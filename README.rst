@@ -31,7 +31,7 @@ Start the celery worker::
 
 Start the app server (using Werkzeug)::
 
-    python run.py
+    python run.py --debug
 
 Optional steps
 --------------

@@ -26,11 +26,11 @@ def main(argv):
         if opt == '-v':
             print 'Usage: run.py [-d -h <host> -p <port>]'
             exit()
-        elif opt in ("-d", "--debug"):
+        elif opt in ('-d', '--debug'):
             debug = True
-        elif opt in ("-h", "--host"):
+        elif opt in ('-h', '--host'):
             host = arg
-        elif opt in ("-p", "--port"):
+        elif opt in ('-p', '--port'):
             port = int(arg)
     app = make_app(debug=debug)
     app.run(
