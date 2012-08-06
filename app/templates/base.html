@@ -23,7 +23,12 @@
           <li class='active'><a href='{{ url_for("index") }}'>Home</a></li>
         </ul>
         <ul class='nav pull-right'>
-          <li><a href='{{ url_for("auth.sign_in") }}'>Sign in</a></li>
+          <li>
+            {% if current_user.is_authenticated() %}
+            <a href='{{ url_for("auth.sign_out") }}'>Sign out</a></li>
+            {% else %}
+            <a href='{{ url_for("auth.sign_in") }}'>Sign in</a></li>
+            {% endif %}
         </ul>
       </div>
     </div>

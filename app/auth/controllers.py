@@ -11,63 +11,49 @@ logger = logging.getLogger(__name__)
 # General imports
 
 from flask import request
+from flask.ext.login import UserMixin
 
 from json import loads
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-
 from urllib import urlencode
 from urllib2 import Request, urlopen
-
-# Blueprint level imports
-
-import models as m
 
 # App level imports
 
 import app.config as x
 
-# Session handling
-# ================
+# User class
+# ==========
 
-class Session(object):
+class User(UserMixin):
 
-    """Session handling.
+    """User class.
 
-    Usage inside the app::
+    This class is pretty generic. Additional features will come from
+    the other blueprints.
 
-        with Session() as session:
-            # do stuff
+    :param email: user gmail email
+    :type email: string
 
     """
-
-    def __enter__(self):
-        return self.Session()
-
-    def __exit__(self):
-        self.Session.remove()
-
-    @classmethod
-    def initialize_db(cls, debug=False):
-        """Initialize database connection."""
-        if debug:
-            engine = create_engine(
-                    x.DebugConfig.AUTH_DB_URL,
-                    pool_recycle=3600
-            )
+    def __init__(self, email):
+        self.email = email
+        if email in x.AUTHORIZED_EMAILS:
+            self.authorized = True
         else:
-            engine = create_engine(
-                    x.BaseConfig.AUTH_DB_URL,
-                    pool_recycle=3600
-            )
-        m.Base.metadata.create_all(engine, checkfirst=True)
-        cls.Session = scoped_session(sessionmaker(bind=engine))
+            self.authorized = False
+
+    def __repr__(self):
+        return '<User %r>' % self.email
+
+    def get_id(self):
+        """Necessary for Flask login extension."""
+        return self.email
 
 # Google API helpers
 # ==================
 
-class OAuth:
+class OAuth(x.AuthConfig):
 
     """Contains variables used for the Google authentication process."""
 
@@ -82,9 +68,6 @@ class OAuth:
             'profile': "https://www.googleapis.com/auth/userinfo.profile"
     }
     RESPONSE_TYPE = "token"
-    CLIENT_ID = "469814544301.apps.googleusercontent.com"
-    CLIENT_SECRET = "MQ_HNDiwnYiWRCquXIj2G03i"
-    REDIRECT_URI = 'http://nncsts.com:5000/oauth2callback'
     GRANT_TYPE = "authorization_code"
     ACCESS_TYPE = "offline"
 

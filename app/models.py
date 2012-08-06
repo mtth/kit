@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 from datetime import datetime
 
+from functools import partial
+
 from json import dumps, loads
 
 from sqlalchemy import Column, String, DateTime, Text, Integer
@@ -33,7 +35,7 @@ Base = declarative_base()
 
 class ExpandedBase(object):
 
-    """To easily access stored instances properties."""
+    """To easily access stored instances properties and log stuff."""
 
     def jsonify(self):
         d = {}
@@ -49,6 +51,16 @@ class ExpandedBase(object):
             elif isinstance(value, datetime):
                 d[varname] = getattr(self, str(value))
         return d
+
+    def _logger(self, message, loglevel):
+        action = getattr(logger, loglevel)
+        return action('%s :: %s' % (self, message))
+
+    def __getattr__(self, varname):
+        if varname in ['debug', 'info', 'warn', 'error']:
+            return partial(self._logger, loglevel=varname)
+        else:
+            raise AttributeError
 
 # The models
 # ==========
@@ -76,6 +88,7 @@ class Job(Base, ExpandedBase):
         self.progress = 0
         self._args = dumps(args)
         self._kwargs = dumps(kwargs)
+        self.debug('Created.')
 
     @property
     def args(self):

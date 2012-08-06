@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # General imports
 
-from flask import Flask, render_template
+from flask import flash, Flask, render_template
 
 from functools import wraps
 
@@ -45,6 +45,7 @@ def pagify(func):
 @app.route('/')
 def index():
     """Splash page."""
+    flash('hi')
     return render_template('index.html')
 
 @app.route('/jobs')

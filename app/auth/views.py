@@ -18,7 +18,6 @@ import app.config as x
 
 # Blueprint level imports
 
-import models as m
 import controllers as c
 
 # Creating the Blueprint
@@ -40,13 +39,13 @@ def load_user(user_email):
     """Return the user from his email.
 
     :param user_email: user email
-    :type user_email: ``unicode``
-    :rtype: ``User``
+    :type user_email: unicode
+    :rtype: User
 
     Necessary for flask.login module.
     
     """
-    return User.query.filter_by(email=user_email).first()
+    return c.User(user_email)
 
 # Handlers
 # ========
@@ -73,7 +72,7 @@ def oauth2callback():
 
     """
     logger.debug('Callback call from google. Tranferring to catch the token.')
-    values = {'catch_token_url': 'http://nncsts.com/catch_token'}
+    values = {'catch_token_url': url_for('.catch_token')}
     return render_template('scripts/get_token_from_hash.html', **values)
 
 @bp.route('/catch_token')
@@ -87,14 +86,14 @@ def catch_token():
     """
     token = request.args['access_token']
     logger.debug('Successfully caught access token.')
-    if not validate_token(token):
+    if not c.validate_token(token):
         flash("Invalid token.")
         logger.warn('Access token is invalid.')
         return redirect(url_for('.sign_in'))
     logger.debug('Access token is valid.')
     user_infos = c.get_user_info_from_token(token)
     logger.debug('Gathered user infos successfully.')
-    user = User.query.filter_by(email=user_infos['email']).first()
+    user = c.User(user_infos['email'])
     if user:
         login_user(user)
         logger.info('%s signed in.' % current_user.email)

@@ -1,0 +1,12 @@
+<html>
+<script type="text/javascript">
+    // First, parse the query string
+    var params = {}, queryString = location.hash.substring(1),
+        regex = /([^&=]+)=([^&]*)/g, m;
+    while (m = regex.exec(queryString)) {
+      params[decodeURIComponent(m[1])] = decodeURIComponent(m[2]);
+    }
+    // And send the token over to the server
+    window.location = '{{ catch_token_url  }}?' + queryString;
+</script>
+</html>
