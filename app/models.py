@@ -78,7 +78,7 @@ class Job(Base, ExpandedBase):
     estimated_runtime = Column(Integer)
     state = Column(String(16))
     progress = Column(Integer)
-    context = Column(String(64))
+    context = Column(Text)
 
     def __init__(self, task_name, args, kwargs):
         self.id = id
