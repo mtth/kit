@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1>Jobs</h1>
+
+<table class='table table-condensed tablesorter'>
+  <thead>
+    <tr>
+      <th>Task name</th>
+      <th>Task kwargs</th>
+      <th>Start time</th>
+      <th>Runtime</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>hii</td>
+      <td>2</td>
+      <td>Start time</td>
+      <td>Runtime</td>
+      <td>Status</td>
+    </tr>
+    <tr>
+      <td>hi</td>
+      <td>1</td>
+      <td>Start time</td>
+      <td>Runtime</td>
+      <td>Status</td>
+    </tr>
+    {% for job in jobs %}
+    <tr>
+      <td>{{ job.task_name }}</td>
+      <td>{{ job.kwargs }}</td>
+      <td>{{ job.start_time }}</td>
+      <td>{{ job.runtime }}</td>
+      <td>{{ job.state }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan='5'>No jobs here yet.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock content %}
