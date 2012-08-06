@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+"""The views, entry point to wonders."""
+
+# Logger
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 # General imports
 
 from flask import Flask, render_template
@@ -36,8 +44,10 @@ def pagify(func):
 
 @app.route('/')
 def index():
+    """Splash page."""
     return render_template('index.html')
 
 @app.route('/jobs')
 def jobs():
+    """Job history page."""
     return render_template('jobs.html')

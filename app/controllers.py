@@ -2,6 +2,8 @@
 
 """The engine behind it all."""
 
+# Logger
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,15 @@ import app.models as m
 
 class Session(object):
 
+    """Session handling.
+
+    Usage inside the app::
+
+        with Session() as session:
+            # do stuff
+
+    """
+
     def __enter__(self):
         return self.Session()
 
@@ -29,14 +40,15 @@ class Session(object):
 
     @classmethod
     def initialize_db(cls, debug=False):
+        """Initialize database connection."""
         if debug:
             engine = create_engine(
-                    x.DebugConfig.SQLALCHEMY_DB_URI,
+                    x.DebugConfig.APP_DB_URL,
                     pool_recycle=3600
             )
         else:
             engine = create_engine(
-                    x.BaseConfig.SQLALCHEMY_DB_URI,
+                    x.BaseConfig.APP_DB_URL,
                     pool_recycle=3600
             )
         m.Base.metadata.create_all(engine, checkfirst=True)

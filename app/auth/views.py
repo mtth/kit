@@ -18,8 +18,8 @@ import app.config as x
 
 # Blueprint level imports
 
-import app.auth.models as m
-import app.auth.controllers as c
+import models as m
+import controllers as c
 
 # Creating the Blueprint
 # ======================

@@ -1,12 +1,71 @@
 #!/usr/bin/env python
 
+"""This is where the auth magic happens."""
+
+# Logger
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+# General imports
+
 from flask import request
 
 from json import loads
 
-from urllib import urlencode
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
 
+from urllib import urlencode
 from urllib2 import Request, urlopen
+
+# Blueprint level imports
+
+import models as m
+
+# App level imports
+
+import app.config as x
+
+# Session handling
+# ================
+
+class Session(object):
+
+    """Session handling.
+
+    Usage inside the app::
+
+        with Session() as session:
+            # do stuff
+
+    """
+
+    def __enter__(self):
+        return self.Session()
+
+    def __exit__(self):
+        self.Session.remove()
+
+    @classmethod
+    def initialize_db(cls, debug=False):
+        """Initialize database connection."""
+        if debug:
+            engine = create_engine(
+                    x.DebugConfig.AUTH_DB_URL,
+                    pool_recycle=3600
+            )
+        else:
+            engine = create_engine(
+                    x.BaseConfig.AUTH_DB_URL,
+                    pool_recycle=3600
+            )
+        m.Base.metadata.create_all(engine, checkfirst=True)
+        cls.Session = scoped_session(sessionmaker(bind=engine))
+
+# Google API helpers
+# ==================
 
 class OAuth:
 
@@ -25,7 +84,7 @@ class OAuth:
     RESPONSE_TYPE = "token"
     CLIENT_ID = "469814544301.apps.googleusercontent.com"
     CLIENT_SECRET = "MQ_HNDiwnYiWRCquXIj2G03i"
-    REDIRECT_URI = 'http://nncsts.com/oauth2callback'
+    REDIRECT_URI = 'http://nncsts.com:5000/oauth2callback'
     GRANT_TYPE = "authorization_code"
     ACCESS_TYPE = "offline"
 

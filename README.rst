@@ -10,6 +10,7 @@ Python modules::
     pip install SQLAlchemy
     pip install Celery
     pip install flask-login
+    pip install redis
 
 Redis::
 
@@ -35,7 +36,7 @@ Start the app server (using Werkzeug)::
 Optional steps
 --------------
 
-*   Daemonizing redis
+*   Daemonizing redis on a mac
 
     Create a plist file::
 
@@ -58,8 +59,12 @@ Optional steps
         </dict>
         </plist>
 
+*   Daemonizing the celery worker
+
+    TODO
+
 Sources
 -------
 
-http://redis.io/topics/quickstart
-http://naleid.com/blog/2011/03/05/running-redis-as-a-user-daemon-on-osx-with-launchd/
+*   http://redis.io/topics/quickstart
+*   http://naleid.com/blog/2011/03/05/running-redis-as-a-user-daemon-on-osx-with-launchd/

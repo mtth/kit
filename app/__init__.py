@@ -2,6 +2,8 @@
 
 """App factory module."""
 
+# Logger
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,25 +12,27 @@ logger = logging.getLogger(__name__)
 # App level imports
 
 import app.config as x
-
-# Import the main app instance
-
-from app.views import app
+import app.controllers as c
 
 # Import the blueprints
 
-import app.auth.views as auth
+from app.auth import initialize_bp
+
+# Import the main app instance
+
+from app.views import app as the_app
 
 # The app factory!
 # ================
 
 def make_app(debug=False):
     """App factory."""
+    # App configuration
+    the_app.config.from_object(x.BaseConfig)
     if debug:
-        app.config.from_object(x.DebugConfig)
-    else:
-        app.config.from_object(x.BaseConfig)
+        the_app.config.from_object(x.DebugConfig)
+    # Initializing the database
+    c.Session.initialize_db(debug)
     # Hooking up the authentication blueprint
-    app.register_blueprint(auth.bp)
-    auth.login_manager.setup_app(app)
-    return app
+    initialize_bp(the_app, debug)
+    return the_app

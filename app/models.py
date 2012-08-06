@@ -2,6 +2,8 @@
 
 """Persistent classes."""
 
+# Logging
+
 import logging
 
 logger = logging.getLogger(__name__)
