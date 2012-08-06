@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 from flask import abort, Blueprint, flash, redirect, request, \
 render_template, url_for
 
-from flaskext.login import LoginManager, login_user, logout_user, \
+from flask.ext.login import LoginManager, login_user, logout_user, \
 current_user, login_required
 
 # App level imports

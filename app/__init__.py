@@ -10,7 +10,14 @@ logger = logging.getLogger(__name__)
 # App level imports
 
 import app.config as x
-import app.views as v
+
+# Import the main app instance
+
+from app.views import app
+
+# Import the blueprints
+
+import app.auth.views as auth
 
 # The app factory!
 # ================
@@ -18,7 +25,10 @@ import app.views as v
 def make_app(debug=False):
     """App factory."""
     if debug:
-        v.app.config.from_object(x.DebugConfig)
+        app.config.from_object(x.DebugConfig)
     else:
-        v.app.config.from_object(x.BaseConfig)
-    return v.app
+        app.config.from_object(x.BaseConfig)
+    # Hooking up the authentication blueprint
+    app.register_blueprint(auth.bp)
+    auth.login_manager.setup_app(app)
+    return app

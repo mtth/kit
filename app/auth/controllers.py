@@ -32,7 +32,7 @@ class OAuth:
 def get_params():
     """Builds the dictionary of parameters required the API request.
 
-    :rtype: ``dict``
+    :rtype: dict
 
     """
     if 'next' in request.args:
@@ -48,7 +48,7 @@ def get_params():
 def get_google_login_url():
     """Combines the endpoint with the parameters to generate the API url.
 
-    :rtype: ``str``
+    :rtype: string
 
     """
     return (OAuth.ENDPOINTS['get_token_or_code'] + '?' + 
@@ -58,8 +58,8 @@ def validate_token(token):
     """Checks if the token is valid.
 
     :param token: auth token
-    :type token: ``str``
-    :rtype: ``bool``
+    :type token: string
+    :rtype: boolean
 
     """
     url = OAuth.ENDPOINTS['validate_token'] + '?access_token=' + token
@@ -74,8 +74,8 @@ def get_user_info_from_token(token):
     """Grabs user email from token.
 
     :param token: auth token
-    :type token: ``str``
-    :rtype: ``dict``
+    :type token: string
+    :rtype: dict
 
     """
     url = OAuth.ENDPOINTS['get_user_info']

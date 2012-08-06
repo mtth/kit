@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 # General imports
 
-from sqlalchemy import Column, String, DateTime, Text, Integer
+from sqlalchemy import Column, String, DateTime, Text, Integer, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 
 # App level imports
@@ -41,14 +41,12 @@ class User(Base):
 
     __tablename__ = 'users'
 
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120))
-    name = db.Column(db.String(120))
-    is_admin = db.Column(db.Boolean)
+    id = Column(Integer, primary_key=True)
+    email = Column(String(120))
+    is_admin = Column(Boolean)
 
     def __init__(self, email):
         self.email = email
-        self.name = ''
         self.is_admin = False
 
     def __repr__(self):
