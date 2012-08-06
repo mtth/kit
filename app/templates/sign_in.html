@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Sign in <small>via your Google account</small></h1>
+<hr>
+{% if current_user.is_authenticated() %}
+You are already signed in friend
+{% else %}
+<div class='row'>
+  <div class='span6 offset3'>
+    <ul class='thumbnails'>
+      <li class=span6'><a href='{{ sign_in_url }}'>Sign in</a></li>
+    </ul>
+  </div>
+</div>
+{% endif %}
+<hr>
+{% endblock %}

@@ -4,7 +4,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8'>
-<title>amzn</title>
+<title>apptastic</title>
 <meta name='viewport' content='width=device-width, initial-scale=1.0'>
 <meta name='description' content=''>
 <meta name='author' content=''>
@@ -17,10 +17,13 @@
 <div class='navbar navbar-fixed-top'>
   <div class='navbar-inner'>
     <div class='container'>
-      <a class='brand' href='#'>[ amzn ]</a>
+      <a class='brand' href='#'>[ apptastic ]</a>
       <div class='nav-collapse'>
         <ul class='nav pull-left'>
           <li class='active'><a href='{{ url_for("index") }}'>Home</a></li>
+        </ul>
+        <ul class='nav pull-right'>
+          <li><a href='{{ url_for("auth.sign_in") }}'>Sign in</a></li>
         </ul>
       </div>
     </div>
@@ -32,13 +35,15 @@
 
 {% endblock content %}
 
-  <div class='row'>
-    <div class='span12'>
-      <p class='pull-left'>
-        Questions? <a href='mailto:monsch@mit.edu'>email me!</a>
-      </p>
-    </div>
-  </div>
+<div id='footer'>
+    <p class='pull-left'>
+      Questions? <a href='mailto:monsch@mit.edu'>email me!</a>
+    </p>
+    <p class='pull-right'>
+      <a href='{{ url_for("jobs") }}'>Active Jobs</a> ::
+      <a href='{{ url_for("jobs") }}'>Jobs</a>
+    </p>
+</div>
 </div>
 <!-- Le javascript -->
 <!-- Placed at the end of the document so the pages load faster -->
