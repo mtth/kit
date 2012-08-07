@@ -4,15 +4,11 @@
 
 # General imports
 
-from os.path import dirname, join
+from os.path import abspath, dirname, join, pardir
 
-# Global variables
+# Logging configuration
 
-APPLICATION_FOLDER = dirname(__file__)
-AUTHORIZED_EMAILS = [
-    'ninecoast@gmail.com',
-]
-LOGGING_FOLDER = join(APPLICATION_FOLDER, 'logs')
+LOGGING_FOLDER = abspath(join(dirname(__file__), pardir, 'logs'))
 LOGGER_CONFIG = {
     'version': 1,              
     'formatters': {
@@ -69,44 +65,3 @@ DEBUG_LOGGER_CONFIG = {
         },
     }
 }
-
-# App configuration objects
-
-class BaseConfig(object):
-
-    DEBUG = False
-    SECRET_KEY = 'replace_this_with_a_key'
-    APP_DB_URL = 'sqlite:///%s/db/app.sqlite' % APPLICATION_FOLDER
-    AUTH_DB_URL = 'sqlite:///%s/db/auth.sqlite' % APPLICATION_FOLDER
-    TESTING = False
-
-class DebugConfig(BaseConfig):
-
-    DEBUG = True
-    APP_DB_URL = 'sqlite:///%s/db/app_dev.sqlite' % APPLICATION_FOLDER
-    AUTH_DB_URL = 'sqlite:///%s/db/auth_dev.sqlite' % APPLICATION_FOLDER
-    TESTING = False
-
-# Celery worker configuration
-
-class CeleryBaseConfig(object):
-
-    BROKER_URL = 'redis://localhost:6379/0'
-    CELERY_DISABLE_RATE_LIMIT = True
-    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-    CELERYD_CONCURRENCY = 3
-    CELERYD_PREFETCH_MULTIPLIER = 1
-
-class CeleryDebugConfig(CeleryBaseConfig):
-
-    BROKER_URL = 'redis://localhost:6379/1'
-    CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
-    DEBUG = True
-
-# Auth blueprint configuration
-
-class AuthConfig(object):
-
-    CLIENT_ID = "727771047328-orosiiaun16cf0p6q8sfal3dema77hq4.apps.googleusercontent.com"
-    CLIENT_SECRET = "kdZOow_-1502o-KC6SsgR5AE"
-    REDIRECT_URI = 'http://nncsts.com:5000/oauth2callback'

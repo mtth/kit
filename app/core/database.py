@@ -15,8 +15,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 # App level imports
 
-import app.conf as x
-import app.models as m
+from app.conf.flask import BaseConfig, DebugConfig
 
 # Session handling
 # ================
@@ -43,12 +42,12 @@ class Session(object):
         """Initialize database connection."""
         if debug:
             engine = create_engine(
-                    x.DebugConfig.APP_DB_URL,
+                    DebugConfig.APP_DB_URL,
                     pool_recycle=3600
             )
         else:
             engine = create_engine(
-                    x.BaseConfig.APP_DB_URL,
+                    BaseConfig.APP_DB_URL,
                     pool_recycle=3600
             )
         m.Base.metadata.create_all(engine, checkfirst=True)

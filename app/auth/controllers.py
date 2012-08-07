@@ -20,7 +20,7 @@ from urllib2 import Request, urlopen
 
 # App level imports
 
-import app.config as x
+from app.conf.flask import AuthConfig
 
 # User class
 # ==========
@@ -53,7 +53,7 @@ class User(UserMixin):
 # Google API helpers
 # ==================
 
-class OAuth(x.AuthConfig):
+class OAuth(AuthConfig):
 
     """Contains variables used for the Google authentication process."""
 

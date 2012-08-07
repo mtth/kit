@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # App level imports
 
-import app.config as x
+import app.conf as x
 import app.controllers as c
 
 # Import the blueprints
@@ -28,7 +28,7 @@ from app.views import app as the_app
 def make_app(debug=False):
     """App factory."""
     # App and logger configuration
-    the_app.config.from_object(x.BaseConfig)
+    the_app.config.from_object(x.app.BaseConfig)
     if debug:
         the_app.config.from_object(x.DebugConfig)
         logging.config.dictConfig(x.DEBUG_LOGGER_CONFIG)

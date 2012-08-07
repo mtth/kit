@@ -14,8 +14,6 @@ current_user, login_required
 
 # App level imports
 
-import app.config as x
-
 # Blueprint level imports
 
 import controllers as c
