@@ -7,36 +7,24 @@
 from __future__ import absolute_import
 
 from celery import Celery, current_task
-from celery.signals import celeryd_init, task_postrun, task_prerun, worker_process_init
+from celery.signals import celeryd_init, task_postrun, task_prerun, \
+worker_process_init
 
 # App level imports
 
 from app.core.database import Session
-from app.conf.celery import CeleryBaseConfig
 
 # Celery instantiation
 # ====================
 
 celery = Celery()
 
-def initialize_db(**kwargs):
-    if celery.conf:
-        pass
-
 @celeryd_init.connect
 def handler(sender=None, conf=None, **kwrds):
-    print 'hi', celery.conf['BROKER_URL']
-
-# if 'production' in __file__:
-#     celery.config_from_object(x.CeleryBaseConfig)
-#         Session.initialize_db()
-# else:
-#     celery.config_from_object(x.CeleryDebugConfig)
-#     def initialize_db(**kwargs):
-#         Session.initialize_db(debug=True)
+    Session.debug = conf['DEBUG']
 
 # Connect to the database once the workers are initialized
-# worker_process_init.connect(initialize_db)
+worker_process_init.connect(Session.initialize_db)
 
 # Job tracking
 # ============
@@ -81,6 +69,3 @@ class CurrentJob(object):
             logger.info('%s :: %s' % (kwargs, context))
         self.session.commit()
 
-@celery.task()
-def do_something_else():
-    pass

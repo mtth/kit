@@ -11,19 +11,12 @@ logger = logging.getLogger(__name__)
 # General imports
 
 from sqlalchemy import Column, String, DateTime, Text, Integer
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # App level imports
 
+from app.core.database import Base
 from app.core.util import Loggable
-
-import app.conf as x
-
-# SQLAlchemy setup
-# ================
-
-Base = declarative_base()
 
 # The models
 # ==========
