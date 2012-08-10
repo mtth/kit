@@ -80,7 +80,7 @@ def catch_token():
         ).first()
     if user:
         login_user(user)
-        logger.info('%s signed in.' % current_user.email)
+        user.info('Signed in.')
         flash("You signed in successfully!", category='success')
     else:
         logger.warn('%s tried to sign in.' % user_infos['email'])
@@ -94,7 +94,7 @@ def sign_out():
     Redirects to the home page after a successful sign out.
 
     """
-    logger.info('%s signed out.' % current_user.email)
+    current_user.info('Signed out.')
     logout_user()
     flash("You signed out successfully!", category='success')
     return redirect(url_for('index'))

@@ -2,6 +2,10 @@
 
 """Flask App Template helpers"""
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # General imports
 
 from datetime import datetime
@@ -13,9 +17,9 @@ from json import dumps, loads
 # Helpers
 # =======
 
-class Loggable(object):
+class Jsonifiable(object):
 
-    """To easily access stored instances properties and log stuff."""
+    """For easy API calls."""
 
     def jsonify(self):
         d = {}
@@ -32,8 +36,20 @@ class Loggable(object):
                 d[varname] = getattr(self, str(value))
         return d
 
+class Loggable(object):
+
+    """To easily log stuff.
+
+    To be able to trace back the instance logged to where it is defined,
+    it is recommended to reassign the logger property in the children
+    classes.
+
+    """
+
+    logger = logger
+
     def _logger(self, message, loglevel):
-        action = getattr(logger, loglevel)
+        action = getattr(self.logger, loglevel)
         return action('%s :: %s' % (self, message))
 
     def __getattr__(self, varname):

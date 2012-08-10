@@ -20,7 +20,7 @@ from sqlalchemy.orm import backref, relationship
 from app.core.models import Base
 from app.core.util import Loggable
 
-class User(Base, UserMixin):
+class User(Base, Loggable, UserMixin):
 
     """User class.
 
@@ -33,6 +33,8 @@ class User(Base, UserMixin):
 
     id = Column(Integer, primary_key=True)
     email = Column(String(64), unique=True)
+
+    logger = logger
 
     def __init__(self, email):
         self.email = email
