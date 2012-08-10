@@ -40,9 +40,13 @@ class Session(object):
     debug = False
 
     def __enter__(self):
-        return self.Session()
+        try:
+            return self.Session()
+        except:
+            raise Exception("The database connection needs to "
+                            "be initialized before doing this.")
 
-    def __exit__(self):
+    def __exit__(self, type, value, traceback):
         self.Session.remove()
 
     @classmethod
