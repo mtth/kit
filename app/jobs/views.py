@@ -22,4 +22,5 @@ bp = Blueprint(
 @bp.route('/')
 def index():
     """Job history page."""
+    logger.info('Visited job page!')
     return render_template('jobs.html')

@@ -30,5 +30,4 @@ app = Flask(__name__)
 def index():
     """Splash page."""
     logger.info('Visited front page!')
-    flash('hi')
     return render_template('index.html')
