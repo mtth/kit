@@ -18,5 +18,12 @@ from sqlalchemy.orm import backref, relationship
 from app.core.models import Base
 from app.core.util import Loggable
 
-import app.conf as x
+class Member(Base):
 
+    __tablename__ = 'members'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(64))
+
+    def __init__(self, name):
+        self.name = name

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # General imports
 
 from flask import request
-from flask.ext.login import UserMixin
+from flask.ext.login import LoginManager
 
 from json import loads
 
@@ -21,34 +21,35 @@ from urllib2 import Request, urlopen
 # App level imports
 
 from app.conf.flask import AuthConfig
+from app.core.database import Session
 
-# User class
-# ==========
+import models as m
 
-class User(UserMixin):
+# Login manager instance
+# ======================
 
-    """User class.
+login_manager = LoginManager()
 
-    This class is pretty generic. Additional features will come from
-    the other blueprints.
+login_manager.login_view = '/sign_in'
+login_manager.login_message = ("A little bird tells me you have to sign in"
+                               " before coming here.")
 
-    :param email: user gmail email
-    :type email: string
+@login_manager.user_loader
+def load_user(user_email):
+    """Return the user from his email.
 
+    :param user_email: user email
+    :type user_email: string
+    :rtype: User
+
+    Necessary for flask.login module.
+    
     """
-    def __init__(self, email):
-        self.email = email
-        if email in x.AUTHORIZED_EMAILS:
-            self.authorized = True
-        else:
-            self.authorized = False
-
-    def __repr__(self):
-        return '<User %r>' % self.email
-
-    def get_id(self):
-        """Necessary for Flask login extension."""
-        return self.email
+    with Session() as session:
+        user = session.query(m.User).filter(
+                m.User.email == user_email
+        ).first()
+    return user
 
 # Google API helpers
 # ==================

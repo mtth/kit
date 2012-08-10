@@ -8,42 +8,25 @@ logger = logging.getLogger(__name__)
 
 from flask import abort, Blueprint, flash, redirect, request, \
 render_template, url_for
-
-from flask.ext.login import LoginManager, login_user, logout_user, \
+from flask.ext.login import login_user, logout_user, \
 current_user, login_required
 
-# App level imports
+from app.core.database import Session
 
 # Blueprint level imports
 
 import controllers as c
+import models as m
 
 # Creating the Blueprint
 # ======================
 
-bp = Blueprint('auth', __name__, url_prefix='')
-
-# Module configuration
-# ====================
-
-login_manager = LoginManager()
-
-login_manager.login_view = '/sign_in'
-login_manager.login_message = ("a little bird tells me you have to sign in"
-                               " before coming here")
-
-@login_manager.user_loader
-def load_user(user_email):
-    """Return the user from his email.
-
-    :param user_email: user email
-    :type user_email: unicode
-    :rtype: User
-
-    Necessary for flask.login module.
-    
-    """
-    return c.User(user_email)
+bp = Blueprint(
+        'auth',
+        __name__,
+        url_prefix='/auth',
+        template_folder='../templates/auth'
+)
 
 # Handlers
 # ========
@@ -91,7 +74,10 @@ def catch_token():
     logger.debug('Access token is valid.')
     user_infos = c.get_user_info_from_token(token)
     logger.debug('Gathered user infos successfully.')
-    user = c.User(user_infos['email'])
+    with Session() as session:
+        user = session.query(m.User).filter(
+                m.User.email == user_infos['email']
+        ).first()
     if user:
         login_user(user)
         logger.info('%s signed in.' % current_user.email)

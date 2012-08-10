@@ -30,7 +30,7 @@ LOGGER_CONFIG = {
         },  
     },
     'loggers': {
-        'app': {
+        '': {
             'handlers': ['default', 'stream'],
             'level': 'INFO',
             'propagate': True

@@ -1,15 +1,11 @@
 #!/usr/bin/env python
 
-__all__ = ['controllers.py', 'views.py']
+"""Jobs management blueprint."""
 
-# Blueprint level imports
-
-import controllers as c
 import views as v
 
-# Initialize the blueprint
+__all__ = ['controllers.py', 'views.py']
 
 def initialize_bp(the_app, debug=False):
     """Initialize the blueprint."""
     the_app.register_blueprint(v.bp)
-    c.login_manager.setup_app(the_app)

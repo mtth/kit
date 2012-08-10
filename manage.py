@@ -18,7 +18,7 @@ database connection at that moment. Pretty nifty and convenient.
 """
 
 from flask import current_app
-from flask.ext.script import Manager
+from flask.ext.script import Manager, prompt
 
 from pprint import pprint
 
@@ -27,12 +27,15 @@ from subprocess import call
 from sys import modules
 
 from app import make_app
+from app.auth.models import User
 from app.core.database import Session
+
+import app.models as m
 
 # Creating the manager instance
 # =============================
 
-manager = Manager(make_app)
+manager = Manager(make_app, with_default_commands=False)
 
 # Options
 # these options seem to be passed to the make_app function and also added
@@ -46,7 +49,7 @@ manager.add_option(
 
 @manager.option('-t', '--host', dest='host', default='0.0.0.0')
 @manager.option('-p', '--port', dest='port', default=5000)
-def run_server():
+def run_server(host, port):
     """Start the flask werkzeug server."""
     current_app.run(
             host=host,
@@ -61,6 +64,24 @@ def view_app_config():
     for key, value in sorted(current_app.config.items()):
         print '%30s %s' % (key, value)
 
+@manager.command
+def add_user():
+    with Session() as session:
+        user_email = prompt('User email?')
+        user = User(user_email)
+        session.add(user)
+        session.commit()
+
+@manager.command
+def view_users():
+    with Session() as session:
+        users = session.query(User).all()
+        for user in users:
+            print '%10s %s' % (user.id, user.email)
+
+def promote_user():
+    pass
+
 # Celery management
 # =================
 
@@ -69,19 +90,19 @@ def run_worker():
     """Start the Celery worker."""
     if current_app.debug:
         print 'Starting Celery worker in DEBUG mode!'
-        call(['celery', 'worker', '--config=app.conf.celerydebug'])
+        call(['celery', 'worker', '--config=app.conf.celery.debug'])
     else:
         print 'Starting Celery worker!'
-        call(['celery', 'worker', '--config=app.conf.celery'])
+        call(['celery', 'worker', '--config=app.conf.celery.base'])
 
 @manager.command
 def view_celery_config():
     """View config used by the Celery worker."""
     print 'Celery config:'
     if current_app.debug:
-        module = 'app.conf.celerydebug'
+        module = 'app.conf.celery.debug'
     else:
-        module = 'app.conf.celery'
+        module = 'app.conf.celery.base'
     __import__(module)
     mod = modules[module]
     for key in dir(mod):

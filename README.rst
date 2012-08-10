@@ -9,6 +9,7 @@ Python modules::
     pip install Flask
     pip install SQLAlchemy
     pip install Celery
+    pip install Flask-Script
     pip install flask-login
     pip install redis
 
