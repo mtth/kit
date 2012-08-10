@@ -90,19 +90,19 @@ def run_worker():
     """Start the Celery worker."""
     if current_app.debug:
         print 'Starting Celery worker in DEBUG mode!'
-        call(['celery', 'worker', '--config=app.conf.celery.debug'])
+        call(['celery', 'worker', '--config=app.config.celery.debug'])
     else:
         print 'Starting Celery worker!'
-        call(['celery', 'worker', '--config=app.conf.celery.base'])
+        call(['celery', 'worker', '--config=app.config.celery.base'])
 
 @manager.command
 def view_celery_config():
     """View config used by the Celery worker."""
     print 'Celery config:'
     if current_app.debug:
-        module = 'app.conf.celery.debug'
+        module = 'app.config.celery.debug'
     else:
-        module = 'app.conf.celery.base'
+        module = 'app.config.celery.base'
     __import__(module)
     mod = modules[module]
     for key in dir(mod):

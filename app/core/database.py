@@ -16,7 +16,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 # App level imports
 
-from app.conf.flask import BaseConfig, DebugConfig
+from app.config.flask import BaseConfig, DebugConfig
 
 # SQLAlchemy setup
 # ================

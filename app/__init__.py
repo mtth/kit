@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 # App level imports
 
-from app.conf.flask import BaseConfig, DebugConfig
-from app.conf.logging import DEBUG_LOGGER_CONFIG, LOGGER_CONFIG
+from app.config.flask import BaseConfig, DebugConfig
+from app.config.logging import DEBUG_LOGGER_CONFIG, LOGGER_CONFIG
 
 from app.core.database import Session
 

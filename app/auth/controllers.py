@@ -20,7 +20,7 @@ from urllib2 import Request, urlopen
 
 # App level imports
 
-from app.conf.flask import AuthConfig
+from app.config.flask import AuthConfig
 from app.core.database import Session
 
 import models as m
