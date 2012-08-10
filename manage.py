@@ -18,7 +18,7 @@ database connection at that moment. Pretty nifty and convenient.
 """
 
 from flask import current_app
-from flask.ext.script import Manager, prompt
+from flask.ext.script import Manager, prompt, Shell
 
 from pprint import pprint
 
@@ -43,6 +43,8 @@ manager = Manager(make_app, with_default_commands=False)
 manager.add_option(
         '-d', '--debug', action='store_true', dest='debug', default=False
 )
+
+manager.add_command('shell', Shell())
 
 # App management
 # ==============
@@ -90,19 +92,27 @@ def run_worker():
     """Start the Celery worker."""
     if current_app.debug:
         print 'Starting Celery worker in DEBUG mode!'
-        call(['celery', 'worker', '--config=app.config.celery.debug'])
+        call([
+                'celery', 'worker',
+                '--config=app.config.celery.celery_debug',
+                '--loglevel=debug',
+        ])
     else:
         print 'Starting Celery worker!'
-        call(['celery', 'worker', '--config=app.config.celery.base'])
+        call([
+                'celery', 'worker',
+                '--config=app.config.celery.celery_base',
+                '--loglevel=info',
+        ])
 
 @manager.command
 def view_celery_config():
     """View config used by the Celery worker."""
     print 'Celery config:'
     if current_app.debug:
-        module = 'app.config.celery.debug'
+        module = 'app.config.celery.celery_debug'
     else:
-        module = 'app.config.celery.base'
+        module = 'app.config.celery.celery_base'
     __import__(module)
     mod = modules[module]
     for key in dir(mod):

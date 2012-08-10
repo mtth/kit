@@ -41,6 +41,11 @@ LOGGER_CONFIG = {
             'level': 'INFO',
             'propagate': True
         },
+        'celery': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True
+        },
     }
 }
 
@@ -71,6 +76,11 @@ DEBUG_LOGGER_CONFIG = {
             'propagate': True
         },
         'app': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True
+        },
+        'celery': {
             'handlers': ['file'],
             'level': 'DEBUG',
             'propagate': True

@@ -4,7 +4,7 @@
 
 # Celery worker configuration
 
-from app.conf.celery import *
+from app.config.celery.celery_base import *
 
 DEBUG = True
 

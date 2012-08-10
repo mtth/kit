@@ -17,7 +17,7 @@ from sqlalchemy.orm import backref, relationship
 
 # App level imports
 
-from app.core.models import Base
+from app.core.database import Base
 from app.core.util import Loggable
 
 class User(Base, Loggable, UserMixin):

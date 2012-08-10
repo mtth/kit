@@ -12,7 +12,7 @@ from time import sleep
 
 # App level import
 
-from app.core.celery import celery
+from app.core.celery import celery, CurrentJob
 from app.core.database import Session
 
 # Tasks
@@ -22,6 +22,7 @@ from app.core.database import Session
 def do_something():
     with Session() as session:
         job = CurrentJob(session)
-        job.info('Started...')
+        job.progress('Started...')
+        print 'hi'
         sleep(5)
-        job.info('Finished!')
+        job.progress('Finished!')

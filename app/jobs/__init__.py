@@ -4,7 +4,7 @@
 
 import views as v
 
-__all__ = ['controllers.py', 'views.py']
+# __all__ = ['controllers.py', 'models.py', 'views.py']
 
 def initialize_bp(the_app, debug=False):
     """Initialize the blueprint."""

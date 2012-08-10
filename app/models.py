@@ -15,15 +15,9 @@ from sqlalchemy.orm import backref, relationship
 
 # App level imports
 
-from app.core.models import Base
+from app.core.database import Base
 from app.core.util import Loggable
 
-class Member(Base):
+# Models
+# ======
 
-    __tablename__ = 'members'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String(64))
-
-    def __init__(self, name):
-        self.name = name

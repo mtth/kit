@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # General imports
 
-from flask import flash, Flask, render_template
+from flask import flash, Flask, redirect, render_template, url_for
 
 # App level imports
 
@@ -29,5 +29,11 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     """Splash page."""
-    logger.info('Visited front page!')
+    logger.debug('Visited front page!')
     return render_template('index.html')
+
+@app.route('/test')
+def test():
+    logger.debug('Visited test page.')
+    t.do_something.delay()
+    return redirect(url_for('index'))
