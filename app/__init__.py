@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # App level imports
 
 import app.conf as x
-import app.controllers as c
+from app.core.database import Session
 
 # Import the blueprints
 
@@ -28,14 +28,15 @@ from app.views import app as the_app
 def make_app(debug=False):
     """App factory."""
     # App and logger configuration
-    the_app.config.from_object(x.app.BaseConfig)
+    the_app.config.from_object(x.flask.BaseConfig)
     if debug:
-        the_app.config.from_object(x.DebugConfig)
-        logging.config.dictConfig(x.DEBUG_LOGGER_CONFIG)
+        the_app.config.from_object(x.flask.DebugConfig)
+        # logging.config.dictConfig(x.LOGGER_CONFIG)
+        Session.debug = True
     else:
-        logging.config.dictConfig(x.LOGGER_CONFIG)
+        pass
     # Initializing the database
-    c.Session.initialize_db(debug)
+    Session.initialize_db()
     # Hooking up the authentication blueprint
     initialize_bp(the_app, debug)
     return the_app
