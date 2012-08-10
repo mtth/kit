@@ -11,7 +11,7 @@ logger = getLogger(__name__)
 
 # App level imports
 
-from app.config.celery import celery_base, celery_debug
+from app.config.celery import CeleryBaseConfig, CeleryDebugConfig
 from app.config.flask import BaseConfig, DebugConfig
 from app.config.logging import DEBUG_LOGGER_CONFIG, LOGGER_CONFIG
 
@@ -35,13 +35,13 @@ def make_app(debug=False):
     # App and logger configuration
     the_app.config.from_object(BaseConfig)
     if debug:
-        the_app.config.from_object(DebugConfig)
         dictConfig(DEBUG_LOGGER_CONFIG)
-        celery.config_from_object(celery_debug)
+        the_app.config.from_object(DebugConfig)
+        celery.config_from_object(CeleryDebugConfig)
         Session.debug = True
     else:
         dictConfig(LOGGER_CONFIG)
-        celery.config_from_object(celery_base)
+        celery.config_from_object(CeleryBaseConfig)
     # Initializing the database
     Session.initialize_db()
     # Hooking up the blueprint

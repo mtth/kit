@@ -6,7 +6,7 @@ Command line interface to:
 
 *   Start web server
 *   Start celery worker
-*   Manage database (maybe?)
+*   Manage database
 
 Comments
 --------
@@ -44,6 +44,7 @@ manager.add_option(
         '-d', '--debug', action='store_true', dest='debug', default=False
 )
 
+# Commands
 manager.add_command('shell', Shell())
 
 # App management
@@ -94,14 +95,14 @@ def run_worker():
         print 'Starting Celery worker in DEBUG mode!'
         call([
                 'celery', 'worker',
-                '--config=app.config.celery.celery_debug',
+                '--config=app.config.celery.CeleryDebugConfig',
                 '--loglevel=debug',
         ])
     else:
         print 'Starting Celery worker!'
         call([
                 'celery', 'worker',
-                '--config=app.config.celery.celery_base',
+                '--config=app.config.celery.CeleryBaseConfig',
                 '--loglevel=info',
         ])
 
@@ -110,9 +111,9 @@ def view_celery_config():
     """View config used by the Celery worker."""
     print 'Celery config:'
     if current_app.debug:
-        module = 'app.config.celery.celery_debug'
+        module = 'app.config.celery.CeleryDebugConfig'
     else:
-        module = 'app.config.celery.celery_base'
+        module = 'app.config.celery.CeleryBaseConfig'
     __import__(module)
     mod = modules[module]
     for key in dir(mod):

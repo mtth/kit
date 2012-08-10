@@ -4,9 +4,9 @@
 
 # Logging
 
-import logging
+from logging import getLogger
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 # General imports
 
@@ -63,3 +63,21 @@ class Job(Base, Jsonifiable, Loggable):
     @property
     def kwargs(self):
         return loads(self._kwargs)
+
+    def get_models(self):
+        """Get the objects that are inputs to the task.
+
+        This uses a particular structure for calling tasks: kwargs are reserved
+        for arguments that represent models classes and they must be called as
+        follows::
+
+            kwargs = {
+                    'ModelClass' : {
+                            'primary_key_one': primary_key_one_value,
+                            # ...
+                    },
+                    # ...
+            }
+
+        """
+        pass
