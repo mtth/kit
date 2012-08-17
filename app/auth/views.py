@@ -11,7 +11,7 @@ render_template, url_for
 from flask.ext.login import login_user, logout_user, \
 current_user, login_required
 
-from app.core.database import Session
+from app.core.database import Db
 
 # Blueprint level imports
 
@@ -74,10 +74,9 @@ def catch_token():
     logger.debug('Access token is valid.')
     user_infos = c.get_user_info_from_token(token)
     logger.debug('Gathered user infos successfully.')
-    with Session() as session:
-        user = session.query(m.User).filter(
-                m.User.email == user_infos['email']
-        ).first()
+    user = m.User.q.filter(
+            m.User.email == user_infos['email']
+    ).first()
     if user:
         login_user(user)
         user.info('Signed in.')

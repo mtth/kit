@@ -20,17 +20,13 @@ database connection at that moment. Pretty nifty and convenient.
 from flask import current_app
 from flask.ext.script import Manager, prompt, Shell
 
-from pprint import pprint
-
 from subprocess import call
 
 from sys import modules
 
 from app import make_app
 from app.auth.models import User
-from app.core.database import Session
-
-import app.models as m
+from app.core.database import Db
 
 # Creating the manager instance
 # =============================
@@ -69,7 +65,8 @@ def view_app_config():
 
 @manager.command
 def add_user():
-    with Session() as session:
+    """Add user to database."""
+    with Db() as session:
         user_email = prompt('User email?')
         user = User(user_email)
         session.add(user)
@@ -77,12 +74,14 @@ def add_user():
 
 @manager.command
 def view_users():
-    with Session() as session:
+    """View all database users."""
+    with Db() as session:
         users = session.query(User).all()
         for user in users:
             print '%10s %s' % (user.id, user.email)
 
 def promote_user():
+    """TBD."""
     pass
 
 # Celery management

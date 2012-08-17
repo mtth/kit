@@ -21,7 +21,7 @@ from urllib2 import Request, urlopen
 # App level imports
 
 from app.config.flask import AuthConfig
-from app.core.database import Session
+from app.core.database import Db
 
 import models as m
 
@@ -45,10 +45,9 @@ def load_user(user_email):
     Necessary for flask.login module.
     
     """
-    with Session() as session:
-        user = session.query(m.User).filter(
-                m.User.email == user_email
-        ).first()
+    user = m.User.q.filter(
+            m.User.email == user_email
+    ).first()
     return user
 
 # Google API helpers

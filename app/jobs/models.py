@@ -11,15 +11,11 @@ logger = getLogger(__name__)
 # General imports
 
 from datetime import datetime
-
-from json import dumps, loads
-
 from sqlalchemy import Column, String, DateTime, Text, Integer
-from sqlalchemy.orm import backref, relationship
 
 # App level imports
 
-from app.core.database import Base
+from app.core.database import Base, Features, JSONEncodedDict
 from app.core.util import Jsonifiable, Loggable
 
 # The models
@@ -37,32 +33,26 @@ class Job(Base, Jsonifiable, Loggable):
     name = Column(String(64))
     start_time = Column(DateTime)
     end_time = Column(DateTime)
-    estimated_runtime = Column(Integer)
-    state = Column(String(16))
-    progress = Column(Integer)
-    context = Column(Text)
+    state = Column(String(8), default='RUNNING')
+    progress = Column(Integer, default=0)
+    context = Column(Text, default='Started...')
+    parameters = Column(Features.as_mutable(JSONEncodedDict))
+    statistics = Column(Features.as_mutable(JSONEncodedDict))
 
-    def __init__(self, task_id, task_name, args, kwargs):
+    def __init__(self, task_id, task_name, parameters):
         self.id = task_id
         self.name = task_name
         self.start_time = datetime.now()
-        self.state = 'RUNNING'
-        self.progress = 0
-        self._args = dumps(args)
-        self._kwargs = dumps(kwargs)
+        self.parameters = parameters
+        self.statistics = {
+                'runtime_breakdown': [],
+                'runtime_estimation': 0
+        }
         self.debug('Created.')
 
     def __repr__(self):
         """To be extended to include the name and args, kwargs."""
         return '<Job id=%s>' % self.id
-
-    @property
-    def args(self):
-        return loads(self._args)
-
-    @property
-    def kwargs(self):
-        return loads(self._kwargs)
 
     def get_models(self):
         """Get the objects that are inputs to the task.
@@ -81,3 +71,11 @@ class Job(Base, Jsonifiable, Loggable):
 
         """
         pass
+
+    @property
+    def runtime(self):
+        """Current job runtime."""
+        if self.end_time:
+            return (self.end_time - self.start_time).seconds
+        else:
+            return (datetime.now() - self.start_time).seconds

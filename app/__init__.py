@@ -16,7 +16,7 @@ from app.config.flask import BaseConfig, DebugConfig
 from app.config.logging import DEBUG_LOGGER_CONFIG, LOGGER_CONFIG
 
 from app.core.celery import celery
-from app.core.database import Session
+from app.core.database import Db
 
 # Import the blueprints
 
@@ -38,12 +38,12 @@ def make_app(debug=False):
         dictConfig(DEBUG_LOGGER_CONFIG)
         the_app.config.from_object(DebugConfig)
         celery.config_from_object(CeleryDebugConfig)
-        Session.debug = True
+        Db.debug = True
     else:
         dictConfig(LOGGER_CONFIG)
         celery.config_from_object(CeleryBaseConfig)
     # Initializing the database
-    Session.initialize_db()
+    Db.initialize(the_app)
     # Hooking up the blueprint
     init_auth_bp(the_app, debug)
     init_jobs_bp(the_app, debug)

@@ -13,16 +13,15 @@ from time import sleep
 # App level import
 
 from app.core.celery import celery, CurrentJob
-from app.core.database import Session
+from app.core.database import Db
 
 # Tasks
 # =====
 
 @celery.task()
 def do_something():
-    with Session() as session:
-        job = CurrentJob(session)
-        job.progress('Started...')
-        print 'hi'
-        sleep(5)
-        job.progress('Finished!')
+    job = CurrentJob()
+    job.progress('Started...')
+    print 'hi'
+    sleep(5)
+    job.progress('Finished!')

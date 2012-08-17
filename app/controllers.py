@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # App level imports
 
-from app.core.database import Session
+from app.core.database import Db
 
 # Controllers
 # ===========
