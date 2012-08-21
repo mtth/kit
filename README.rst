@@ -28,11 +28,11 @@ Running the app
 
 Start the celery worker::
 
-    celery worker -A app -l info
+    python manage.py run_worker
 
 Start the app server (using Werkzeug)::
 
-    python run.py --debug
+    python manage.py run_server
 
 Optional steps
 --------------

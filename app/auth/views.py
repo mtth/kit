@@ -73,7 +73,7 @@ def catch_token():
     logger.debug('Access token is valid.')
     user_infos = c.get_user_info_from_token(token)
     logger.debug('Gathered user infos successfully.')
-    user = m.User.q.filter(
+    user = m.User.query.filter(
             m.User.email == user_infos['email']
     ).first()
     if user:

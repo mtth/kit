@@ -10,6 +10,7 @@
 <meta name='author' content=''>
 <link href='/static/assets/css/bootstrap.css' rel='stylesheet'>
 <link href='/static/assets/css/datatables.css' rel='stylesheet'>
+<link href='/static/assets/css/app.css' rel='stylesheet'>
 <link rel='icon' type='image/png' href='/static/assets/img/favicon.jpg'>
 <link rel='shortcut icon' href='/static/favicon.ico'>
 </head>
@@ -20,12 +21,23 @@
       <a class='brand' href='#'>[ apptastic ]</a>
       <div class='nav-collapse'>
         <ul class='nav pull-left'>
+
+{% block navbar %}
+
           <li class='active'><a href='{{ url_for("index") }}'>Home</a></li>
+
+{% endblock %}
+
         </ul>
         <ul class='nav pull-right'>
           <li>
             {% if current_user.is_authenticated() %}
-            <a href='{{ url_for("auth.sign_out") }}'>Sign out</a></li>
+            <li class='dropdown'>
+            <a href="#" class='dropdown-toggle' data-toggle='dropdown'>{{ current_user.email }} <b class='caret'></b></a>
+            <ul class='dropdown-menu'>
+              <li><a href="{{ url_for('auth.sign_out') }}">Sign out</a></li>
+            </ul>
+          </li>
             {% else %}
             <a href='{{ url_for("auth.sign_in") }}'>Sign in</a></li>
             {% endif %}
@@ -34,6 +46,11 @@
     </div>
   </div>
 </div>
+
+{% block subnavbar %}
+
+{% endblock %}
+
 <div class='container'>
 
 <div id='flashed_messages'>
@@ -58,6 +75,7 @@
       <a href='{{ url_for("jobs.index") }}'>Active</a>
     </p>
 </div>
+
 </div>
 <!-- Le javascript -->
 <!-- Placed at the end of the document so the pages load faster -->

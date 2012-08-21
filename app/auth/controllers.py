@@ -45,7 +45,7 @@ def load_user(user_email):
     Necessary for flask.login module.
     
     """
-    user = m.User.q.filter(
+    user = m.User.query.filter(
             m.User.email == user_email
     ).first()
     return user

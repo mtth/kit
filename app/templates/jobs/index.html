@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'jobs/base.html' %}
 
 {% block content %}
 
@@ -25,6 +25,15 @@
     </tr>
     {% endfor %}
   </tbody>
+  <tfoot>
+    <tr>
+      <th>Task name</th>
+      <th>Task kwargs</th>
+      <th>Start time</th>
+      <th>Runtime</th>
+      <th>Status</th>
+    </tr>
+  </tfoot>
 </table>
 
 {% endblock content %}
