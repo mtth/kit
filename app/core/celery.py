@@ -96,9 +96,9 @@ class CurrentJob(object):
         @celery.task()
         def do_something():
             job = CurrentJob()
-            job.context('This fantastic job just started...', 10)
             # do stuff
-            job.context('Success!')
+            job.context('This fantastic job is doing cool stuff...', 10)
+            # do some other great stuff
 
     """
 
@@ -117,15 +117,15 @@ class CurrentJob(object):
         """
         previous_context = self.job.context
         if previous_context != unicode(context):
-            context_start = self.job.statistics['last_context_update']
+            context_start = self.job.infos['last_context_update']
             context_end = time()
-            runtime_breakdown = self.job.statistics['runtime_breakdown']
+            runtime_breakdown = self.job.infos['runtime_breakdown']
             runtime_breakdown.append((
                     previous_context,
                     context_end - context_start
             ))
-            self.job.statistics['runtime_breakdown'] = runtime_breakdown
-            self.job.statistics['last_context_update'] = context_end
+            self.job.infos['runtime_breakdown'] = runtime_breakdown
+            self.job.infos['last_context_update'] = context_end
             self.job.context = context
         self.job.progress = progress
         if loglevel:

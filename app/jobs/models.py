@@ -37,8 +37,8 @@ class Job(Base, Jsonifiable, Loggable):
     state = Column(String(8), default='RUNNING')
     progress = Column(Integer, default=0)
     context = Column(Text, default='Started...')
-    parameters = Column(MutableDict.as_mutable(JSONEncodedDict))
-    statistics = Column(MutableDict.as_mutable(JSONEncodedDict))
+    _parameters = Column(MutableDict.as_mutable(JSONEncodedDict))
+    infos = Column(MutableDict.as_mutable(JSONEncodedDict))
 
     def __init__(self, task_id, task_name, parameters):
         self.id = task_id
@@ -46,7 +46,7 @@ class Job(Base, Jsonifiable, Loggable):
         self.start_time = datetime.now()
         self.context = 'Started...'
         self.parameters = parameters
-        self.statistics = {
+        self.infos = {
                 'runtime_breakdown': [],
                 'runtime_estimation': 0,
                 'last_context_update': time()
@@ -57,6 +57,14 @@ class Job(Base, Jsonifiable, Loggable):
         """To be extended to include the name and args, kwargs."""
         return '<Job id=%s>' % self.id
 
+    @property
+    def parameters(self):
+        return dict((k, v) for k, v in self._parameters.items() if v)
+
+    @parameters.setter
+    def parameters(self, value):
+        self._parameters = value
+
     def get_models(self):
         """Get the objects that are inputs to the task.
 
@@ -65,10 +73,7 @@ class Job(Base, Jsonifiable, Loggable):
         follows::
 
             kwargs = {
-                    'ModelClass' : {
-                            'primary_key_one': primary_key_one_value,
-                            # ...
-                    },
+                    'ModelClass': primary_key,
                     # ...
             }
 

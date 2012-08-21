@@ -10,7 +10,7 @@
       <th>Start time</th>
       <th>Task name</th>
       <th>Task parameters</th>
-      <th>Statistics</th>
+      <th>Infos</th>
       <th>Runtime</th>
       <th>Status</th>
     </tr>
@@ -21,21 +21,12 @@
       <td>{{ job.start_time }}</td>
       <td>{{ job.name }}</td>
       <td>{{ job.parameters }}</td>
-      <td>{{ job.statistics }}</td>
+      <td>{{ job.infos }}</td>
       <td>{{ job.runtime }}</td>
       <td>{{ job.state }}</td>
     </tr>
     {% endfor %}
   </tbody>
-  <tfoot>
-    <tr>
-      <th>Start time</th>
-      <th>Task name</th>
-      <th>Task parameters</th>
-      <th>Runtime</th>
-      <th>Status</th>
-    </tr>
-  </tfoot>
 </table>
 
 {% endblock content %}

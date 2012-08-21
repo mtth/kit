@@ -23,9 +23,17 @@ bp = Blueprint(
 )
 
 @bp.route('/')
-@login_required
 def index():
     """Job history page."""
     logger.info('Visited job page!')
     jobs = m.Job.query.all()
     return render_template('jobs/index.html', jobs=jobs)
+
+@bp.route('/active')
+@login_required
+def active():
+    """Active jobs."""
+    logger.info('Visited job page!')
+    jobs = m.Job.query.all()
+    return render_template('jobs/index.html', jobs=jobs)
+
