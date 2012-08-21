@@ -16,11 +16,10 @@ bp = Blueprint(
         'jobs',
         __name__,
         url_prefix='/jobs',
-        template_folder='jobs'
 )
 
 @bp.route('/')
 def index():
     """Job history page."""
     logger.info('Visited job page!')
-    return render_template('jobs.html')
+    return render_template('jobs/index.html')

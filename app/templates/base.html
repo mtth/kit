@@ -9,7 +9,7 @@
 <meta name='description' content=''>
 <meta name='author' content=''>
 <link href='/static/assets/css/bootstrap.css' rel='stylesheet'>
-<link href='/static/assets/css/tablesorter.css' rel='stylesheet'>
+<link href='/static/assets/css/datatables.css' rel='stylesheet'>
 <link rel='icon' type='image/png' href='/static/assets/img/favicon.jpg'>
 <link rel='shortcut icon' href='/static/favicon.ico'>
 </head>
@@ -51,18 +51,18 @@
 
 <div id='footer'>
     <p class='pull-left'>
-      Questions? <a href='mailto:monsch@mit.edu'>email me!</a>
+      Powered by Flask, Celery, Bootstrap and tap water.
     </p>
     <p class='pull-right'>
-      <a href='{{ url_for("jobs.index") }}'>Active Jobs</a> ::
-      <a href='{{ url_for("jobs.index") }}'>Jobs</a>
+      <a href='{{ url_for("jobs.index") }}'>Jobs</a> |
+      <a href='{{ url_for("jobs.index") }}'>Active</a>
     </p>
 </div>
 </div>
 <!-- Le javascript -->
 <!-- Placed at the end of the document so the pages load faster -->
 <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js'></script>
-<script src='/static/assets/js/jquery.tablesorter.js'></script>
+<script src='/static/assets/js/datatables.js'></script>
 <script src='/static/assets/js/bootstrap.js'></script>
 <script src='/static/assets/js/app.js'></script>
 </body>

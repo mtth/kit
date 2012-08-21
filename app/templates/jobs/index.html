@@ -4,7 +4,7 @@
 
 <h1>Jobs</h1>
 
-<table class='table table-condensed tablesorter'>
+<table class='table table-condensed datatable'>
   <thead>
     <tr>
       <th>Task name</th>
@@ -22,10 +22,6 @@
       <td>{{ job.start_time }}</td>
       <td>{{ job.runtime }}</td>
       <td>{{ job.state }}</td>
-    </tr>
-    {% else %}
-    <tr>
-      <td colspan='5'>No jobs here yet.</td>
     </tr>
     {% endfor %}
   </tbody>

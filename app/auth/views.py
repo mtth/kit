@@ -25,7 +25,6 @@ bp = Blueprint(
         'auth',
         __name__,
         url_prefix='/auth',
-        template_folder='../templates/auth'
 )
 
 # Handlers
@@ -40,7 +39,7 @@ def sign_in():
 
     """
     values = {'sign_in_url': c.get_google_login_url()}
-    return render_template('sign_in.html', **values)
+    return render_template('auth/sign_in.html', **values)
 
 @bp.route('/oauth2callback')
 def oauth2callback():

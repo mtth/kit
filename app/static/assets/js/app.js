@@ -1,5 +1,5 @@
 $(function() {
-    $('.tablesorter').each(function() {
-        $(this).tablesorter();
+    $('.datatable').each(function() {
+        $(this).dataTable();
     });
 });
