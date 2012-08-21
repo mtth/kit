@@ -16,6 +16,12 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 # Helpers
 # =======
 
+class ConversionError(Exception):
+
+    """Thrown when a row can't be parsed."""
+
+    pass
+
 def convert(value, return_type):
     """Converts a string to another builtin type."""
     if return_type == 'int':
@@ -28,11 +34,13 @@ def convert(value, return_type):
         elif not value or value.lower() == 'false' or value == '0':
             return False
         else:
-            raise Exception('Can\'t convert %s to boolean.' % value)
+            raise ConversionError('Can\'t convert %s to boolean.' % value)
     elif return_type == 'unicode':
         return unicode(value, encoding='utf-8', errors='replace')
-    else:
+    elif return_type == 'str':
         return value
+    # if we get here, something has gone wrong
+    raise ConversionError('Invalid conversion type: %s' % return_type)
 
 def exponential_smoothing(data, alpha=0.5):
     """Helper function for smoothing data.
@@ -137,7 +145,7 @@ def histogram(
 # Classes
 # -------
 
-class UnicodeDictReader(object):
+class SmartDictReader(DictReader):
 
     """Helper for importing .csv files.
 
@@ -149,29 +157,54 @@ class UnicodeDictReader(object):
     Some csv files have unicode data which raises errors. This helper function
     automatically replaces non-ascii characters.
 
+    Interesting values for kwargs can be:
+    *   delimiter = '\t'
+    *   quotechar = '\x07'
+
     """
 
-    def __init__(self, csvfile, fields, **kwargs):
+    def __init__(self, csvfile, fields, silent=True, **kwargs):
+        self.csvfile = csvfile
+        self.n_imports = 0
+        self.n_errors = 0
+        self.silent = silent
         kwargs['fieldnames'] = [field[0] for field in fields]
-        fieldtypes = dict(fields)
-        fieldtypes['extra'] = 'list'
-        reader = DictReader(
-                csvfile,
-                delimiter='\t',
-                quotechar='\x07',   # Hack for silly chars
-                **kwargs
-        )
-        for row in reader:
+        self.fieldtypes = dict(fields)
+        DictReader.__init__(self, csvfile, **kwargs)
+
+    def next(self):
+        try:
+            row = DictReader.next(self)
+        except StopIteration:
+            if self.n_errors:
+                logger.warn('%s: %s rows imported, %s errors.' % (
+                        self.csvfile.name,
+                        self.n_imports,
+                        self.n_errors
+                ))
+            else:
+                logger.info('%s: %s rows imported.' % (
+                        self.csvfile.name,
+                        self.n_imports
+                ))
+            raise StopIteration
+        else:
             try:
                 processed_row = dict(
-                        (key, convert(value, fieldtypes[key]))
+                        (key, convert(value, self.fieldtypes[key]))
                         for key, value in row.iteritems()
-                        if fieldtypes[key]
+                        if self.fieldtypes[key]
                 )
-            except Exception as e:
-                print 'The misbehaving row: %s' % row
-                raise e
-            yield processed_row
+            except (ValueError, ConversionError) as e:
+                logger.error(
+                        'Row processing error: %s. Full row: %s' % (e, row)
+                )
+                self.n_errors += 1
+                if not self.silent:
+                    raise
+            else:
+                self.n_imports += 1
+                return processed_row
 
 class Jsonifiable(object):
 
@@ -186,9 +219,9 @@ class Jsonifiable(object):
         :rtype: Dict or dict
 
         """
-        try:
+        if isinstance(self, dict):
             d = dict(self)
-        except:
+        else:
             d = {}
         cls = self.__class__
         varnames = [
