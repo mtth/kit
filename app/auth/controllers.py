@@ -30,9 +30,9 @@ import models as m
 
 login_manager = LoginManager()
 
-login_manager.login_view = '/sign_in'
+login_manager.login_view = '/auth/sign_in'
 login_manager.login_message = ("A little bird tells me you have to sign in"
-                               " before coming here.")
+                               " before going there.")
 
 @login_manager.user_loader
 def load_user(user_email):

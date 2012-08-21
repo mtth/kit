@@ -56,7 +56,7 @@ class Db(object):
         self.session.remove()
 
     @classmethod
-    def initialize(cls, app, **kwrds):
+    def initialize(cls, app=None, **kwrds):
         """Initialize database connection."""
         if cls.debug:
             engine = create_engine(

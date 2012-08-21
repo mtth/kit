@@ -21,7 +21,7 @@ from app.core.database import Db
 @celery.task()
 def do_something():
     job = CurrentJob()
-    job.progress('Started...')
+    job.context('Started...')
     print 'hi'
     sleep(5)
-    job.progress('Finished!')
+    job.context('Finished!')

@@ -7,9 +7,9 @@
 <table class='table table-condensed datatable'>
   <thead>
     <tr>
-      <th>Task name</th>
-      <th>Task kwargs</th>
       <th>Start time</th>
+      <th>Task name</th>
+      <th>Task parameters</th>
       <th>Runtime</th>
       <th>Status</th>
     </tr>
@@ -17,9 +17,9 @@
   <tbody>
     {% for job in jobs %}
     <tr>
-      <td>{{ job.task_name }}</td>
-      <td>{{ job.kwargs }}</td>
       <td>{{ job.start_time }}</td>
+      <td>{{ job.name }}</td>
+      <td>{{ job.parameters }}</td>
       <td>{{ job.runtime }}</td>
       <td>{{ job.state }}</td>
     </tr>
@@ -27,9 +27,9 @@
   </tbody>
   <tfoot>
     <tr>
-      <th>Task name</th>
-      <th>Task kwargs</th>
       <th>Start time</th>
+      <th>Task name</th>
+      <th>Task parameters</th>
       <th>Runtime</th>
       <th>Status</th>
     </tr>

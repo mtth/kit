@@ -65,7 +65,7 @@ def task_prerun_handler(task_id, task, args, kwargs, **kwrds):
 def task_failure_handler(task_id, exception, args, kwargs, traceback,
         einfo, **kwrds):
     """Called if task failed."""
-    job = Job.q.filter(Job.id == task_id).first()
+    job = Job.query.get(task_id)
     job.context = traceback
     Db.session.add(job)
     Db.session.commit()
@@ -73,9 +73,7 @@ def task_failure_handler(task_id, exception, args, kwargs, traceback,
 @task_postrun.connect
 def task_postrun_handler(task_id, task, args, kwargs, retval, state, **kwrds):
     """Called last after a task terminates (successfully or not)."""
-    job = Job.q.filter(
-            Job.id == task_id
-    ).first()
+    job = Job.query.get(task_id)
     job.end_time = datetime.now()
     job.state = state
     Db.session.add(job)
@@ -102,9 +100,7 @@ class CurrentJob(object):
 
     def __init__(self):
         self.task = current_task
-        self.job = Job.q.filter(
-                Job.id == self.task.request.id
-        ).first()
+        self.job = Job.query.get(self.task.request.id)
         self.context_start = datetime.now()
 
     def context(self, context, progress=100, loglevel='info'):
@@ -119,10 +115,11 @@ class CurrentJob(object):
         previous_context = self.job.context
         if previous_context != unicode(context):
             runtime_breakdown = self.job.statistics['runtime_breakdown']
-            runtime_breakdown.append(
+            runtime_breakdown.append((
                     previous_context,
                     (datetime.now() - self.context_start).seconds
-            )
+            ))
+            self.job.statistics['runtime_breakdown'] = runtime_breakdown
             self.job.context = context
             self.context_start = datetime.now()
         self.job.progress = progress
