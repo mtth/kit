@@ -52,7 +52,7 @@ class Db(object):
     def __enter__(self):
         return self.session()
 
-    def __exit(self, type, value, traceback):
+    def __exit__(self, type, value, traceback):
         self.session.remove()
 
     @classmethod
@@ -70,7 +70,7 @@ class Db(object):
             )
         Base.metadata.create_all(engine, checkfirst=True)
         cls.session = scoped_session(sessionmaker(bind=engine))
-        Base.q = cls.session.query_property()
+        Base.query = cls.session.query_property()
         if app:
             @app.teardown_request
             def teardown_request_handler(exception=None):
