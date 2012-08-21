@@ -10,9 +10,9 @@ from logging.config import dictConfig
 
 from celery import Celery, current_task
 from celery.signals import celeryd_init, task_failure, task_postrun, \
-task_prerun, worker_process_init, after_setup_logger
-
+task_prerun, task_success, worker_process_init, after_setup_logger
 from datetime import datetime
+from time import time
 
 # App level imports
 
@@ -65,18 +65,22 @@ def task_prerun_handler(task_id, task, args, kwargs, **kwrds):
 def task_failure_handler(task_id, exception, args, kwargs, traceback,
         einfo, **kwrds):
     """Called if task failed."""
-    job = Job.query.get(task_id)
-    job.context = traceback
-    Db.session.add(job)
-    Db.session.commit()
+    job = CurrentJob(task_id)
+    job.context(traceback)
+
+@task_success.connect
+def task_success_handler(result, **kwrds):
+    """Called if task succeeds."""
+    job = CurrentJob()
+    job.context('Success!')
 
 @task_postrun.connect
 def task_postrun_handler(task_id, task, args, kwargs, retval, state, **kwrds):
     """Called last after a task terminates (successfully or not)."""
-    job = Job.query.get(task_id)
-    job.end_time = datetime.now()
-    job.state = state
-    Db.session.add(job)
+    job = CurrentJob(task_id)
+    job.job.end_time = datetime.now()
+    job.job.state = state
+    Db.session.add(job.job)
     Db.session.commit()
     Db.dismantle()
 
@@ -98,10 +102,9 @@ class CurrentJob(object):
 
     """
 
-    def __init__(self):
-        self.task = current_task
-        self.job = Job.query.get(self.task.request.id)
-        self.context_start = datetime.now()
+    def __init__(self, task_id=None):
+        task_id = task_id or current_task.request.id
+        self.job = Job.query.get(task_id)
 
     def context(self, context, progress=100, loglevel='info'):
         """Method to update a job's progress.
@@ -114,14 +117,16 @@ class CurrentJob(object):
         """
         previous_context = self.job.context
         if previous_context != unicode(context):
+            context_start = self.job.statistics['last_context_update']
+            context_end = time()
             runtime_breakdown = self.job.statistics['runtime_breakdown']
             runtime_breakdown.append((
                     previous_context,
-                    (datetime.now() - self.context_start).seconds
+                    context_end - context_start
             ))
             self.job.statistics['runtime_breakdown'] = runtime_breakdown
+            self.job.statistics['last_context_update'] = context_end
             self.job.context = context
-            self.context_start = datetime.now()
         self.job.progress = progress
         if loglevel:
             action = getattr(self.job, loglevel)

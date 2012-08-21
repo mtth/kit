@@ -242,7 +242,7 @@ class JSONEncodedDict(TypeDecorator):
             value = loads(value)
         return value
 
-class Features(Mutable, dict):
+class MutableDict(Mutable, dict):
 
     """Used with JSONEncoded dict to be able to track updates.
 

@@ -12,10 +12,11 @@ logger = getLogger(__name__)
 
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, Text, Integer
+from time import time
 
 # App level imports
 
-from app.core.database import Base, Features, JSONEncodedDict
+from app.core.database import Base, MutableDict, JSONEncodedDict
 from app.core.util import Jsonifiable, Loggable
 
 # The models
@@ -36,17 +37,19 @@ class Job(Base, Jsonifiable, Loggable):
     state = Column(String(8), default='RUNNING')
     progress = Column(Integer, default=0)
     context = Column(Text, default='Started...')
-    parameters = Column(Features.as_mutable(JSONEncodedDict))
-    statistics = Column(Features.as_mutable(JSONEncodedDict))
+    parameters = Column(MutableDict.as_mutable(JSONEncodedDict))
+    statistics = Column(MutableDict.as_mutable(JSONEncodedDict))
 
     def __init__(self, task_id, task_name, parameters):
         self.id = task_id
         self.name = task_name
         self.start_time = datetime.now()
+        self.context = 'Started...'
         self.parameters = parameters
         self.statistics = {
                 'runtime_breakdown': [],
-                'runtime_estimation': 0
+                'runtime_estimation': 0,
+                'last_context_update': time()
         }
         self.debug('Created.')
 
