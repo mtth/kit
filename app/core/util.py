@@ -56,7 +56,7 @@ def histogram(
         bins=50,
         restrict=None,
         categories=None,
-        sorted=0,
+        order=0,
         expand=False
 ):
     """Returns a histogram of counts for the data.
@@ -73,9 +73,9 @@ def histogram(
             uniformly spread) or a list of increasing bin values. smaller
             values will be in the first bin, larger in the last one.
         :type bins: int or list(int)
-        :param sorted: 0 if data isn't sorted, 1 if sorted in ascending, -1 if
+        :param order: 0 if data isn't sorted, 1 if sorted in ascending, -1 if
             sorted in descending order.
-        :type sorted: string
+        :type order: string
 
     Possible extension: allow categories to return a list of keys, which would
     allow elements to be included in several counts.
@@ -84,10 +84,10 @@ def histogram(
     if isinstance(bins, int):
         n_bins = bins
         if not n_bins > 0: raise Exception("Number of bins must be > 0.")
-        if sorted == '1':
+        if order == '1':
             max_value = key(data[-1])
             min_value = key(data[0])
-        elif sorted == '-1':
+        elif order == '-1':
             max_value = key(data[0])
             min_value = key(data[-1])
         else:
@@ -365,7 +365,7 @@ class Dict(dict):
         items = []
         for key, value in dic.iteritems():
             k = prefix + sep + key if prefix else key
-            if isinstance(value, dict):
+            if isinstance(value, dict) and value:
                 items.extend(cls.flatten(value, sep, k).items())
             else:
                 items.append((k, value))
