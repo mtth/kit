@@ -24,3 +24,6 @@ $(function() {
         });
     });
 });
+
+var job_index = function () {
+}
