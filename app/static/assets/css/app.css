@@ -3,9 +3,17 @@
     overflow: auto;
 }
 
+.details_expander {
+    cursor: pointer;
+    cursor: hand;
+}
 .details {
     background-color: #fff;
+    border: 1px solid #ccc;
 }
-.details:hover {
-    background-color: #fff;
+.details > dl {
+    padding-right: 30px;
+}
+.subnavbar {
+    margin-top: 40px;
 }

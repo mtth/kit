@@ -59,11 +59,38 @@ class Job(Base, Jsonifiable, Loggable):
 
     @property
     def parameters(self):
-        return dict((k, v) for k, v in self._parameters.items() if v)
+        params = self._parameters
+        rv = ', '.join([str(v) for v in params['args']])
+        rv += ', ' if rv else ''
+        for k, v in params['kwargs']:
+            rv += '%s=%s, ' % (k, v)
+        return rv
 
     @parameters.setter
     def parameters(self, value):
         self._parameters = value
+
+    @property
+    def started(self):
+        delta = datetime.now() - self.start_time
+        if delta.days > 1:
+            return '%s days ago' % delta.days
+        elif delta.days == 1:
+            return 'Yesterday'
+        else:
+            hours = delta.seconds / 3600
+            if hours > 1:
+                return '%s hours ago' % hours
+            elif hours == 1:
+                return '1 hour ago'
+            else:
+                minutes = (delta.seconds - hours * 3600) / 60
+                if minutes > 1:
+                    return '%s minutes ago' % minutes
+                elif minutes == 1:
+                    return '1 minute ago'
+                else:
+                    return 'Just now'
 
     def get_models(self):
         """Get the objects that are inputs to the task.
