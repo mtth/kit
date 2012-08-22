@@ -13,14 +13,23 @@ from datetime import datetime
 from functools import partial, wraps
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
-# Helpers
-# =======
+# Errors
+# ======
 
 class ConversionError(Exception):
 
     """Thrown when a row can't be parsed."""
 
     pass
+
+class APIError(Exception):
+
+    """Thrown when an API call is invalid."""
+
+    pass
+
+# Helpers
+# =======
 
 def convert(value, return_type):
     """Converts a string to another builtin type."""
@@ -233,7 +242,7 @@ class Jsonifiable(object):
             cls_value = getattr(cls, varname)
             if isinstance(cls_value, (property, InstrumentedAttribute)):
                 value = getattr(self, varname)
-                if isinstance(value, (dict, float, int, long, str)):
+                if isinstance(value, (dict, float, int, long, str, unicode)):
                     d[varname] = getattr(self, varname)
                 elif isinstance(value, datetime):
                     d[varname] = str(getattr(self, str(varname)))

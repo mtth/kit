@@ -4,19 +4,17 @@
 
 <h1>Jobs</h1>
 
-<table class='table table-condensed datatable'>
+<table id='jobs_table'>
   <thead>
     <tr>
       <th>Start time</th>
       <th>Task name</th>
-      <th>Task parameters</th>
-      <th>Infos</th>
       <th>Runtime</th>
       <th>Status</th>
     </tr>
   </thead>
   <tbody>
-    {% for job in jobs %}
+{#    {% for job in jobs %}
     <tr>
       <td>{{ job.start_time }}</td>
       <td>{{ job.name }}</td>
@@ -25,7 +23,7 @@
       <td>{{ job.runtime }}</td>
       <td>{{ job.state }}</td>
     </tr>
-    {% endfor %}
+    {% endfor %} #}
   </tbody>
 </table>
 

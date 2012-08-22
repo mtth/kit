@@ -1,3 +1,11 @@
 #footer {
     margin-top: 50px;
+    overflow: auto;
+}
+
+.details {
+    background-color: #fff;
+}
+.details:hover {
+    background-color: #fff;
 }

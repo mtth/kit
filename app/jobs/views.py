@@ -4,13 +4,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 # General imports
-
-from flask import abort, Blueprint, flash, redirect, request, \
-render_template, url_for
+from flask import abort, Blueprint, flash, jsonify, make_response, redirect,\
+request, render_template, url_for
 from flask.ext.login import login_required
 
-# Blueprint imports
+# App imports
+from app.core.util import APIError
 
+# Blueprint imports
+import controllers as c
 import models as m
 
 # Creating the Blueprint
@@ -37,3 +39,21 @@ def active():
     jobs = m.Job.query.all()
     return render_template('jobs/index.html', jobs=jobs)
 
+@bp.route('/lookup')
+def lookup():
+    """Information retrieval hook."""
+    try:
+        result = c.lookup(**request.args)
+        status = 'Success!'
+    except APIError as e:
+        status = 'Invalid request: %s.' % e
+        result = ''
+    response = make_response(jsonify({
+            'status': status,
+            'query': request.args,
+            'result': result
+    }))
+    # For external API calls
+    response.headers['Access-Control-Allow-Origin'] = 'http://nncsts.com'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    return response
