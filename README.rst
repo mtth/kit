@@ -9,10 +9,10 @@ Template to get a Flask_ webapp running out of the box. The package comes with a
 Feature highlights
 ------------------
 
-*   Database setup is built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is supported. A few helper classes and methods are also provided: dictionary column, custom queries, pagination.
+*   Database setup built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is supported. A few helper classes and methods are also provided: dictionary column, custom queries, pagination.
 *   Job tracking for Celery tasks.
-*   User authentication using Google Auth is available. Using it only requires registering the app on the Google Auth website.
-*   The Datatables_ javascript module is also used to easily integrate interactive tables.
+*   User authentication using Google Auth (requires registering the app on the Google Auth website).
+*   Datatables_ javascript module included for easy integration of interactive tables.
 *   Sleek Bootstrap_ and Jinja_ (from Flask) templating.
 
 Installation
