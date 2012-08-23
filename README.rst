@@ -4,14 +4,16 @@ Flask App Template
 About
 -----
 
-Template to get a Flask_ webapp running out of the box. The package comes with a functional Celery_ backend. The Datatables_ javascript module is also used to easily integrate interactive tables.
+Template to get a Flask_ webapp running out of the box. The package comes with a functional Celery_ backend.
 
 Feature highlights
 ------------------
 
-*   Database setup is built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is also supported. A few helper classes and methods are also provided: dictionary column, custom queries, pagination.
+*   Database setup is built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is supported. A few helper classes and methods are also provided: dictionary column, custom queries, pagination.
 *   Job tracking for Celery tasks.
 *   User authentication using Google Auth is available. Using it only requires registering the app on the Google Auth website.
+*   The Datatables_ javascript module is also used to easily integrate interactive tables.
+*   Sleek Bootstrap_ and Jinja_ (from Flask) templating.
 
 Installation
 ------------
@@ -92,5 +94,5 @@ Sources
 .. _Jinja: http://jinja.pocoo.org/docs/
 .. _Celery: http://docs.celeryproject.org/en/latest/index.html
 .. _Datatables: http://datatables.net/examples/
-.. _SQLAchemy: http://docs.sqlalchemy.org/en/rel_0_7/orm/tutorial.html
+.. _SQLAlchemy: http://docs.sqlalchemy.org/en/rel_0_7/orm/tutorial.html
 .. _MySQL: http://dev.mysql.com/doc/
