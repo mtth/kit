@@ -233,14 +233,10 @@ class JSONEncodedDict(TypeDecorator):
     impl = Text
 
     def process_bind_param(self, value, dialect):
-        if value is not None:
-            value = dumps(value)
-        return value
+        return dumps(value) if value else {}
 
     def process_result_value(self, value, dialect):
-        if value is not None:
-            value = loads(value)
-        return value
+        return loads(value) if value else {}
 
 class MutableDict(Mutable, dict):
 
@@ -277,3 +273,5 @@ class MutableDict(Mutable, dict):
         dict.__delitem__(self, key)
         self.changed()
         
+# Attach the mutation listeners to the JSONEncodedDict class globally
+MutableDict.associate_with(JSONEncodedDict)

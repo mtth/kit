@@ -1,6 +1,11 @@
 Flask App Template
 ==================
 
+About
+-----
+
+Template to get a Flask_ webapp running out of the box. The package comes with a functional Celery_ backend. The Datatables_ javascript module is also used to easily integrate interactive tables.
+
 Requirements
 ------------
 
@@ -69,3 +74,14 @@ Sources
 
 *   http://redis.io/topics/quickstart
 *   http://naleid.com/blog/2011/03/05/running-redis-as-a-user-daemon-on-osx-with-launchd/
+
+*   http://infinitemonkeycorps.net/docs/pph/
+*   https://google-developers.appspot.com/chart/interactive/docs/index
+*   http://codemirror.net/
+*   http://networkx.lanl.gov/index.html
+
+.. _Bootstrap: http://twitter.github.com/bootstrap/index.html
+.. _Flask: http://flask.pocoo.org/docs/api/
+.. _Jinja: http://jinja.pocoo.org/docs/
+.. _Celery: http://docs.celeryproject.org/en/latest/index.html
+.. _Datatables: http://datatables.net/examples/

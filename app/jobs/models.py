@@ -11,12 +11,13 @@ logger = getLogger(__name__)
 # General imports
 
 from datetime import datetime
+from flask import url_for
 from sqlalchemy import Column, String, DateTime, Text, Integer
 from time import time
 
 # App level imports
 
-from app.core.database import Base, MutableDict, JSONEncodedDict
+from app.core.database import Base, JSONEncodedDict
 from app.core.util import Jsonifiable, Loggable
 
 # The models
@@ -37,8 +38,8 @@ class Job(Base, Jsonifiable, Loggable):
     state = Column(String(8), default='RUNNING')
     progress = Column(Integer, default=0)
     context = Column(Text, default='Started...')
-    _parameters = Column(MutableDict.as_mutable(JSONEncodedDict))
-    infos = Column(MutableDict.as_mutable(JSONEncodedDict))
+    _parameters = Column(JSONEncodedDict)
+    infos = Column(JSONEncodedDict)
 
     def __init__(self, task_id, task_name, parameters):
         self.id = task_id
@@ -48,69 +49,36 @@ class Job(Base, Jsonifiable, Loggable):
         self.parameters = parameters
         self.infos = {
                 'runtime_breakdown': [],
-                'runtime_estimation': 0,
                 'last_context_update': time()
         }
         self.debug('Created.')
 
     def __repr__(self):
-        """To be extended to include the name and args, kwargs."""
+        """To be extended to include the name and args, kwargs. Maybe."""
         return '<Job id=%s>' % self.id
 
     @property
     def parameters(self):
+        """We do some formatting before outputting the parameters here."""
         params = self._parameters
         rv = ', '.join([str(v) for v in params['args']])
         rv += ', ' if rv else ''
-        for k, v in params['kwargs']:
-            rv += '%s=%s, ' % (k, v)
+        rv += ', '.join('%s=%s' % (k,v) for k, v in params['kwargs'])
         return rv
 
     @parameters.setter
     def parameters(self, value):
+        """Setter for parameters."""
         self._parameters = value
-
-    @property
-    def started(self):
-        delta = datetime.now() - self.start_time
-        if delta.days > 1:
-            return '%s days ago' % delta.days
-        elif delta.days == 1:
-            return 'Yesterday'
-        else:
-            hours = delta.seconds / 3600
-            if hours > 1:
-                return '%s hours ago' % hours
-            elif hours == 1:
-                return '1 hour ago'
-            else:
-                minutes = (delta.seconds - hours * 3600) / 60
-                if minutes > 1:
-                    return '%s minutes ago' % minutes
-                elif minutes == 1:
-                    return '1 minute ago'
-                else:
-                    return 'Just now'
-
-    def get_models(self):
-        """Get the objects that are inputs to the task.
-
-        This uses a particular structure for calling tasks: kwargs are reserved
-        for arguments that represent models classes and they must be called as
-        follows::
-
-            kwargs = {
-                    'ModelClass': primary_key,
-                    # ...
-            }
-
-        """
-        pass
 
     @property
     def runtime(self):
         """Current job runtime."""
-        if self.end_time:
-            return (self.end_time - self.start_time).seconds
-        else:
-            return (datetime.now() - self.start_time).seconds
+        end = self.end_time if self.end_time else datetime.now()
+        delta = end - self.start_time
+        return delta.seconds + float(delta.microseconds) / 1e6
+
+    @property
+    def url(self):
+        """Url for job page."""
+        return url_for('.job', job_id=self.id)

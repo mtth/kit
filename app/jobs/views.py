@@ -39,6 +39,10 @@ def active():
     jobs = m.Job.query.all()
     return render_template('jobs/index.html', jobs=jobs)
 
+@bp.route('/job/<job_id>')
+def job(job_id):
+    return redirect(url_for('index'))
+
 @bp.route('/lookup')
 def lookup():
     """Information retrieval hook."""

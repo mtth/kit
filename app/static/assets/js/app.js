@@ -99,10 +99,21 @@ var activate_table = function(table_id, options, data) {
     }
 }
 
-var labelize = function(container) {
+var labelize = function(row) {
     var c = $(container);
     var html = c.html();
     c.html('<span class="label">' + html + '</span>');
+}
+
+var post_process = function(row) {
+    // find td elemends which require editing
+    var columns = $(row).children('[special]');
+    for (var i in columns) {
+        var td = $(columns[i]);
+        if (td.attr('special') === 'urlize') {
+            td;
+        }
+    }
 }
 
 var job_index = function () {
