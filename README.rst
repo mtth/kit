@@ -31,7 +31,7 @@ Python modules::
     pip install flask-login
     pip install redis
 
-Redis::
+If you are planning on using the Celery backend, and don't yet have Redis, here is how to install it::
 
     curl -O http://download.redis.io/redis-stable.tar.gz
     tar xvzf redis-stable.tar.gz
@@ -41,7 +41,7 @@ Redis::
     sudo cp redis-server /usr/local/bin/
     sudo cp redis-cli /usr/local/bin/
 
-Enter your Google OAuth credentials in ``app/config/flask.py``.
+That's it!
 
 Running the app
 ---------------
@@ -53,6 +53,10 @@ Start the celery worker::
 Start the app server (using Werkzeug)::
 
     python manage.py run_server
+
+.. note::
+
+    Use the ``-d`` flag in each of the previous commands to run it in debug mode.
 
 Optional steps
 --------------
@@ -104,4 +108,4 @@ Sources
 .. _MySQL: http://dev.mysql.com/doc/
 .. _`Google API console`: https://code.google.com/apis/console
 .. _jQuery: http://jquery.com/
-.. _jQuery-ui: http://jqueryui.com/
+.. _`jQuery UI`: http://jqueryui.com/
