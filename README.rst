@@ -9,11 +9,15 @@ Template to get a Flask_ webapp running out of the box. The package comes with a
 Feature highlights
 ------------------
 
-*   Database setup built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is supported. A few helper classes and methods are also provided: dictionary column, custom queries, pagination.
+*   Database setup built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is supported. A few helper classes and methods are also provided: dictionary column, property caching, custom queries, pagination.
 *   Job tracking for Celery tasks.
 *   User authentication using Google Auth (requires registering the app on the `Google API console`_).
 *   Datatables_ javascript module included for easy integration of interactive tables.
 *   Sleek Bootstrap_ and Jinja_ (from Flask) templating.
+
+Coming soon:
+
+*   Automatic scheduled cache refresh using Celery
 
 Installation
 ------------
@@ -37,7 +41,7 @@ Redis::
     sudo cp redis-server /usr/local/bin/
     sudo cp redis-cli /usr/local/bin/
 
-Enter your Google OAuth credentials in `app/config/flask.py`.
+Enter your Google OAuth credentials in ``app/config/flask.py``.
 
 Running the app
 ---------------
