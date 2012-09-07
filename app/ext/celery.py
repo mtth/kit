@@ -17,8 +17,8 @@ from time import time
 # App level imports
 
 from app.config.logging import DEBUG_LOGGER_CONFIG, LOGGER_CONFIG
-from app.core.database import Db
-from app.jobs.models import Job
+from app.ext.database import Db
+from app.core.models import Job
 
 # Celery instantiation
 # ====================
@@ -104,7 +104,7 @@ class CurrentJob(object):
 
     def __init__(self, task_id=None):
         task_id = task_id or current_task.request.id
-        self.job = Job.query.get(task_id)
+        self.job = Job.query.filter(Job.task_id == task_id).one()
 
     def context(self, context, progress=100, loglevel='info'):
         """Method to update a job's progress.

@@ -1,10 +1,8 @@
-{% import 'macros.html' as macros %}
-
 <!DOCTYPE html>
 <html lang='en'>
 <head>
 <meta charset='utf-8'>
-<title>apptastic</title>
+<title>Hello World!</title>
 <meta name='viewport' content='width=device-width, initial-scale=1.0'>
 <meta name='description' content=''>
 <meta name='author' content=''>
@@ -18,7 +16,7 @@
 <div class='navbar navbar-fixed-top navbar-inverse'>
   <div class='navbar-inner'>
     <div class='container'>
-      <a class='brand' href='#'>[ apptastic ]</a>
+      <a class='brand' href='#'>[ fat ]</a>
       <div class='nav-collapse'>
         <ul class='nav pull-left'>
 
@@ -35,11 +33,11 @@
             <li class='dropdown'>
             <a href="#" class='dropdown-toggle' data-toggle='dropdown'>{{ current_user.email }} <b class='caret'></b></a>
             <ul class='dropdown-menu'>
-              <li><a href="{{ url_for('auth.sign_out') }}">Sign out</a></li>
+              <li><a href="{{ url_for('core.sign_out') }}">Sign out</a></li>
             </ul>
           </li>
             {% else %}
-            <a href='{{ url_for("auth.sign_in") }}'>Sign in</a></li>
+            <a href='{{ url_for("core.sign_in") }}'>Sign in</a></li>
             {% endif %}
         </ul>
       </div>
@@ -68,12 +66,7 @@
 
 <div id='footer'>
     <p class='pull-left'>
-      Powered by Flask, Celery, Bootstrap and tap water.
-    </p>
-    <p class='pull-right'>
-      <a href='{{ url_for("test") }}'>Test</a> |
-      <a href='{{ url_for("jobs.index") }}'>Jobs</a> |
-      <a href='{{ url_for("jobs.index") }}'>Active</a>
+      Made with healthy <a href="https://github.com/mtth/flask">fat</a>
     </p>
 </div>
 

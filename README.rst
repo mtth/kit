@@ -12,7 +12,7 @@ Feature highlights
 *   Database setup built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is supported. A few helper classes and methods are also provided: dictionary column, property caching, custom queries, pagination.
 *   Job tracking for Celery tasks.
 *   User authentication using Google Auth (requires registering the app on the `Google API console`_).
-*   Datatables_ javascript module included for easy integration of interactive tables.
+*   Datatables_ plugin for easy integration of interactive tables. jQuery_ and `jQuery UI`_ are also included.
 *   Sleek Bootstrap_ and Jinja_ (from Flask) templating.
 
 Coming soon:
@@ -103,3 +103,5 @@ Sources
 .. _SQLAlchemy: http://docs.sqlalchemy.org/en/rel_0_7/orm/tutorial.html
 .. _MySQL: http://dev.mysql.com/doc/
 .. _`Google API console`: https://code.google.com/apis/console
+.. _jQuery: http://jquery.com/
+.. _jQuery-ui: http://jqueryui.com/

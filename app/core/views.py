@@ -11,7 +11,8 @@ render_template, url_for
 from flask.ext.login import login_user, logout_user, \
 current_user, login_required
 
-from app.core.database import Db
+from app.ext.database import Db
+from app.ext.util import APIError
 
 # Blueprint level imports
 
@@ -22,9 +23,8 @@ import models as m
 # ======================
 
 bp = Blueprint(
-        'auth',
-        __name__,
-        url_prefix='/auth',
+        'core',
+        __name__
 )
 
 # Handlers
@@ -39,7 +39,7 @@ def sign_in():
 
     """
     values = {'sign_in_url': c.get_google_login_url()}
-    return render_template('auth/sign_in.html', **values)
+    return render_template('core/sign_in.html', **values)
 
 @bp.route('/oauth2callback')
 def oauth2callback():
@@ -97,3 +97,29 @@ def sign_out():
     flash("You signed out successfully!", category='success')
     return redirect(url_for('index'))
 
+@bp.route('/jobs')
+@login_required
+def jobs():
+    """Jobs."""
+    logger.info('Visited job page!')
+    jobs = m.Job.query.all()
+    return render_template('core/index.html', jobs=jobs)
+
+@bp.route('/lookup')
+def lookup():
+    """Information retrieval hook."""
+    try:
+        result = c.lookup(**request.args)
+        status = 'Success!'
+    except APIError as e:
+        status = 'Invalid request: %s.' % e
+        result = ''
+    response = make_response(jsonify({
+            'status': status,
+            'query': request.args,
+            'result': result
+    }))
+    # For external API calls
+    response.headers['Access-Control-Allow-Origin'] = 'http://nncsts.com'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    return response

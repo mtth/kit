@@ -25,8 +25,8 @@ from subprocess import call
 from sys import modules
 
 from app import make_app
-from app.auth.models import User
-from app.core.database import Db
+from app.core.models import User
+from app.ext.database import Db
 
 # Creating the manager instance
 # =============================
@@ -52,7 +52,7 @@ def run_server(host, port):
     """Start the flask werkzeug server."""
     current_app.run(
             host=host,
-            port=port,
+            port=int(port),
             debug=current_app.debug
     )
 

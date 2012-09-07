@@ -5,23 +5,21 @@
 # Logger
 
 import logging
-
 logger = logging.getLogger(__name__)
 
 # General imports
 
 from flask import request
 from flask.ext.login import LoginManager
-
 from json import loads
-
 from urllib import urlencode
 from urllib2 import Request, urlopen
 
 # App level imports
 
-from app.config.flask import AuthConfig
-from app.core.database import Db
+from app.config.flask import AuthConfig, APPLICATION_ROOT_URL
+from app.ext.database import Db
+from app.ext.util import APIError
 
 import models as m
 
@@ -30,9 +28,8 @@ import models as m
 
 login_manager = LoginManager()
 
-login_manager.login_view = '/auth/sign_in'
-login_manager.login_message = ("A little bird tells me you have to sign in"
-                               " before going there.")
+login_manager.login_view = '/sign_in'
+login_manager.login_message = 'You need to sign in first.'
 
 @login_manager.user_loader
 def load_user(user_email):
@@ -50,8 +47,8 @@ def load_user(user_email):
     ).first()
     return user
 
-# Google API helpers
-# ==================
+# Google OAuth API helpers
+# ========================
 
 class OAuth(AuthConfig):
 
@@ -82,7 +79,7 @@ def get_params():
     else:
         state = '/'
     return {'scope': OAuth.SCOPES['email'],
-            'redirect_uri': OAuth.REDIRECT_URI,
+            'redirect_uri': APPLICATION_ROOT_URL + '/oauth2callback',
             'response_type': OAuth.RESPONSE_TYPE,
             'state': state,
             'client_id': OAuth.CLIENT_ID}
@@ -125,3 +122,26 @@ def get_user_info_from_token(token):
     req = Request(url, headers=headers)
     res = loads(urlopen(req).read())
     return res
+
+# API
+# ===
+
+def lookup(**kwargs):
+    query_type = kwargs['q'][0]
+    if query_type == 'all_jobs':
+        jobs = m.Job.query.all()
+        return [job.jsonify() for job in jobs]
+    if query_type == 'active_jobs':
+        jobs = m.Job.query.filter(m.Job.state=='RUNNING').all()
+        return [job.jsonify() for job in jobs]
+    elif query_type == 'job_infos':
+        if 'job_id' in kwargs:
+            job = m.Job.query.get(kwargs['job_id'][0])
+            if job:
+                return job.jsonify()
+            else:
+                return 'No job found for this id.'
+        else:
+            raise APIError('job_infos query requires job_id parameter')
+    else:
+        raise APIError('Invalid query parameter: %s.' % query_type)

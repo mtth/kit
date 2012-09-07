@@ -6,12 +6,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 # General imports
-
 from collections import defaultdict
 from csv import DictReader
 from datetime import datetime
 from functools import partial, wraps
+from re import sub
 from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.orm.collections import InstrumentedList
 
 # Errors
 # ======
@@ -30,6 +31,10 @@ class APIError(Exception):
 
 # Helpers
 # =======
+
+def uncamelcase(name):
+    s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 def convert(value, return_type):
     """Converts a string to another builtin type."""
@@ -240,12 +245,23 @@ class Jsonifiable(object):
         ]
         for varname in varnames:
             cls_value = getattr(cls, varname)
-            if isinstance(cls_value, (property, InstrumentedAttribute)):
-                value = getattr(self, varname)
+            if isinstance(cls_value, (
+                    property,
+                    InstrumentedAttribute
+            )):
+                try:
+                    value = getattr(self, varname)
+                except AttributeError as e:
+                    logger.error('Can\'t read attribute %s: %s' % (varname, e))
+                    raise
                 if isinstance(value, (dict, float, int, long, str, unicode)):
                     d[varname] = getattr(self, varname)
                 elif isinstance(value, datetime):
-                    d[varname] = str(getattr(self, str(varname)))
+                    d[varname] = str(getattr(self, varname))
+                elif isinstance(value, InstrumentedList):
+                    d[varname] = ', '.join(
+                            str(e) for e in getattr(self, varname)
+                    )
                 elif not value:
                     d[varname] = None
                 else:
@@ -257,15 +273,16 @@ class Loggable(object):
 
     """To easily log stuff.
 
-    To be able to trace back the instance logged to where it is defined,
-    it is recommended to reassign the logger property in the children
-    classes.
+    This implements the main logging methods ('debug', 'info', 'warn', 'error')
+    directly on the class instance. For example, this allows something like::
+
+        instance.log('Some message.')
 
     """
 
-    logger = logger
-
     def _logger(self, message, loglevel):
+        if not hasattr(self, 'logger'):
+            self.logger = logging.getLogger(self.__module__)
         action = getattr(self.logger, loglevel)
         return action('%s :: %s' % (self, message))
 

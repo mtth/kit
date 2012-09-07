@@ -8,6 +8,7 @@ from os.path import abspath, dirname, join, pardir
 
 # Global variables
 
+APPLICATION_ROOT_URL = 'http://nncsts.com:8888'
 APPLICATION_FOLDER = abspath(join(dirname(__file__), pardir))
 
 # App configuration objects
@@ -32,4 +33,3 @@ class AuthConfig(object):
 
     CLIENT_ID = "727771047328-orosiiaun16cf0p6q8sfal3dema77hq4.apps.googleusercontent.com"
     CLIENT_SECRET = "kdZOow_-1502o-KC6SsgR5AE"
-    REDIRECT_URI = 'http://nncsts.com:5000/auth/oauth2callback'
