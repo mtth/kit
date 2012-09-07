@@ -21,10 +21,26 @@ Available options:
     *   infos               infos
     *   auto_width          activate max width
 
-AJAX table populating can also be activated by passing a third argument::
+AJAX table populating is equally easy. Let's imagine we want to display in a
+table the results of an API call (in our example, let's say we receive back a
+list of member objects and we want to display their member ID and name). We 
+simply pass in a third argument with the AJAX request URL and the columns we
+want to display::
 
-    data = source: '/lookup?q=something'
-    activate_table('the_table_id', null, data)
+    data = 
+        source: '/lookup?q=members'
+        columns:
+            Member ID:
+                key: 'id'
+            Name:
+                key: 'full_name'
+    options = []
+    activate_table('the_table_id', options, data)
+
+It is also possible to display toggable details for each row by specifying
+a details key on the data argument.
+
+Technical API:
 
 The data object must have the following attributes:
 
@@ -35,7 +51,7 @@ The data object must have the following attributes:
 Columns and details are objects where each attribute corresponds to a column /
 detail name and contains an object with the following attributes:
 
-For columsn and details:
+For columns and details:
 
     *   key                 attribute name in the AJAX response (for nested
                             properties, use 'level1.level2.prop' syntax)
@@ -48,15 +64,8 @@ The special object can have the following attributes:
 
     *   url                 the key of the url to which the column text will
                             be pointed to (attribute of row)
-    *   bar                 if used, the key must point to a list of tuples
-                            (text, integer)
     *   label               a function determining the class of the label to
                             apply (must return 'success', 'info', etc.)
-
-.. note::
-
-    The first letter of each option represents the type expected (b: boolean,
-    s: string, i: integer, ao: object).
 */
 
 
