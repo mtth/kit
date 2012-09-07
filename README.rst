@@ -54,9 +54,10 @@ Start the app server (using Werkzeug)::
 
     python manage.py run_server
 
-.. note::
+.. note:
 
-    Use the ``-d`` flag in each of the previous commands to run it in debug mode.
+    *   Use the ``-d`` flag in each of the previous commands to run it in debug mode.
+    *   A list of available commands by the manager is available by running ``python manage.py``
 
 Optional steps
 --------------
@@ -84,16 +85,11 @@ Optional steps
         </dict>
         </plist>
 
-*   Daemonizing the celery worker
-
-    TODO
-
 Sources
 -------
 
 *   http://redis.io/topics/quickstart
 *   http://naleid.com/blog/2011/03/05/running-redis-as-a-user-daemon-on-osx-with-launchd/
-
 *   http://infinitemonkeycorps.net/docs/pph/
 *   https://google-developers.appspot.com/chart/interactive/docs/index
 *   http://codemirror.net/
