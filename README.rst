@@ -14,8 +14,7 @@ Feature highlights
 Quickstart
 ----------
 
-* Installation
-  Clone this repo on your machine::
+* **Installation** Clone this repo on your machine::
 
     git clone git://github.com/mtth/flask.git
     cd flask
@@ -25,12 +24,12 @@ Quickstart
     pip install Flask-Script
     pip install SQLAlchemy
 
-* Running the app
-  Start the app server (using Werkzeug)::
+* **Running the app** Start the app server (using Werkzeug)::
 
     python manage.py run_server
 
   NB:
+
   * Append the ``-d`` flag to run the server in debug mode
   * A list of available commands by the manager is available by running ``python manage.py``
 
@@ -39,15 +38,13 @@ Optional steps
 
 * Using Google OAuth
 
-  * Setup
-    Python module requirements::
+  * **Setup** Python module requirements::
 
       pip install flask-login
 
     Inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE_CLIENT_ID`` and ``GOOGLE_CLIENT_SECRET``. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
 
-  * Usage
-    To restrict some pages to logged-in users, add the `login_required` to the corresponding view. E.g::
+  * **Usage** To restrict some pages to logged-in users, add the `login_required` to the corresponding view. E.g::
 
       @app.route('/some_url')
       @login_required
@@ -64,9 +61,7 @@ Optional steps
 
 * Using Celery
 
-  * Setup
-
-    Python module requirements::
+  * **Setup** Python module requirements::
 
       pip install Celery
       pip install redis
@@ -81,15 +76,13 @@ Optional steps
       sudo cp redis-server /usr/local/bin/
       sudo cp redis-cli /usr/local/bin/
 
-  * Usage
-
-    Run the following command to start the worker::
+  * **Usage** Run the following command to start the worker::
 
       python manage.py run_worker
 
     To learn how to create tasks and schedule them, please refer to the official Celery_ documentation.
 
-  * Optional extra steps
+  * **Optional extra steps**
 
     * Daemonizing redis on a mac
 
@@ -114,8 +107,7 @@ Optional steps
         </dict>
         </plist>
 
-Running the server on Apache
-**
+* Running the server on Apache
 
   Create a file called `run.wsgi` in the main directory with the following contents::
 
