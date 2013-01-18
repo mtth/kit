@@ -7,7 +7,7 @@ Feature highlights
 ------------------
 
 * Database interactions using SQLAlchemy_
-* User authentication using `Google OAuth 2.0`_
+* `User authentication using Google OAuth 2.0`_
 * Includes jQuery_ and Bootstrap_ CSS and JS libraries
 * Celery_ for scheduling and running long jobs
 
@@ -36,6 +36,8 @@ Quickstart
 Optional steps
 --------------
 
+.. _`User authentication using Google OAuth 2.0`:
+
 * Using Google OAuth
 
   * **Setup** Python module requirements::
@@ -51,7 +53,7 @@ Optional steps
       def some_protected_page():
         return render_templage('template.html')
 
-    At first, there are no authorized users, in order to authorize someone to log in, run the following command::
+    At first, there are no authorized users, in order to authorize someone to log in, run the following command and enter the email you want to authorize when prompted::
 
       python manage.py add_user
 
@@ -75,6 +77,8 @@ Optional steps
       make test
       sudo cp redis-server /usr/local/bin/
       sudo cp redis-cli /usr/local/bin/
+    
+    Finally, inside ``app/core/config.py``, set ``USE_CELERY = True``.
 
   * **Usage** Run the following command to start the worker::
 
