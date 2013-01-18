@@ -49,7 +49,7 @@ class BaseConfig(object):
   DEBUG = False
   LOGGER_NAME = 'app'
   SECRET_KEY = '\x81K\xfb4u\xddp\x1c>\xe2e\xeeI\xf2\xff\x16\x16\xf6\xf9D'
-  USE_X_SENDFILE = True
+  USE_X_SENDFILE = False
   TESTING = False
 
 class DebugConfig(BaseConfig):
