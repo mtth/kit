@@ -2,21 +2,14 @@
 
 """App factory module."""
 
-# Logger
 from logging import getLogger
 from logging.config import dictConfig
 
-# App level imports
-from app.config.celery import CeleryBaseConfig, CeleryDebugConfig
-from app.config.flask import BaseConfig, DebugConfig
-from app.config.logging import DEBUG_LOGGER_CONFIG, LOGGER_CONFIG
-from app.ext.celery import celery
-from app.ext.database import Db
-
-# Import the blueprint
 from app.core import initialize_bp as init_core_bp
-
-# Import the main app instance
+from app.core.celery import celery
+from app.core.config import CeleryBaseConfig, CeleryDebugConfig, \
+BaseConfig, DebugConfig, DEBUG_LOGGER_CONFIG, LOGGER_CONFIG
+from app.core.database import Db
 from app.views import app as the_app
 
 logger = getLogger(__name__)

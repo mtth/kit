@@ -6,19 +6,19 @@
 
 from __future__ import absolute_import
 
-from logging.config import dictConfig
-
 from celery import Celery, current_task
 from celery.signals import celeryd_init, task_failure, task_postrun, \
 task_prerun, task_success, worker_process_init, after_setup_logger
 from datetime import datetime
+from logging.config import dictConfig
+from sqlalchemy import Boolean, Column, DateTime, Integer, Unicode, String, Text
+from sqlalchemy.orm import backref, relationship
 from time import time
 
 # App level imports
 
-from app.config.logging import DEBUG_LOGGER_CONFIG, LOGGER_CONFIG
-from app.ext.database import Db
-from app.core.models import Job
+from app.core.config import DEBUG_LOGGER_CONFIG, LOGGER_CONFIG
+from app.core.database import Base, Db, JSONEncodedDict
 
 # Celery instantiation
 # ====================
@@ -133,3 +133,50 @@ class CurrentJob(object):
             action(context)
         Db.session.commit()
 
+# Model
+
+class Job(Base):
+
+    """Celery jobs."""
+
+    id = Column(Integer, primary_key=True)
+    task_id = Column(String(64), unique=True)
+    task_name = Column(String(64))
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    state = Column(String(16), default='RUNNING')
+    progress = Column(Integer, default=0)
+    context = Column(String(64), default='Started...')
+    parameters = Column(JSONEncodedDict)
+    infos = Column(JSONEncodedDict)
+
+    def __init__(self, task_id, task_name, parameters):
+        self.task_id = task_id
+        self.task_name = task_name
+        self.start_time = datetime.now()
+        self.parameters = parameters
+        self.infos = {
+                'runtime_breakdown': [],
+                'last_context_update': time()
+        }
+        self.debug('Created.')
+
+    def __repr__(self):
+        """To be extended to include the name and args, kwargs. Maybe."""
+        return '<Job id=%r>' % self.id
+
+    @property
+    def parameters_list(self):
+        """We do some formatting before outputting the parameters here."""
+        params = self.parameters
+        rv = ', '.join([str(v) for v in params['args']])
+        rv += ', ' if rv else ''
+        rv += ', '.join('%s=%s' % (k,v) for k, v in params['kwargs'])
+        return rv
+
+    @property
+    def runtime(self):
+        """Current job runtime."""
+        end = self.end_time if self.end_time else datetime.now()
+        delta = end - self.start_time
+        return delta.seconds + float(delta.microseconds) / 1e6

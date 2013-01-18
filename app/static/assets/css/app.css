@@ -1,19 +1,21 @@
-#footer {
-    margin-top: 50px;
-    overflow: auto;
+* {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -ms-box-sizing: border-box;
+  -o-box-sizing: border-box;
+  box-sizing: border-box;
 }
-
-.details_expander {
-    cursor: pointer;
-    cursor: hand;
+body {
+  padding-top: 80px;
 }
-.details {
-    background-color: #fff;
-    border: 1px solid #ccc;
+.clearfix:after {
+  visibility: hidden;
+  display: block;
+  font-size: 0;
+  content: " ";
+  clear: both;
+  height: 0;
 }
-.details > dl {
-    padding-right: 30px;
-}
-.subnavbar {
-    margin-top: 40px;
+.hidden {
+  display: none;
 }

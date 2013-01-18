@@ -85,6 +85,10 @@ Optional steps
         </dict>
         </plist>
 
+*   Run with Apache
+
+    TODO: write the run.wsgi file.
+
 Sources
 -------
 

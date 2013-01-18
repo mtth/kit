@@ -19,14 +19,12 @@ database connection at that moment. Pretty nifty and convenient.
 
 from flask import current_app
 from flask.ext.script import Manager, prompt, Shell
-
 from subprocess import call
-
 from sys import modules
 
 from app import make_app
-from app.core.models import User
-from app.ext.database import Db
+from app.core.auth import User
+from app.core.database import Db
 
 # Creating the manager instance
 # =============================

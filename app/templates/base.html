@@ -1,86 +1,51 @@
 <!DOCTYPE html>
 <html lang='en'>
-<head>
-<meta charset='utf-8'>
-<title>Hello World!</title>
-<meta name='viewport' content='width=device-width, initial-scale=1.0'>
-<meta name='description' content=''>
-<meta name='author' content=''>
-<link href='/static/assets/css/bootstrap.css' rel='stylesheet'>
-<link href='/static/assets/css/datatables.css' rel='stylesheet'>
-<link href='/static/assets/css/app.css' rel='stylesheet'>
-<link rel='icon' type='image/png' href='/static/assets/img/favicon.jpg'>
-<link rel='shortcut icon' href='/static/favicon.ico'>
-</head>
-<body>
-<div class='navbar navbar-fixed-top navbar-inverse'>
-  <div class='navbar-inner'>
-    <div class='container'>
-      <a class='brand' href='#'>[ fat ]</a>
-      <div class='nav-collapse'>
-        <ul class='nav pull-left'>
-
-{% block navbar %}
-
-          <li class='active'><a href='{{ url_for("index") }}'>Home</a></li>
-
-{% endblock %}
-
-        </ul>
-        <ul class='nav pull-right'>
-          <li>
-            {% if current_user.is_authenticated() %}
-            <li class='dropdown'>
-            <a href="#" class='dropdown-toggle' data-toggle='dropdown'>{{ current_user.email }} <b class='caret'></b></a>
-            <ul class='dropdown-menu'>
-              <li><a href="{{ url_for('core.sign_out') }}">Sign out</a></li>
-            </ul>
-          </li>
-            {% else %}
-            <a href='{{ url_for("core.sign_in") }}'>Sign in</a></li>
-            {% endif %}
-        </ul>
+  <head>
+    <meta charset='utf-8'>
+    <title>orage.in</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <meta name='description' content=''>
+    <meta name='author' content=''>
+    <link href='http://st.orage.in/css/bootstrap.css' rel='stylesheet'>
+    <link href='http://st.orage.in/css/bootstrap-responsive.css' rel='stylesheet'>
+    <link href='/static/assets/css/app.css' rel='stylesheet'>
+    <link href='http://st.orage.in/favicon.ico' rel='shortcut icon' type='image/x-icon'>
+  </head>
+  <body>
+    <div class='navbar navbar-fixed-top'>
+      <div class='navbar-inner'>
+        <div class='container'>
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class='brand' href='/'>orage.in</a>
+        </div>
       </div>
     </div>
-  </div>
-</div>
-
-{% block subnavbar %}
-
-{% endblock %}
-
-<div class='container'>
-
-<div id='flashed_messages'>
-  {% for category, message in get_flashed_messages(with_categories=True) %}
-  <div class='alert alert-{{ category }}'>
-    <a class="close" data-dismiss="alert" href="#">×</a>
-    <strong>{{ category | title }}:</strong> {{ message }}
-  </div>
-  {% endfor %}
-</div>
-
-{% block content %}
-
-{% endblock content %}
-
-<div id='footer'>
-    <p class='pull-left'>
-      Made with healthy <a href="https://github.com/mtth/flask">fat</a>
-    </p>
-</div>
-
-</div>
-<!-- Le javascript -->
-<!-- Placed at the end of the document so the pages load faster -->
-<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js'></script>
-<script src='/static/assets/js/datatables.js'></script>
-<script src='/static/assets/js/bootstrap.js'></script>
-<script src='/static/assets/js/app.js'></script>
-
-{% block scripts %}
-
-{% endblock %}
-
-</body>
+    <div class='container'>
+      <div class='page-content'>
+        <div id='flashed_messages'>
+          {% for category, message in get_flashed_messages(with_categories=True) %}
+            <div class='alert alert-{{ category }}'>
+              <a class="close" data-dismiss="alert" href="#">×</a>
+              <strong>{{ category | title }}:</strong> {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+        {% block content %}
+        {% endblock content %}
+      </div>
+      <div class='page-footer'>
+        <hr>
+        {% if current_user.is_authenticated() %}
+          <a href='{{ url_for("core.sign_out") }}'>Sign out</a>
+        {% endif %}
+      </div>
+    </div>
+    <script src='http://st.orage.in/js/jquery.js'></script>
+    <script src='http://st.orage.in/js/underscore.js'></script>
+    <script src='http://st.orage.in/js/backbone.js'></script>
+  </body>
 </html>
