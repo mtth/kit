@@ -4,100 +4,137 @@ Flask App Template
 About
 -----
 
-Template to get a Flask_ webapp running out of the box. The package comes with a functional Celery_ backend.
+Flask_ webapp template with optional Celery_ backend.
 
 Feature highlights
 ------------------
 
-*   Database setup built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is supported. A few helper classes and methods are also provided: dictionary column, property caching, custom queries, pagination.
-*   Job tracking for Celery tasks.
-*   User authentication using Google Auth (requires registering the app on the `Google API console`_).
-*   Datatables_ plugin for easy integration of interactive tables. jQuery_ and `jQuery UI`_ are also included.
-*   Sleek Bootstrap_ and Jinja_ (from Flask) templating.
+* Database setup built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is supported. A few helper classes and methods are also provided: dictionary column, property caching, custom queries, pagination.
+* User authentication using Google Auth (requires registering the app on the `Google API console`_).
+* Datatables_ plugin for easy integration of interactive tables. jQuery_ and `jQuery UI`_ are also included.
+* Sleek Bootstrap_ and Jinja_ (from Flask) templating.
 
-Coming soon:
+Quickstart
+----------
 
-*   Automatic scheduled cache refresh using Celery
+* Requirements
 
-Installation
-------------
-
-Python modules::
+  Python modules::
 
     pip install Flask
     pip install SQLAlchemy
     pip install Celery
     pip install Flask-Script
     pip install flask-login
-    pip install redis
 
-If you are planning on using the Celery backend, and don't yet have Redis, here is how to install it::
+* Running the app
 
-    curl -O http://download.redis.io/redis-stable.tar.gz
-    tar xvzf redis-stable.tar.gz
-    cd redis-stable
-    make
-    make test
-    sudo cp redis-server /usr/local/bin/
-    sudo cp redis-cli /usr/local/bin/
-
-That's it!
-
-Running the app
----------------
-
-Start the celery worker::
-
-    python manage.py run_worker
-
-Start the app server (using Werkzeug)::
+  Start the app server (using Werkzeug)::
 
     python manage.py run_server
 
-.. note:
+  .. note:
 
-    *   Use the ``-d`` flag in each of the previous commands to run it in debug mode.
-    *   A list of available commands by the manager is available by running ``python manage.py``
+    * Append the ``-d`` flag to run the server in debug mode
+    * A list of available commands by the manager is available by running ``python manage.py``
 
 Optional steps
 --------------
 
-*   Daemonizing redis on a mac
+### Using Celery
 
-    Create a plist file::
+  * Requirements:
+
+    Python module requirement::
+
+      pip install redis
+
+    If you are planning on using the Celery backend, and don't yet have Redis, here is how to install it::
+
+      curl -O http://download.redis.io/redis-stable.tar.gz
+      tar xvzf redis-stable.tar.gz
+      cd redis-stable
+      make
+      make test
+      sudo cp redis-server /usr/local/bin/
+      sudo cp redis-cli /usr/local/bin/
+
+  * Start the celery worker::
+
+    python manage.py run_worker
+
+  * Extra steps:
+
+    * Daemonizing redis on a mac
+
+      Create a plist file::
 
         sudo vim /Library/LaunchDaemons/io.redis.redis-server.plist
 
-    Copy the following contents::
-    
+      Copy the following contents::
+      
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
         <dict>
-            <key>Label</key>
-            <string>io.redis.redis-server</string>
-            <key>ProgramArguments</key>
-            <array>
-                <string>/usr/local/bin/redis-server</string>
-            </array>
-            <key>RunAtLoad</key>
-            <true/>
+          <key>Label</key>
+          <string>io.redis.redis-server</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>/usr/local/bin/redis-server</string>
+          </array>
+          <key>RunAtLoad</key>
+          <true/>
         </dict>
         </plist>
 
-*   Run with Apache
+### Running the server on Apache
 
-    TODO: write the run.wsgi file.
+  Create a file called `run.wsgi` in the main directory with the following contents::
 
+    # Virtualenv activation
+    from os.path import abspath, dirname, join
+    activate_this = abspath(join(dirname(__file__), 'venv/bin/activate_this.py'))
+    execfile(activate_this, dict(__file__=activate_this))
+
+    # Since the application isn't on the path
+    import sys
+    sys.path.insert(0, abspath(join(dirname(__file__)))
+
+    # App factory
+    from app import make_app
+    application = make_app()
+  
+  Then add a virtualhost in your Apache virtual host configuration file (often found at `/etc/apache2/extra/httpd-vhosts.conf`) with the following configuration::
+
+    <VirtualHost *:80>
+      ServerName [server_name]
+      WSGIDaemonProcess [process_name] user=[process_user] threads=5
+      WSGIScriptAlias / [path_to_wsgi_file]
+      <Directory [path_to_root_directory]>
+          WSGIProcessGroup [process_name]
+          WSGIApplicationGroup %{GLOBAL}
+          Order deny,allow
+          Allow from all
+      </Directory>
+      ErrorLog "[path_to_error_log]"
+      CustomLog "[path_to_access_log]" combined
+    </VirtualHost>
+
+
+### Using Google OAuth
+
+  TODO
+  
 Sources
 -------
 
-*   http://redis.io/topics/quickstart
-*   http://naleid.com/blog/2011/03/05/running-redis-as-a-user-daemon-on-osx-with-launchd/
-*   http://infinitemonkeycorps.net/docs/pph/
-*   https://google-developers.appspot.com/chart/interactive/docs/index
-*   http://codemirror.net/
-*   http://networkx.lanl.gov/index.html
+* http://redis.io/topics/quickstart
+* http://naleid.com/blog/2011/03/05/running-redis-as-a-user-daemon-on-osx-with-launchd/
+* http://infinitemonkeycorps.net/docs/pph/
+* https://google-developers.appspot.com/chart/interactive/docs/index
+* http://codemirror.net/
+* http://networkx.lanl.gov/index.html
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
 .. _Flask: http://flask.pocoo.org/docs/api/
