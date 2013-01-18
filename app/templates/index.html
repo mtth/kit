@@ -12,10 +12,10 @@
 <div class='page-footer'>
   <div class='container'>
     <div class='pull-left'>
+      <a href='http://flask.orage.in'>Made in Flask</a>
     </div>
     <div class='pull-right'>
-      <a href='http://flask.orage.in'>Made in Flask</a>
-      {% if current_user.is_authenticated() %}
+      {% if is_logged_in() %}
         <a href='{{ url_for("core.sign_out") }}'>Sign out</a>
       {% endif %}
     </div>

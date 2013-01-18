@@ -23,8 +23,11 @@ from subprocess import call
 from sys import modules
 
 from app import make_app
-from app.core.auth import User
+from app.core.config import USE_OAUTH
 from app.core.database import Db
+
+if USE_OAUTH:
+  from app.core.auth import User
 
 # Creating the manager instance
 # =============================
@@ -61,26 +64,24 @@ def view_app_config():
     for key, value in sorted(current_app.config.items()):
         print '%30s %s' % (key, value)
 
-@manager.command
-def add_user():
-    """Add user to database."""
-    with Db() as session:
-        user_email = prompt('User email?')
-        user = User(user_email)
-        session.add(user)
-        session.commit()
+if USE_OAUTH:
 
-@manager.command
-def view_users():
-    """View all database users."""
-    with Db() as session:
-        users = session.query(User).all()
-        for user in users:
-            print '%10s %s' % (user.id, user.email)
+  @manager.command
+  def add_user():
+      """Add user to database."""
+      with Db() as session:
+          user_email = prompt('User email?')
+          user = User(user_email)
+          session.add(user)
+          session.commit()
 
-def promote_user():
-    """TBD."""
-    pass
+  @manager.command
+  def view_users():
+      """View all database users."""
+      with Db() as session:
+          users = session.query(User).all()
+          for user in users:
+              print '%10s %s' % (user.id, user.email)
 
 # Celery management
 # =================

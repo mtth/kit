@@ -151,6 +151,11 @@ bp = Blueprint(
         __name__
 )
 
+def initialize_bp(the_app, debug=False):
+    """Initialize the blueprint."""
+    the_app.register_blueprint(bp)
+    login_manager.setup_app(the_app)
+
 # Handlers
 # ========
 
@@ -232,7 +237,7 @@ def sign_out():
         current_user.info('Signed out.')
         logout_user()
     values = {
-            'header': 'Goodbye friend',
+            'header': 'Bye, friend',
             'color': 'success',
             'sign_in_url': get_google_login_url()
     }

@@ -17,6 +17,7 @@ app = Flask(__name__)
 # =============
 
 @app.route('/')
+@login_required
 def index():
   """Splash page."""
   return render_template('index.html')

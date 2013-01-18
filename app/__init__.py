@@ -15,7 +15,8 @@ if USE_CELERY:
   from app.core.celery import celery
 
 if USE_OAUTH:
-  from app.core import initialize_bp as init_core_bp
+  from flask.ext.login import current_user
+  from app.core.auth import initialize_bp as init_core_bp
 
 logger = getLogger(__name__)
 
@@ -26,8 +27,11 @@ logger = getLogger(__name__)
 def inject():
   def static_url(request):
     return STATIC_SERVER_URL or request.url_root + 'static/assets'
+  def is_logged_in():
+    return USE_OAUTH and current_user.is_authenticated()
   return {
-    'static_url': static_url
+    'static_url': static_url,
+    'is_logged_in': is_logged_in
   }
 
 def make_app(debug=False):
