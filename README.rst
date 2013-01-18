@@ -15,32 +15,24 @@ Quickstart
 ----------
 
 * Installation
-
   Clone this repo on your machine::
 
     git clone git://github.com/mtth/flask.git
     cd flask
-
-  Setting up the `virtual environment`_ (optional but recommended)::
-
+    sudo easy_install virtualenv  # optional (if you don't have virtualenv)
     virtualenv venv
     . venv/bin/activate
-
-  Installing dependencies::
-
     pip install Flask-Script
     pip install SQLAlchemy
 
 * Running the app
-
   Start the app server (using Werkzeug)::
 
     python manage.py run_server
 
   NB:
-
-    * Append the ``-d`` flag to run the server in debug mode
-    * A list of available commands by the manager is available by running ``python manage.py``
+  * Append the ``-d`` flag to run the server in debug mode
+  * A list of available commands by the manager is available by running ``python manage.py``
 
 Optional steps
 --------------
@@ -48,15 +40,13 @@ Optional steps
 * Using Google OAuth
 
   * Setup
-
     Python module requirements::
 
       pip install flask-login
 
-    Inside `app/core/config.py`, set `USE_OAUTH = True` and fill in the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
+    Inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE_CLIENT_ID`` and ``GOOGLE_CLIENT_SECRET``. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
 
   * Usage
-
     To restrict some pages to logged-in users, add the `login_required` to the corresponding view. E.g::
 
       @app.route('/some_url')
