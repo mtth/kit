@@ -5,12 +5,17 @@
 from logging import getLogger
 from logging.config import dictConfig
 
-from app.core import initialize_bp as init_core_bp
-from app.core.celery import celery
-from app.core.config import CeleryBaseConfig, CeleryDebugConfig, \
-BaseConfig, DebugConfig, DEBUG_LOGGER_CONFIG, LOGGER_CONFIG, STATIC_SERVER_URL
+from app.core.config import BaseConfig, DebugConfig, LoggerConfig, \
+STATIC_SERVER_URL, USE_CELERY, USE_OAUTH
 from app.core.database import Db
 from app.views import app as the_app
+
+if USE_CELERY:
+  from app.core.config import CeleryBaseConfig, CeleryDebugConfig
+  from app.core.celery import celery
+
+if USE_OAUTH:
+  from app.core import initialize_bp as init_core_bp
 
 logger = getLogger(__name__)
 
@@ -30,15 +35,18 @@ def make_app(debug=False):
   # App and logger configuration
   the_app.config.from_object(BaseConfig)
   if debug:
-    dictConfig(DEBUG_LOGGER_CONFIG)
+    dictConfig(LoggerConfig.DEBUG_LOGGER_CONFIG)
     the_app.config.from_object(DebugConfig)
-    celery.config_from_object(CeleryDebugConfig)
+    if USE_CELERY:
+      celery.config_from_object(CeleryDebugConfig)
     Db.debug = True
   else:
-    dictConfig(LOGGER_CONFIG)
-    celery.config_from_object(CeleryBaseConfig)
+    dictConfig(LoggerConfig.LOGGER_CONFIG)
+    if USE_CELERY:
+      celery.config_from_object(CeleryBaseConfig)
   # Initializing the database
   Db.initialize(the_app)
   # Hooking up the blueprint
-  init_core_bp(the_app, debug)
+  if USE_OAUTH:
+    init_core_bp(the_app, debug)
   return the_app

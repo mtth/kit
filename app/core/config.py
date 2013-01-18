@@ -23,14 +23,19 @@ DB_URL = 'sqlite:///%s/core/db/app.sqlite' % APPLICATION_FOLDER
 # OPTIONAL ==============================================================
 #
 
+# To use Google Auth 
+
+USE_OAUTH = True
+GOOGLE_CLIENT_ID = '727771047328-orosiiaun16cf0p6q8sfal3dema77hq4.apps.googleusercontent.com'
+GOOGLE_CLIENT_SECRET = '6wSk04wHCNDma257YMzZbvqr'
+
+# To activate the Celery backend
+
+USE_CELERY = False
+
 # To serve resources from another server, enter the url here (no trailing slash)
 
 STATIC_SERVER_URL = ''
-
-# To use Google Auth from a different domain than orage.in, replace these with your own
-
-GOOGLE_CLIENT_ID = '727771047328-orosiiaun16cf0p6q8sfal3dema77hq4.apps.googleusercontent.com'
-GOOGLE_CLIENT_SECRET = '6wSk04wHCNDma257YMzZbvqr'
 
 #
 # UNDER THE HOOD ========================================================
@@ -63,84 +68,85 @@ class AuthConfig(object):
 
 # Logging configuration
 
-LOGGING_FOLDER = abspath(join(dirname(__file__), pardir, 'core', 'logs'))
-LOGGER_CONFIG = {
-    'version': 1,              
-    'formatters': {
-        'standard': {
-            'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
-        },
-    },
-    'handlers': {
-        'file': {
-            'level':'INFO',    
-            'class':'logging.FileHandler',
-            'formatter': 'standard',
-            'filename': join(LOGGING_FOLDER, 'info.log')
-        },  
-        'stream': {
-            'level':'WARN',    
-            'class':'logging.StreamHandler',
-            'formatter': 'standard',
-        },  
-    },
-    'loggers': {
-        '': {
-            'handlers': ['stream'],
-            'level': 'WARN',
-            'propagate': True
-        },
-        'app': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True
-        },
-        'celery': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True
-        },
-    }
-}
+class LoggerConfig(object):
 
-DEBUG_LOGGER_CONFIG = {
-    'version': 1,              
-    'formatters': {
-        'standard': {
-            'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
-        },
-    },
-    'handlers': {
-        'file': {
-            'level':'DEBUG',    
-            'class':'logging.FileHandler',
-            'formatter': 'standard',
-            'filename': join(LOGGING_FOLDER, 'debug.log')
-        },  
-        'stream': {
-            'level':'DEBUG',    
-            'class':'logging.StreamHandler',
-            'formatter': 'standard',
-        },  
-    },
-    'loggers': {
-        '': {
-            'handlers': ['stream'],
-            'level': 'DEBUG',
-            'propagate': True
-        },
-        'app': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True
-        },
-        'celery': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True
-        },
-    }
-}
+  LOGGING_FOLDER = abspath(join(dirname(__file__), pardir, 'core', 'logs'))
+  LOGGER_CONFIG = {
+      'version': 1,              
+      'formatters': {
+          'standard': {
+              'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
+          },
+      },
+      'handlers': {
+          'file': {
+              'level':'INFO',    
+              'class':'logging.FileHandler',
+              'formatter': 'standard',
+              'filename': join(LOGGING_FOLDER, 'info.log')
+          },  
+          'stream': {
+              'level':'WARN',    
+              'class':'logging.StreamHandler',
+              'formatter': 'standard',
+          },  
+      },
+      'loggers': {
+          '': {
+              'handlers': ['stream'],
+              'level': 'WARN',
+              'propagate': True
+          },
+          'app': {
+              'handlers': ['file'],
+              'level': 'INFO',
+              'propagate': True
+          },
+          'celery': {
+              'handlers': ['file'],
+              'level': 'INFO',
+              'propagate': True
+          },
+      }
+  }
+  DEBUG_LOGGER_CONFIG = {
+      'version': 1,              
+      'formatters': {
+          'standard': {
+              'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
+          },
+      },
+      'handlers': {
+          'file': {
+              'level':'DEBUG',    
+              'class':'logging.FileHandler',
+              'formatter': 'standard',
+              'filename': join(LOGGING_FOLDER, 'debug.log')
+          },  
+          'stream': {
+              'level':'DEBUG',    
+              'class':'logging.StreamHandler',
+              'formatter': 'standard',
+          },  
+      },
+      'loggers': {
+          '': {
+              'handlers': ['stream'],
+              'level': 'DEBUG',
+              'propagate': True
+          },
+          'app': {
+              'handlers': ['file'],
+              'level': 'DEBUG',
+              'propagate': True
+          },
+          'celery': {
+              'handlers': ['file'],
+              'level': 'DEBUG',
+              'propagate': True
+          },
+      }
+  }
 
 # Celery configuration
 

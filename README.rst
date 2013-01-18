@@ -21,18 +21,15 @@ Quickstart
     git clone git://github.com/mtth/flask.git
     cd flask
 
-  Setting up the `virtual environment`_ (optional but recommended)::
+  Setting up the `virtual environment` (optional but recommended)::
 
     virtualenv venv
     . venv/bin/activate
 
   Installing dependencies::
 
-    pip install Flask
-    pip install SQLAlchemy
-    pip install Celery
     pip install Flask-Script
-    pip install flask-login
+    pip install SQLAlchemy
 
 * Running the app
 
