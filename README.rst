@@ -14,9 +14,7 @@ Feature highlights
 Quickstart
 ==========
 
-* **Installation**
-
-  Clone this repo on your machine::
+* **Installation**::
 
     git clone git://github.com/mtth/flask.git
     cd flask
@@ -26,9 +24,7 @@ Quickstart
     pip install Flask-Script
     pip install SQLAlchemy
 
-* **Running the app**
-
-  Start the app server (using Werkzeug)::
+* **Running the app**::
 
     python manage.py run_server
 
