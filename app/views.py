@@ -3,7 +3,6 @@
 """The views, entry point to wonders."""
 
 from flask import Flask, render_template
-from flask.ext.login import login_required
 from logging import getLogger
 
 logger = getLogger(__name__)
@@ -17,7 +16,6 @@ app = Flask(__name__)
 # =============
 
 @app.route('/')
-@login_required
 def index():
   """Splash page."""
   return render_template('index.html')
