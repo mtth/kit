@@ -16,17 +16,17 @@ Quickstart
 
 * **Installation**::
 
-    git clone git://github.com/mtth/flask.git
-    cd flask
-    sudo easy_install virtualenv  # optional (if you don't have virtualenv)
-    virtualenv venv
-    . venv/bin/activate
-    pip install Flask-Script
-    pip install SQLAlchemy
+    $ git clone git://github.com/mtth/flask.git
+    $ cd flask
+    $ sudo easy_install virtualenv  # optional (if you don't have virtualenv)
+    $ virtualenv venv
+    $ . venv/bin/activate
+    $ pip install Flask-Script
+    $ pip install SQLAlchemy
 
 * **Running the app**::
 
-    python manage.py run_server -p 5050
+    $ python manage.py run_server -p 5050
 
   This will run the server (using Werkzeug) on port 5050. Also:
 
@@ -70,11 +70,11 @@ User authentication using Google OAuth
 
   At first, there are no authorized users, in order to authorize someone to log in, run the following command and enter the email you want to authorize when prompted::
 
-    python manage.py add_user
+    $ python manage.py add_user
 
   You can view the list of authorized users at any time by running::
 
-    python manage.py view_users
+    $ python manage.py view_users
 
 Running and scheduling jobs with Celery
 ---------------------------------------
@@ -83,13 +83,13 @@ Running and scheduling jobs with Celery
 
   Install ``Celery`` and ``redis`` python modules via ``pip``.  If you don't yet have Redis, here is how to install it::
 
-    curl -O http://download.redis.io/redis-stable.tar.gz
-    tar xvzf redis-stable.tar.gz
-    cd redis-stable
-    make
-    make test
-    sudo cp redis-server /usr/local/bin/
-    sudo cp redis-cli /usr/local/bin/
+    $ curl -O http://download.redis.io/redis-stable.tar.gz
+    $ tar xvzf redis-stable.tar.gz
+    $ cd redis-stable
+    $ make
+    $ make test
+    $ sudo cp redis-server /usr/local/bin/
+    $ sudo cp redis-cli /usr/local/bin/
   
   Finally, inside ``app/core/config.py``, set ``USE_CELERY = True``.
 
@@ -97,7 +97,7 @@ Running and scheduling jobs with Celery
   
   Run the following command to start the worker::
 
-    python manage.py run_worker
+    $ python manage.py run_worker
 
   To learn how to create tasks and schedule them, please refer to the official Celery_ documentation.
 
@@ -107,7 +107,7 @@ Running and scheduling jobs with Celery
 
     Create a plist file::
 
-      sudo vim /Library/LaunchDaemons/io.redis.redis-server.plist
+      $ sudo vim /Library/LaunchDaemons/io.redis.redis-server.plist
 
     Copy the following contents::
     
