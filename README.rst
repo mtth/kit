@@ -4,15 +4,15 @@ Flask App Template
 Flask_ webapp template with optional Celery_ backend.
 
 Feature highlights
-------------------
+==================
 
 * Database interactions using SQLAlchemy_
-* `User authentication using Google OAuth 2.0`_
 * Includes jQuery_ and Bootstrap_ CSS and JS libraries
+* `User authentication using Google OAuth 2.0`_
 * Celery_ for scheduling and running long jobs
 
 Quickstart
-----------
+==========
 
 * **Installation** Clone this repo on your machine::
 
@@ -33,35 +33,32 @@ Quickstart
   * Append the ``-d`` flag to run the server in debug mode
   * A list of available commands by the manager is available by running ``python manage.py``
 
-Optional steps
---------------
+Optional features
+=================
 
-.. _`User authentication using Google OAuth 2.0`:
+User authentication using Google OAuth 2.0
+------------------------------------------
 
-   hi
+* **Setup** Python module requirements::
 
-* Using Google OAuth
+    pip install flask-login
 
-  * **Setup** Python module requirements::
+  Inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE_CLIENT_ID`` and ``GOOGLE_CLIENT_SECRET``. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
 
-      pip install flask-login
+* **Usage** To restrict some pages to logged-in users, add the `login_required` to the corresponding view. E.g::
 
-    Inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE_CLIENT_ID`` and ``GOOGLE_CLIENT_SECRET``. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
+    @app.route('/some_url')
+    @login_required
+    def some_protected_page():
+      return render_templage('template.html')
 
-  * **Usage** To restrict some pages to logged-in users, add the `login_required` to the corresponding view. E.g::
+  At first, there are no authorized users, in order to authorize someone to log in, run the following command and enter the email you want to authorize when prompted::
 
-      @app.route('/some_url')
-      @login_required
-      def some_protected_page():
-        return render_templage('template.html')
+    python manage.py add_user
 
-    At first, there are no authorized users, in order to authorize someone to log in, run the following command and enter the email you want to authorize when prompted::
+  You can view the list of authorized users at any time by running::
 
-      python manage.py add_user
-
-    You can view the list of authorized users at any time by running::
-
-      python manage.py view_users
+    python manage.py view_users
 
 * Using Celery
 
