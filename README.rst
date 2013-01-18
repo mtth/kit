@@ -38,6 +38,8 @@ Optional steps
 
 .. _`User authentication using Google OAuth 2.0`:
 
+   hi
+
 * Using Google OAuth
 
   * **Setup** Python module requirements::
