@@ -33,7 +33,7 @@ Quickstart
 
     python manage.py run_server
 
-  .. note:
+  NB:
 
     * Append the ``-d`` flag to run the server in debug mode
     * A list of available commands by the manager is available by running ``python manage.py``
@@ -41,7 +41,8 @@ Quickstart
 Optional steps
 --------------
 
-### Using Celery
+Using Celery
+**
 
   * Requirements:
 
@@ -59,9 +60,11 @@ Optional steps
       sudo cp redis-server /usr/local/bin/
       sudo cp redis-cli /usr/local/bin/
 
-  * Start the celery worker::
+  * Start the celery worker
 
-    python manage.py run_worker
+    Run the following command::
+
+      python manage.py run_worker
 
   * Extra steps:
 
@@ -88,7 +91,8 @@ Optional steps
         </dict>
         </plist>
 
-### Running the server on Apache
+Running the server on Apache
+**
 
   Create a file called `run.wsgi` in the main directory with the following contents::
 
@@ -122,7 +126,8 @@ Optional steps
     </VirtualHost>
 
 
-### Using Google OAuth
+Using Google OAuth
+**
 
   TODO
   

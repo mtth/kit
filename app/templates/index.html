@@ -2,8 +2,24 @@
 
 {% block content %}
 
-<div class='loader'>
-    <h1>Loading...</h1>
+<div class='page-header'>
+  <div class='container'>
+    <h1>Loading, <small>please fasten your seatbelts</small></h1>
+  </div>
+</div>
+<div class='page-content'>
+</div>
+<div class='page-footer'>
+  <div class='container'>
+    <div class='pull-left'>
+    </div>
+    <div class='pull-right'>
+      <a href='http://flask.orage.in'>Made in Flask</a>
+      {% if current_user.is_authenticated() %}
+        <a href='{{ url_for("core.sign_out") }}'>Sign out</a>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
 {% endblock %}
