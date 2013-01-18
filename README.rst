@@ -7,7 +7,7 @@ Feature highlights
 ------------------
 
 * Database interactions using SQLAlchemy_
-* User authentication using `Google Auth 2.0`_
+* User authentication using `Google OAuth 2.0`_
 * Includes jQuery_ and Bootstrap_ CSS and JS libraries
 * Celery_ for scheduling and running long jobs
 
@@ -21,7 +21,7 @@ Quickstart
     git clone git://github.com/mtth/flask.git
     cd flask
 
-  Setting up the `virtual environment` (optional but recommended)::
+  Setting up the `virtual environment`_ (optional but recommended)::
 
     virtualenv venv
     . venv/bin/activate
@@ -45,16 +45,43 @@ Quickstart
 Optional steps
 --------------
 
-Using Celery
-************
+* Using Google OAuth
 
-  * Requirements:
+  * Setup
 
-    Python module requirement::
+    Python module requirements::
 
+      pip install flask-login
+
+    Inside `app/core/config.py`, set `USE_OAUTH = True` and fill in the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
+
+  * Usage
+
+    To restrict some pages to logged-in users, add the `login_required` to the corresponding view. E.g::
+
+      @app.route('/some_url')
+      @login_required
+      def some_protected_page():
+        return render_templage('template.html')
+
+    At first, there are no authorized users, in order to authorize someone to log in, run the following command::
+
+      python manage.py add_user
+
+    You can view the list of authorized users at any time by running::
+
+      python manage.py view_users
+
+* Using Celery
+
+  * Setup
+
+    Python module requirements::
+
+      pip install Celery
       pip install redis
 
-    If you are planning on using the Celery backend, and don't yet have Redis, here is how to install it::
+    If you don't yet have Redis, here is how to install it::
 
       curl -O http://download.redis.io/redis-stable.tar.gz
       tar xvzf redis-stable.tar.gz
@@ -64,13 +91,15 @@ Using Celery
       sudo cp redis-server /usr/local/bin/
       sudo cp redis-cli /usr/local/bin/
 
-  * Start the celery worker
+  * Usage
 
-    Run the following command::
+    Run the following command to start the worker::
 
       python manage.py run_worker
 
-  * Extra steps:
+    To learn how to create tasks and schedule them, please refer to the official Celery_ documentation.
+
+  * Optional extra steps
 
     * Daemonizing redis on a mac
 
@@ -129,11 +158,6 @@ Running the server on Apache
       CustomLog "[path_to_access_log]" combined
     </VirtualHost>
 
-
-Using Google OAuth
-**
-
-  TODO
   
 Sources
 -------
