@@ -33,8 +33,8 @@ Quickstart
   * Append the ``-d`` flag to run the server in debug mode (enables autoreload and in-browser debugger)
   * A list of available commands is available by running ``python manage.py``
 
-Optional features
-=================
+Features
+========
 
 Database backend ready to use
 -----------------------------
@@ -43,8 +43,14 @@ The app uses SQLAlchemy_ and offers several helpers to create persistent models.
 
 Here are a few of the helpers available on the default ``Base`` model class:
 
-* jsonifiable
-* loggable
+* Jsonifiable
+* Loggable
+* Cacheable
+
+And more:
+
+* api_response
+* Dict
 
 User authentication using Google OAuth
 --------------------------------------
