@@ -6,10 +6,10 @@ Flask_ webapp template with optional Celery_ backend.
 Feature highlights
 ==================
 
-* Database interactions using SQLAlchemy_
-* Includes jQuery_ and Bootstrap_ CSS and JS libraries
+* `Database backend ready to use`_
 * `User authentication using Google OAuth`_
 * `Running and scheduling jobs with Celery`_
+* Includes jQuery_ and Bootstrap_ CSS and JS libraries
 
 Quickstart
 ==========
@@ -35,6 +35,16 @@ Quickstart
 
 Optional features
 =================
+
+Database backend ready to use
+-----------------------------
+
+The app uses SQLAlchemy_ and offers several helpers to create persistent models. By default, the database backend uses SQLite_ but this can be changed by editing ``APP_DB_URL`` in the ``app/core/config.py`` file. If MySQL_ is used, full write concurrency is supported (even with the Celery_ worker).
+
+Here are a few of the helpers available on the default ``Base`` model class:
+
+* jsonifiable
+* loggable
 
 User authentication using Google OAuth
 --------------------------------------
@@ -65,7 +75,7 @@ Running and scheduling jobs with Celery
 
 * **Setup**
 
-  Install ``Celery`` and ``redis`` python modules via ``pip``. If you don't yet have Redis, here is how to install it::
+  Install ``Celery`` and ``redis`` python modules via ``pip``.  If you don't yet have Redis, here is how to install it::
 
     curl -O http://download.redis.io/redis-stable.tar.gz
     tar xvzf redis-stable.tar.gz
