@@ -1,25 +1,32 @@
 Flask App Template
 ==================
 
-About
------
-
 Flask_ webapp template with optional Celery_ backend.
 
 Feature highlights
 ------------------
 
-* Database setup built in. You only need to give SQLAlchemy_ the database URI and all sessions and connections (from the app and worker) are handled. If MySQL_ is used as storage backend, write concurrency is supported. A few helper classes and methods are also provided: dictionary column, property caching, custom queries, pagination.
-* User authentication using Google Auth (requires registering the app on the `Google API console`_).
-* Datatables_ plugin for easy integration of interactive tables. jQuery_ and `jQuery UI`_ are also included.
-* Sleek Bootstrap_ and Jinja_ (from Flask) templating.
+* Database interactions using SQLAlchemy_
+* User authentication using `Google Auth 2.0`_
+* Includes jQuery_ and Bootstrap_ CSS and JS libraries
+* Celery_ for scheduling and running long jobs
 
 Quickstart
 ----------
 
-* Requirements
+* Installation
 
-  Python modules::
+  Clone this repo on your machine::
+
+    git clone git://github.com/mtth/flask.git
+    cd flask
+
+  Setting up the `virtual environment`_ (optional but recommended)::
+
+    virtualenv venv
+    . venv/bin/activate
+
+  Installing dependencies::
 
     pip install Flask
     pip install SQLAlchemy
@@ -42,7 +49,7 @@ Optional steps
 --------------
 
 Using Celery
-**
+************
 
   * Requirements:
 
@@ -148,6 +155,7 @@ Sources
 .. _Datatables: http://datatables.net/examples/
 .. _SQLAlchemy: http://docs.sqlalchemy.org/en/rel_0_7/orm/tutorial.html
 .. _MySQL: http://dev.mysql.com/doc/
+.. _`Google OAuth 2.0`: https://developers.google.com/accounts/docs/OAuth2
 .. _`Google API console`: https://code.google.com/apis/console
 .. _jQuery: http://jquery.com/
 .. _`jQuery UI`: http://jqueryui.com/

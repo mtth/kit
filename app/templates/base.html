@@ -6,10 +6,10 @@
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <meta name='description' content=''>
     <meta name='author' content=''>
-    <link href='http://st.orage.in/css/bootstrap.css' rel='stylesheet'>
-    <link href='http://st.orage.in/css/bootstrap-responsive.css' rel='stylesheet'>
+    <link href='{{ static_url(request) }}/favicon.ico' rel='shortcut icon' type='image/x-icon'>
+    <link href='{{ static_url(request) }}/css/bootstrap.css' rel='stylesheet'>
+    <link href='{{ static_url(request) }}/css/bootstrap-responsive.css' rel='stylesheet'>
     <link href='/static/assets/css/app.css' rel='stylesheet'>
-    <link href='http://orage.in/favicon.ico' rel='shortcut icon' type='image/x-icon'>
   </head>
   <body>
     <div class='navbar navbar-fixed-top'>
@@ -36,9 +36,7 @@
       {% block content %}
       {% endblock content %}
     </div>
-    <script src='http://st.orage.in/js/jquery.js'></script>
-    <script src='http://st.orage.in/js/underscore.js'></script>
-    <script src='http://st.orage.in/js/backbone.js'></script>
-    <script src='http://st.orage.in/js/bootstrap.js'></script>
+    <script src='http://code.jquery.com/jquery-1.9.0.min.js'></script>
+    <script src='{{ static_url(request) }}/js/bootstrap.js'></script>
   </body>
 </html>

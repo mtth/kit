@@ -4,27 +4,43 @@
 
 from os.path import abspath, dirname, join, pardir
 
-# REQUIRED =================
+APPLICATION_FOLDER = abspath(join(dirname(__file__), pardir))
 
+#
+# REQUIRED ==============================================================
+#
 
-# OPTIONAL =================
+# The URL to the database (can be sqlite filepath, mysql url, etc.)
+#
+# Examples:
+#
+#   * 'sqlite:///%s/core/db/app.sqlite' % APPLICATION_FOLDER
+#   * 'mysql://db_user:dp_pass@localhost/db_name'
 
-APPLICATION_ROOT_URL = ''
+DB_URL = 'sqlite:///%s/core/db/app.sqlite' % APPLICATION_FOLDER
 
-# To use Google Auth from a different domain than orage.in, replace these
+#
+# OPTIONAL ==============================================================
+#
+
+# To serve resources from another server, enter the url here (no trailing slash)
+
+STATIC_SERVER_URL = ''
+
+# To use Google Auth from a different domain than orage.in, replace these with your own
 
 GOOGLE_CLIENT_ID = '727771047328-orosiiaun16cf0p6q8sfal3dema77hq4.apps.googleusercontent.com'
 GOOGLE_CLIENT_SECRET = '6wSk04wHCNDma257YMzZbvqr'
 
-# =======================================================================
+#
+# UNDER THE HOOD ========================================================
+#
 
-APPLICATION_FOLDER = abspath(join(dirname(__file__), pardir))
-
-# App configuration objects
+# App configuration
 
 class BaseConfig(object):
 
-    APP_DB_URL = 'sqlite:///%s/core/db/production.sqlite' % APPLICATION_FOLDER
+    APP_DB_URL = DB_URL
     DEBUG = False
     LOGGER_NAME = 'app'
     SECRET_KEY = '\x81K\xfb4u\xddp\x1c>\xe2e\xeeI\xf2\xff\x16\x16\xf6\xf9D'
@@ -33,7 +49,6 @@ class BaseConfig(object):
 
 class DebugConfig(BaseConfig):
 
-    APP_DB_URL = 'sqlite:///%s/core/db/development.sqlite' % APPLICATION_FOLDER
     DEBUG = True
     TESTING = True
     SEND_FILE_MAX_AGE_DEFAULT = 1
@@ -126,6 +141,8 @@ DEBUG_LOGGER_CONFIG = {
         },
     }
 }
+
+# Celery configuration
 
 class CeleryBaseConfig(object):
 
