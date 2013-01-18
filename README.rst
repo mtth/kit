@@ -26,12 +26,12 @@ Quickstart
 
 * **Running the app**::
 
-    python manage.py run_server
+    python manage.py run_server -p 5050
 
-  NB:
+  This will run the server (using Werkzeug) on port 5050. Also:
 
-  * Append the ``-d`` flag to run the server in debug mode
-  * A list of available commands by the manager is available by running ``python manage.py``
+  * Append the ``-d`` flag to run the server in debug mode (enables autoreload and in-browser debugger)
+  * A list of available commands is available by running ``python manage.py``
 
 Optional features
 =================
@@ -41,11 +41,7 @@ User authentication using Google OAuth
 
 * **Setup**
 
-  Python module requirements::
-
-    pip install flask-login
-
-  Inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE_CLIENT_ID`` and ``GOOGLE_CLIENT_SECRET``. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
+  First, install ``Flask-Login`` via ``pip install flask-login``. Then, inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE_CLIENT_ID`` and ``GOOGLE_CLIENT_SECRET``. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
 
 * **Usage**
 
@@ -69,12 +65,7 @@ Running and scheduling jobs with Celery
 
 * **Setup**
 
-  Python module requirements::
-
-    pip install Celery
-    pip install redis
-
-  If you don't yet have Redis, here is how to install it::
+  Install ``Celery`` and ``redis`` python modules via ``pip``. If you don't yet have Redis, here is how to install it::
 
     curl -O http://download.redis.io/redis-stable.tar.gz
     tar xvzf redis-stable.tar.gz
