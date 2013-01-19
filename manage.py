@@ -45,6 +45,11 @@ manager.add_option(
 # Commands
 manager.add_command('shell', Shell())
 
+@manager.shell
+def make_shell_context():
+  db.create_connection(debug=current_app.debug, app=current_app)
+  return {'app': current_app, 'db': db}
+
 # App management
 # ==============
 
@@ -71,22 +76,31 @@ if USE_OAUTH:
   @manager.command
   def add_user():
     """Add user to database."""
-    with db() as session:
+    db.create_connection(debug=current_app.debug, app=current_app)
+    with db as session:
       user_email = prompt('User email?')
       user = User(user_email)
       session.add(user)
-      session.commit()
 
   @manager.command
   def view_users():
     """View all database users."""
-    with db() as session:
+    db.create_connection(debug=current_app.debug, app=current_app)
+    with db as session:
       users = session.query(User).all()
       for user in users:
         print '%10s %s' % (user.id, user.email)
 
-# Celery management
-# =================
+  @manager.command
+  def remove_user():
+    """Remove user."""
+    db.create_connection(debug=current_app.debug, app=current_app)
+    with db as session:
+      users = session.query(User).all()
+      for user in users:
+        print '%10s %s' % (user.id, user.email)
+      user_id = prompt('User id?')
+      session.delete(User.query.get(user_id))
 
 if USE_CELERY:
 

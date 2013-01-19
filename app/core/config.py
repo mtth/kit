@@ -31,7 +31,7 @@ GOOGLE_CLIENT_SECRET = ''
 
 # To activate the Celery backend
 
-USE_CELERY = True
+USE_CELERY = False
 
 # To serve resources from another server, enter the url here (no trailing slash)
 

@@ -305,9 +305,9 @@ class Db(object):
     return self.session()
 
   def __exit__(self, type, value, traceback):
-    self.session.remove()
+    self.dismantle()
 
-  def create_connection(self, debug=False, app=None, **kwrds):
+  def create_connection(self, debug=False, app=None):
     """Initialize database connection."""
     if debug:
       engine = create_engine(

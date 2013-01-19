@@ -6,16 +6,9 @@
 
 from __future__ import absolute_import
 
-from celery import Celery, current_task
-from celery.signals import celeryd_init, task_failure, task_postrun, \
-task_prerun, task_success, worker_process_init, after_setup_logger
-from datetime import datetime
+from celery import Celery
+from celery.signals import worker_process_init, after_setup_logger
 from logging.config import dictConfig
-from sqlalchemy import Boolean, Column, DateTime, Integer, Unicode, String, Text
-from sqlalchemy.orm import backref, relationship
-from time import time
-
-# App level imports
 
 from app.core.config import LoggerConfig
 from app.core.database import db
