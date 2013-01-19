@@ -269,14 +269,14 @@ class BaseQuery(Query):
 
 class _QueryProperty(object):
 
-  def __init__(self, Db):
-    self.Db = Db
+  def __init__(self, db):
+    self.db = db
 
   def __get__(self, obj, cls):
     try:
       mapper = class_mapper(cls)
       if mapper:
-        return BaseQuery(mapper, session=self.Db.session())
+        return BaseQuery(mapper, session=self.db.session())
     except UnmappedClassError:
       return None
 
@@ -289,19 +289,17 @@ class Db(object):
 
   Usage inside the app::
 
-    Db.session.add(something)
-    Db.session.commit()
+    db.session.add(something)
+    db.session.commit()
 
   Session creation and destruction is handled out of the box.
 
   Or (but not recommended)::
 
-    with Db() as session:
+    with db() as session:
       # do stuff
 
   """
-
-  debug = False
 
   def __enter__(self):
     return self.session()
@@ -309,10 +307,9 @@ class Db(object):
   def __exit__(self, type, value, traceback):
     self.session.remove()
 
-  @classmethod
-  def initialize(cls, app=None, **kwrds):
+  def create_connection(self, debug=False, app=None, **kwrds):
     """Initialize database connection."""
-    if cls.debug:
+    if debug:
       engine = create_engine(
           DebugConfig.APP_DB_URL,
           pool_recycle=3600
@@ -323,16 +320,15 @@ class Db(object):
           pool_recycle=3600
       )
     Base.metadata.create_all(engine, checkfirst=True)
-    cls.session = scoped_session(sessionmaker(bind=engine))
-    Base.query = _QueryProperty(cls)
+    self.session = scoped_session(sessionmaker(bind=engine))
+    Base.query = _QueryProperty(self)
     if app:
       @app.teardown_request
       def teardown_request_handler(exception=None):
         """Called after app requests return."""
-        cls.dismantle()
+        self.dismantle()
 
-  @classmethod
-  def dismantle(cls, **kwrds):
+  def dismantle(self, **kwrds):
     """Remove database connection.
 
     Has to be called after app request/job terminates or connections
@@ -340,11 +336,12 @@ class Db(object):
 
     """
     try:
-      cls.session.commit()
+      self.session.commit()
     except InvalidRequestError as e:
-      cls.session.rollback()
-      cls.session.expunge_all()
+      self.session.rollback()
+      self.session.expunge_all()
       logger.error('Database error: %s' % e)
     finally:
-      cls.session.remove()
+      self.session.remove()
 
+db = Db()

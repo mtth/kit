@@ -31,7 +31,7 @@ GOOGLE_CLIENT_SECRET = ''
 
 # To activate the Celery backend
 
-USE_CELERY = False
+USE_CELERY = True
 
 # To serve resources from another server, enter the url here (no trailing slash)
 
@@ -164,12 +164,9 @@ class CeleryBaseConfig(object):
   BROKER_URL = 'redis://localhost:6379/0'
   CELERY_DISABLE_RATE_LIMIT = True
   CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+  CELERY_SEND_EVENTS = True
   CELERYD_CONCURRENCY = 3
   CELERYD_PREFETCH_MULTIPLIER = 1
-  CELERY_IMPORTS = (
-      'app.core.celery',
-      'app.tasks',
-  )
 
 class CeleryDebugConfig(CeleryBaseConfig):
 

@@ -7,7 +7,7 @@ from logging.config import dictConfig
 
 from app.core.config import BaseConfig, DebugConfig, LoggerConfig, \
 STATIC_SERVER_URL, USE_CELERY, USE_OAUTH
-from app.core.database import Db
+from app.core.database import db
 from app.views import app as the_app
 
 if USE_CELERY:
@@ -36,21 +36,17 @@ def inject():
 
 def make_app(debug=False):
   """App factory."""
-  # App and logger configuration
-  the_app.config.from_object(BaseConfig)
   if debug:
     dictConfig(LoggerConfig.DEBUG_LOGGER_CONFIG)
     the_app.config.from_object(DebugConfig)
-    if USE_CELERY:
-      celery.config_from_object(CeleryDebugConfig)
-    Db.debug = True
   else:
+    the_app.config.from_object(BaseConfig)
     dictConfig(LoggerConfig.LOGGER_CONFIG)
-    if USE_CELERY:
+  if USE_CELERY:
+    if debug:
+      celery.config_from_object(CeleryDebugConfig)
+    else:
       celery.config_from_object(CeleryBaseConfig)
-  # Initializing the database
-  Db.initialize(the_app)
-  # Hooking up the blueprint
   if USE_OAUTH:
     init_core_bp(the_app, debug)
   return the_app

@@ -12,12 +12,12 @@ from urllib import urlencode
 from urllib2 import Request, urlopen
 
 from app.core.config import AuthConfig
-from app.core.database import Base, Db
+from app.core.database import Base
 
 logger = getLogger(__name__)
 
 # Model
-# ====
+# =====
 
 class User(Base, UserMixin):
 
