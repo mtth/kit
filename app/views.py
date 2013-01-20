@@ -4,9 +4,6 @@
 
 from flask import Flask, render_template
 from logging import getLogger
-from time import sleep
-
-from app.core.celery import celery
 
 logger = getLogger(__name__)
 

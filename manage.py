@@ -21,7 +21,7 @@ from flask import current_app
 from flask.ext.script import Manager, prompt, Shell
 
 from app import make_app
-from app.core.config import PROJECT_NAME, USE_CELERY, USE_OAUTH
+from app.core.config import APP_FOLDER, PROJECT_NAME, USE_CELERY, USE_OAUTH
 from app.core.database import db
 
 if USE_CELERY:
@@ -116,12 +116,16 @@ if USE_CELERY:
     if current_app.debug:
       celery.worker_main([
         'worker',
+        '--beat',
+        '--schedule=%s/core/schedules/production.sch' % APP_FOLDER,
         '--hostname=development.%s' % PROJECT_NAME,
         '--queues=development'
       ])
     else:
       celery.worker_main([
         'worker',
+        '--beat',
+        '--schedule=%s/core/schedules/development.sch' % APP_FOLDER,
         '--hostname=production.%s' % PROJECT_NAME,
         '--queues=production'
       ])

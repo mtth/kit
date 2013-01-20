@@ -81,7 +81,7 @@ Running and scheduling jobs with Celery
 
 * **Setup**
 
-  Install ``Celery`` and ``redis`` python modules via ``pip``.  If you don't yet have Redis, here is how to install it::
+  Install ``Celery``, ``redis`` and ``flower`` python modules via ``pip``.  If you don't yet have Redis, here is how to install it::
 
     $ curl -O http://download.redis.io/redis-stable.tar.gz
     $ tar xvzf redis-stable.tar.gz

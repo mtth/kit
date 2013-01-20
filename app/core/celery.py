@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 from celery import Celery
 from celery.signals import worker_process_init, after_setup_logger
+from celery.task import periodic_task
 from logging.config import dictConfig
 
 from app.core.config import LoggerConfig
@@ -17,6 +18,7 @@ from app.core.database import db
 # ====================
 
 celery = Celery()
+celery.periodic_task = periodic_task
 
 # Setup handlers
 # ==============
