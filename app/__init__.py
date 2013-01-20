@@ -6,7 +6,7 @@ from logging import getLogger
 from logging.config import dictConfig
 
 from app.core.config import BaseConfig, DebugConfig, LoggerConfig, \
-STATIC_SERVER_URL, USE_CELERY, USE_OAUTH
+PROJECT_NAME, STATIC_SERVER_URL, USE_CELERY, USE_OAUTH
 from app.core.database import db
 from app.views import app as the_app
 
@@ -30,6 +30,7 @@ def inject():
   def is_logged_in():
     return USE_OAUTH and current_user.is_authenticated()
   return {
+    'project_name': PROJECT_NAME,
     'static_url': static_url,
     'is_logged_in': is_logged_in
   }

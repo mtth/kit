@@ -21,11 +21,12 @@ from flask import current_app
 from flask.ext.script import Manager, prompt, Shell
 
 from app import make_app
-from app.core.config import USE_CELERY, USE_OAUTH
+from app.core.config import PROJECT_NAME, USE_CELERY, USE_OAUTH
 from app.core.database import db
 
 if USE_CELERY:
   from app import celery
+  from app.core.config import BROKER_URL
 
 if USE_OAUTH:
   from app.core.auth import User
@@ -48,7 +49,12 @@ manager.add_command('shell', Shell())
 @manager.shell
 def make_shell_context():
   db.create_connection(debug=current_app.debug, app=current_app)
-  return {'app': current_app, 'db': db}
+  return {
+    'app': current_app,
+    'db': db,
+    'celery': celery if USE_CELERY else None,
+    'User': User if USE_OAUTH else None,
+  }
 
 # App management
 # ==============
@@ -107,12 +113,28 @@ if USE_CELERY:
   @manager.command
   def run_worker():
     """Start the Celery worker."""
-    celery.worker_main(['worker'])
+    if current_app.debug:
+      celery.worker_main([
+        'worker',
+        '--hostname=development.%s' % PROJECT_NAME,
+        '--queues=development'
+      ])
+    else:
+      celery.worker_main([
+        'worker',
+        '--hostname=production.%s' % PROJECT_NAME,
+        '--queues=production'
+      ])
 
   @manager.option('-p', '--port', dest='port', default='5555')
   def run_flower(port):
     """Run flow manager."""
-    celery.start(['celery', 'flower', '--port=%s' % port])
+    celery.start([
+      'celery',
+      'flower',
+      '--broker=%s' % BROKER_URL,
+      '--port=%s' % port
+    ])
 
 if __name__ == '__main__':
   manager.run()

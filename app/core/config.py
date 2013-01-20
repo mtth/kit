@@ -10,6 +10,10 @@ APPLICATION_FOLDER = abspath(join(dirname(__file__), pardir))
 # REQUIRED ====================================================================
 #
 
+# A title for the project (letters and underscores only)
+
+PROJECT_NAME = 'project_name'
+
 # The URL to the database (can be sqlite filepath, mysql url, etc.)
 #
 # Examples:
@@ -23,15 +27,17 @@ DB_URL = 'sqlite:///%s/core/db/app.sqlite' % APPLICATION_FOLDER
 # OPTIONAL ====================================================================
 #
 
-# To use Google Auth 
+# To use Google Auth (secret key can be generated using os.urandom(24))
 
 USE_OAUTH = False
 GOOGLE_CLIENT_ID = ''
 GOOGLE_CLIENT_SECRET = ''
+SECRET_KEY = '\x81K\xfb4u\xddp\x1c>\xe2e\xeeI\xf2\xff\x16\x16\xf6\xf9D'
 
-# To activate the Celery backend
+# To use Celery
 
 USE_CELERY = False
+BROKER_URL = 'redis://localhost:6379/0'
 
 # To serve resources from another server, enter the url here (no trailing slash)
 
@@ -48,7 +54,7 @@ class BaseConfig(object):
   APP_DB_URL = DB_URL
   DEBUG = False
   LOGGER_NAME = 'app'
-  SECRET_KEY = '\x81K\xfb4u\xddp\x1c>\xe2e\xeeI\xf2\xff\x16\x16\xf6\xf9D'
+  SECRET_KEY = SECRET_KEY
   USE_X_SENDFILE = False
   TESTING = False
 
@@ -66,13 +72,6 @@ class DebugConfig(BaseConfig):
   TESTING = True
   SEND_FILE_MAX_AGE_DEFAULT = 1
   USE_X_SENDFILE = False
-
-class AuthConfig(object):
-
-  """Authentication blueprint configuration."""
-
-  CLIENT_ID = GOOGLE_CLIENT_ID
-  CLIENT_SECRET = GOOGLE_CLIENT_SECRET
 
 class LoggerConfig(object):
 
@@ -132,7 +131,7 @@ class LoggerConfig(object):
         'filename': join(LOGGING_FOLDER, 'debug.log')
       },  
       'stream': {
-        'level':'DEBUG',    
+        'level':'INFO',    
         'class':'logging.StreamHandler',
         'formatter': 'standard',
       },  
@@ -140,7 +139,7 @@ class LoggerConfig(object):
     'loggers': {
       '': {
         'handlers': ['stream'],
-        'level': 'DEBUG',
+        'level': 'INFO',
         'propagate': True
       },
       'app': {
@@ -156,27 +155,59 @@ class LoggerConfig(object):
     }
   }
 
-class CeleryBaseConfig(object):
+if USE_CELERY:
 
-  """Base Celery configuration."""
+  from kombu import Exchange, Queue
 
-  DEBUG = False
-  BROKER_URL = 'redis://localhost:6379/0'
-  CELERY_DISABLE_RATE_LIMIT = True
-  CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-  CELERY_SEND_EVENTS = True
-  CELERYD_CONCURRENCY = 3
-  CELERYD_PREFETCH_MULTIPLIER = 1
+  class CeleryBaseConfig(object):
 
-class CeleryDebugConfig(CeleryBaseConfig):
+    """Base Celery configuration."""
 
-  """Debug Celery configuration.
+    DEBUG = False
+    BROKER_URL = BROKER_URL
+    CELERY_QUEUES = [
+      Queue(
+        'production',
+        exchange=Exchange('production', type='direct'),
+        routing_key='production.%s' % PROJECT_NAME
+      ),
+      Queue(
+        'development',
+        exchange=Exchange('development', type='direct'),
+        routing_key='development.%s' % PROJECT_NAME
+      )
+    ]
+    CELERY_DEFAULT_EXCHANGE = 'production'
+    CELERY_DEFAULT_EXCHANGE_TYPE = 'direct'
+    CELERY_DEFAULT_ROUTING_KEY = 'production.%s' % PROJECT_NAME
+    CELERY_DEFAULT_QUEUE = 'production'
+    CELERY_DISABLE_RATE_LIMIT = True
+    CELERY_RESULT_BACKEND = BROKER_URL
+    CELERY_SEND_EVENTS = True
+    CELERY_TRACK_STARTED = True
+    CELERYD_CONCURRENCY = 3
+    CELERYD_PREFETCH_MULTIPLIER = 1
 
-  Note that the broker url is different than the base Celery one. This seems
-  to be necessary so that the workers have completely separate tasks.
+  class CeleryDebugConfig(CeleryBaseConfig):
 
-  """
+    """Debug Celery configuration.
 
-  DEBUG = True
-  BROKER_URL = 'redis://localhost:6379/1'
-  CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
+    Note that the broker url is different than the base Celery one. This seems
+    to be necessary so that the workers have completely separate tasks.
+
+    """
+
+    DEBUG = True
+    CELERY_DEFAULT_EXCHANGE = 'development'
+    CELERY_DEFAULT_ROUTING_KEY = 'development.%s' % PROJECT_NAME
+    CELERY_DEFAULT_QUEUE = 'development'
+
+if USE_OAUTH:
+
+  class AuthConfig(object):
+
+    """Authentication blueprint configuration."""
+
+    CLIENT_ID = GOOGLE_CLIENT_ID
+    CLIENT_SECRET = GOOGLE_CLIENT_SECRET
+
