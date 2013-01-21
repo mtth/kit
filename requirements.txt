@@ -1,0 +1,6 @@
+Flask
+Flask-Script
+Flask-Login
+SQLAlchemy
+Celery
+Flower
