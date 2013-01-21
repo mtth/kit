@@ -16,13 +16,8 @@ Quickstart
 
 * **Installation**::
 
-    $ git clone git://github.com/mtth/flask.git
-    $ cd flask
-    $ sudo easy_install virtualenv  # optional (if you don't have virtualenv)
-    $ virtualenv venv
-    $ . venv/bin/activate
-    $ pip install Flask-Script
-    $ pip install SQLAlchemy
+    $ git clone git://github.com/mtth/flasker.git
+    $ pip install -r requirements.txt
 
 * **Running the app**::
 
@@ -57,7 +52,7 @@ User authentication using Google OAuth
 
 * **Setup**
 
-  First, install ``Flask-Login`` via ``pip install flask-login``. Then, inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE_CLIENT_ID`` and ``GOOGLE_CLIENT_SECRET``. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
+Inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE_CLIENT_ID`` and ``GOOGLE_CLIENT_SECRET``. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
 
 * **Usage**
 
@@ -81,7 +76,7 @@ Running and scheduling jobs with Celery
 
 * **Setup**
 
-  Install ``Celery``, ``redis`` and ``flower`` python modules via ``pip``.  If you don't yet have Redis, here is how to install it::
+First, if you don't yet have Redis, here is how to install it::
 
     $ curl -O http://download.redis.io/redis-stable.tar.gz
     $ tar xvzf redis-stable.tar.gz
@@ -91,7 +86,7 @@ Running and scheduling jobs with Celery
     $ sudo cp redis-server /usr/local/bin/
     $ sudo cp redis-cli /usr/local/bin/
   
-  Finally, inside ``app/core/config.py``, set ``USE_CELERY = True``.
+Finally, inside ``app/core/config.py``, set ``USE_CELERY = True``.
 
 * **Usage**
   
