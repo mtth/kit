@@ -17,6 +17,7 @@ Quickstart
 * **Installation**::
 
     $ git clone git://github.com/mtth/flasker.git
+    $ cd flasker
     $ pip install -r requirements.txt
 
 * **Running the app**::
