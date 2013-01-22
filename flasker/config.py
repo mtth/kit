@@ -3,7 +3,7 @@
 """Global configuration module."""
 
 from kombu import Exchange, Queue
-from os.path import abspath, dirname, join, pardir
+from os.path import join
 
 def make(project_name, project_root, logging_folder, celery_folder, debug):
 
@@ -11,7 +11,8 @@ def make(project_name, project_root, logging_folder, celery_folder, debug):
 
     """Base app configuration."""
 
-    APPLICATION_ROOT = project_root
+    # Activating this messes up sessions...
+    # APPLICATION_ROOT = project_root
     DEBUG = False
     LOGGER_NAME = 'app'
     SECRET_KEY = '\x81K\xfb4u\xddp\x1c>\xe2e\xeeI\xf2\xff\x16\x16\xf6\xf9D'
@@ -147,7 +148,8 @@ def make(project_name, project_root, logging_folder, celery_folder, debug):
         }
       }
 
-  exchange = Exchange(project_name, type='direct')
+  code_name = project_name.lower().replace(' ', '_')
+  exchange = Exchange(code_name, type='direct')
 
   class CeleryBaseConfig(object):
 
@@ -159,16 +161,16 @@ def make(project_name, project_root, logging_folder, celery_folder, debug):
       Queue(
         'production',
         exchange=exchange,
-        routing_key='production.%s' % project_name
+        routing_key='production.%s' % code_name
       ),
       Queue(
         'development',
         exchange=exchange,
-        routing_key='development.%s' % project_name
+        routing_key='development.%s' % code_name
       )
     ]
     CELERY_DEFAULT_EXCHANGE = exchange
-    CELERY_DEFAULT_ROUTING_KEY = 'production.%s' % project_name
+    CELERY_DEFAULT_ROUTING_KEY = 'production.%s' % code_name
     CELERY_DEFAULT_QUEUE = 'production'
     CELERY_DISABLE_RATE_LIMIT = True
     CELERY_RESULT_BACKEND = 'redis://localhost:6379/0' 
@@ -184,7 +186,7 @@ def make(project_name, project_root, logging_folder, celery_folder, debug):
     """Debug Celery configuration."""
 
     DEBUG = True
-    CELERY_DEFAULT_ROUTING_KEY = 'development.%s' % project_name
+    CELERY_DEFAULT_ROUTING_KEY = 'development.%s' % code_name
     CELERY_DEFAULT_QUEUE = 'development'
 
   if debug:

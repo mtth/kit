@@ -5,7 +5,7 @@ from flask import Flask
 from flask.ext.login import current_user
 from logging import getLogger
 from logging.config import dictConfig
-from os.path import abspath, dirname, join, pardir
+from os.path import abspath, join
 
 import config
 import database
@@ -40,12 +40,6 @@ class Flasker(object):
       )
     else:
       self.logging_folder = None
-    if 'celery_folder' in kwargs:
-      self.celery_folder = abspath(
-        join(self.project_root, kwargs['celery_folder'])
-      )
-    else:
-      self.celery_folder = None
     self.app = Flask(
       __name__,
       static_folder=abspath(
@@ -57,8 +51,12 @@ class Flasker(object):
     )
     self.db = database.Db(kwargs.get('db_url', 'sqlite://'))
     if 'celery_folder' in kwargs:
+      self.celery_folder = abspath(
+        join(self.project_root, kwargs['celery_folder'])
+      )
       self.celery = Celery()
     else:
+      self.celery_folder = None
       self.celery = None
 
   def get_app(self):
@@ -119,5 +117,3 @@ class Flasker(object):
     )
     self.manager.run()
 
-if __name__ == '__main__':
-  pass

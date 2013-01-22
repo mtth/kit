@@ -6,6 +6,7 @@ from flask import Blueprint, flash, request, redirect, render_template, url_for
 from flask.ext.login import current_user, login_user, logout_user, LoginManager, UserMixin
 from json import loads
 from logging import getLogger
+from os.path import abspath, join, dirname
 from sqlalchemy import Boolean, Column, DateTime, Integer, Unicode, String, Text
 from sqlalchemy.orm import backref, relationship
 from urllib import urlencode
@@ -14,6 +15,9 @@ from urllib2 import Request, urlopen
 import database
 
 logger = getLogger(__name__)
+
+  # Model
+  # =====
 
 class User(database.Base, UserMixin):
 
@@ -38,10 +42,6 @@ class User(database.Base, UserMixin):
         return self.email
 
 def make(oauth_credentials):
-
-  # Model
-  # =====
-
 
   # Login manager instance
   # ======================
@@ -149,7 +149,8 @@ def make(oauth_credentials):
 
   bp = Blueprint(
           'core',
-          __name__
+          __name__,
+          template_folder=abspath(join(dirname(__file__), 'templates'))
   )
 
   # Handlers
@@ -168,7 +169,7 @@ def make(oauth_credentials):
               'color': 'primary',
               'sign_in_url': get_google_login_url()
       }
-      return render_template('core/sign_in_out.html', **values)
+      return render_template('sign_in_out.html', **values)
 
   @bp.route('/oauth2callback')
   def oauth2callback():
@@ -182,7 +183,7 @@ def make(oauth_credentials):
       """
       logger.debug('Callback call from google. Tranferring to catch the token.')
       values = {'catch_token_url': url_for('.catch_token')}
-      return render_template('core/get_token_from_hash.html', **values)
+      return render_template('get_token_from_hash.html', **values)
 
   @bp.route('/catch_token')
   def catch_token():
@@ -202,7 +203,7 @@ def make(oauth_credentials):
                   'color': 'danger',
                   'sign_in_url': get_google_login_url()
           }
-          return render_template('core/sign_in_out.html', **values)
+          return render_template('sign_in_out.html', **values)
       logger.debug('Access token is valid.')
       user_infos = get_user_info_from_token(token)
       logger.debug('Gathered user infos successfully.')
@@ -220,7 +221,7 @@ def make(oauth_credentials):
                   'color': 'warning',
                   'sign_in_url': get_google_login_url()
           }
-          return render_template('core/sign_in_out.html', **values)
+          return render_template('sign_in_out.html', **values)
           
   @bp.route('/sign_out')
   def sign_out():
@@ -237,12 +238,7 @@ def make(oauth_credentials):
               'color': 'success',
               'sign_in_url': get_google_login_url()
       }
-      return render_template('core/sign_in_out.html', **values)
+      return render_template('sign_in_out.html', **values)
 
   return {'bp': bp, 'login_manager': login_manager}
-
-def initialize_oauth(app):
-    """Initialize the blueprint."""
-    the_app.register_blueprint(bp)
-    login_manager.setup_app(the_app)
 
