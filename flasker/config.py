@@ -2,208 +2,200 @@
 
 """Global configuration module."""
 
+from kombu import Exchange, Queue
 from os.path import abspath, dirname, join, pardir
 
-APP_FOLDER = abspath(join(dirname(__file__), pardir))
+def make(project_name, project_root, logging_folder, celery_folder, debug):
 
-#
-# REQUIRED ====================================================================
-#
+  class AppBaseConfig(object):
 
-# A title for the project (letters and underscores only)
+    """Base app configuration."""
 
-PROJECT_NAME = 'project_name'
+    APPLICATION_ROOT = project_root
+    DEBUG = False
+    LOGGER_NAME = 'app'
+    SECRET_KEY = '\x81K\xfb4u\xddp\x1c>\xe2e\xeeI\xf2\xff\x16\x16\xf6\xf9D'
+    USE_X_SENDFILE = False
+    TESTING = False
 
-# The URL to the database (can be sqlite filepath, mysql url, etc.)
-#
-# Examples:
-#
-# * 'sqlite:///%s/core/db/app.sqlite' % APP_FOLDER
-# * 'mysql://db_user:dp_pass@localhost/db_name'
+  class AppDebugConfig(AppBaseConfig):
 
-DB_URL = 'sqlite:///%s/core/db/app.sqlite' % APP_FOLDER
+    """Debug app configuration.
+    
+    Note the SEND_FILE_MAX_AGE_DEFAULT = 1 to force refresh on every load. This
+    makes debugging javascript much easier but also slows down page loads
+    significantly.
+    
+    """
 
-#
-# OPTIONAL ====================================================================
-#
+    DEBUG = True
+    TESTING = True
+    SEND_FILE_MAX_AGE_DEFAULT = 1
+    USE_X_SENDFILE = False
 
-# To use Celery
+  if logging_folder:
 
-USE_CELERY = False
-BROKER_URL = 'redis://localhost:6379/0'
+    class LoggerConfig(object):
 
-# To use Google Auth (secret key can be generated using os.urandom(24))
+      """Logger configuration."""
 
-USE_OAUTH = False
-GOOGLE_CLIENT_ID = ''
-GOOGLE_CLIENT_SECRET = ''
-SECRET_KEY = '\x81K\xfb4u\xddp\x1c>\xe2e\xeeI\xf2\xff\x16\x16\xf6\xf9D'
+      BASE_CONFIG = {
+        'version': 1,        
+        'formatters': {
+          'standard': {
+            'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
+          },
+        },
+        'handlers': {
+          'file': {
+            'level':'INFO',  
+            'class':'logging.FileHandler',
+            'formatter': 'standard',
+            'filename': join(logging_folder, 'info.log')
+          },  
+          'stream': {
+            'level':'WARN',  
+            'class':'logging.StreamHandler',
+            'formatter': 'standard',
+          },  
+        },
+        'loggers': {
+          '': {
+            'handlers': ['stream', 'file'],
+            'level': 'INFO',
+            'propagate': True
+          },
+        }
+      }
+      DEBUG_CONFIG = {
+        'version': 1,        
+        'formatters': {
+          'standard': {
+            'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
+          },
+        },
+        'handlers': {
+          'file': {
+            'level':'DEBUG',    
+            'class':'logging.FileHandler',
+            'formatter': 'standard',
+            'filename': join(logging_folder, 'debug.log')
+          },  
+          'stream': {
+            'level':'INFO',    
+            'class':'logging.StreamHandler',
+            'formatter': 'standard',
+          },  
+        },
+        'loggers': {
+          '': {
+            'handlers': ['stream', 'file'],
+            'level': 'DEBUG',
+            'propagate': True
+          },
+        }
+      }
 
-# To serve resources from another server, enter the url here (no trailing slash)
+  else:
 
-STATIC_SERVER_URL = ''
+    class LoggerConfig(object):
 
-#
-# UNDER THE HOOD ==============================================================
-#
+      """Logger configuration."""
 
-class BaseConfig(object):
+      BASE_CONFIG = {
+        'version': 1,        
+        'formatters': {
+          'standard': {
+            'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
+          },
+        },
+        'handlers': {
+          'stream': {
+            'level':'WARN',  
+            'class':'logging.StreamHandler',
+            'formatter': 'standard',
+          },  
+        },
+        'loggers': {
+          '': {
+            'handlers': ['stream'],
+            'level': 'WARN',
+            'propagate': True
+          }
+        }
+      }
+      DEBUG_CONFIG = {
+        'version': 1,        
+        'formatters': {
+          'standard': {
+            'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
+          },
+        },
+        'handlers': {
+          'stream': {
+            'level':'INFO',    
+            'class':'logging.StreamHandler',
+            'formatter': 'standard',
+          },  
+        },
+        'loggers': {
+          '': {
+            'handlers': ['stream'],
+            'level': 'INFO',
+            'propagate': True
+          },
+        }
+      }
 
-  """Base app configuration."""
-
-  APP_DB_URL = DB_URL
-  DEBUG = False
-  LOGGER_NAME = 'app'
-  SECRET_KEY = SECRET_KEY
-  USE_X_SENDFILE = False
-  TESTING = False
-
-class DebugConfig(BaseConfig):
-
-  """Debug app configuration.
-  
-  Note the SEND_FILE_MAX_AGE_DEFAULT = 1 to force refresh on every load. This
-  makes debugging javascript much easier but also slows down page loads
-  significantly.
-  
-  """
-
-  DEBUG = True
-  TESTING = True
-  SEND_FILE_MAX_AGE_DEFAULT = 1
-  USE_X_SENDFILE = False
-
-class LoggerConfig(object):
-
-  """Logger configuration."""
-
-  LOGGING_FOLDER = abspath(join(dirname(__file__), pardir, 'core', 'logs'))
-  LOGGER_CONFIG = {
-    'version': 1,        
-    'formatters': {
-      'standard': {
-        'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
-      },
-    },
-    'handlers': {
-      'file': {
-        'level':'INFO',  
-        'class':'logging.FileHandler',
-        'formatter': 'standard',
-        'filename': join(LOGGING_FOLDER, 'info.log')
-      },  
-      'stream': {
-        'level':'WARN',  
-        'class':'logging.StreamHandler',
-        'formatter': 'standard',
-      },  
-    },
-    'loggers': {
-      '': {
-        'handlers': ['stream'],
-        'level': 'WARN',
-        'propagate': True
-      },
-      'app': {
-        'handlers': ['file'],
-        'level': 'INFO',
-        'propagate': True
-      },
-      'celery': {
-        'handlers': ['file'],
-        'level': 'INFO',
-        'propagate': True
-      },
-    }
-  }
-  DEBUG_LOGGER_CONFIG = {
-    'version': 1,        
-    'formatters': {
-      'standard': {
-        'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
-      },
-    },
-    'handlers': {
-      'file': {
-        'level':'DEBUG',    
-        'class':'logging.FileHandler',
-        'formatter': 'standard',
-        'filename': join(LOGGING_FOLDER, 'debug.log')
-      },  
-      'stream': {
-        'level':'INFO',    
-        'class':'logging.StreamHandler',
-        'formatter': 'standard',
-      },  
-    },
-    'loggers': {
-      '': {
-        'handlers': ['stream'],
-        'level': 'INFO',
-        'propagate': True
-      },
-      'app': {
-        'handlers': ['file'],
-        'level': 'DEBUG',
-        'propagate': True
-      },
-      'celery': {
-        'handlers': ['file'],
-        'level': 'DEBUG',
-        'propagate': True
-      },
-    }
-  }
-
-if USE_CELERY:
-
-  from kombu import Exchange, Queue
-
-  exchange = Exchange(PROJECT_NAME, type='direct')
+  exchange = Exchange(project_name, type='direct')
 
   class CeleryBaseConfig(object):
 
     """Base Celery configuration."""
 
     DEBUG = False
-    BROKER_URL = BROKER_URL
+    BROKER_URL = 'redis://localhost:6379/0' 
     CELERY_QUEUES = [
       Queue(
         'production',
         exchange=exchange,
-        routing_key='production.%s' % PROJECT_NAME
+        routing_key='production.%s' % project_name
       ),
       Queue(
         'development',
         exchange=exchange,
-        routing_key='development.%s' % PROJECT_NAME
+        routing_key='development.%s' % project_name
       )
     ]
     CELERY_DEFAULT_EXCHANGE = exchange
-    CELERY_DEFAULT_ROUTING_KEY = 'production.%s' % PROJECT_NAME
+    CELERY_DEFAULT_ROUTING_KEY = 'production.%s' % project_name
     CELERY_DEFAULT_QUEUE = 'production'
     CELERY_DISABLE_RATE_LIMIT = True
-    CELERY_RESULT_BACKEND = BROKER_URL
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0' 
     CELERY_SEND_EVENTS = True
     CELERY_TASK_RESULT_EXPIRES = 3600
     CELERY_TRACK_STARTED = True
     CELERYD_CONCURRENCY = 3
     CELERYD_PREFETCH_MULTIPLIER = 1
+    SCHEDULES_FOLDER = celery_folder
 
   class CeleryDebugConfig(CeleryBaseConfig):
 
     """Debug Celery configuration."""
 
     DEBUG = True
-    CELERY_DEFAULT_ROUTING_KEY = 'development.%s' % PROJECT_NAME
+    CELERY_DEFAULT_ROUTING_KEY = 'development.%s' % project_name
     CELERY_DEFAULT_QUEUE = 'development'
 
-if USE_OAUTH:
-
-  class AuthConfig(object):
-
-    """Authentication blueprint configuration."""
-
-    CLIENT_ID = GOOGLE_CLIENT_ID
-    CLIENT_SECRET = GOOGLE_CLIENT_SECRET
-
+  if debug:
+    return {
+      'app': AppDebugConfig,
+      'celery': CeleryDebugConfig,
+      'logger': LoggerConfig.DEBUG_CONFIG
+    }
+  else:
+    return {
+      'app': AppBaseConfig,
+      'celery': CeleryBaseConfig,
+      'logger': LoggerConfig.BASE_CONFIG
+    }

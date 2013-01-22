@@ -1,4 +1,4 @@
-Example 3
+Example 2
 =========
 
-Includes Celery backend.
+Includes database backend for persistent storage, logging, app structure.

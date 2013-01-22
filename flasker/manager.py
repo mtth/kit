@@ -20,125 +20,113 @@ database connection at that moment. Pretty nifty and convenient.
 from flask import current_app
 from flask.ext.script import Manager, prompt, Shell
 
-from app import make_app
-from app.core.config import APP_FOLDER, PROJECT_NAME, USE_CELERY, USE_OAUTH
-from app.core.database import db
-
-if USE_CELERY:
-  from app import celery
-  from app.core.config import BROKER_URL
-
-if USE_OAUTH:
-  from app.core.auth import User
+import oauth
 
 # Creating the manager instance
 # =============================
 
-manager = Manager(make_app, with_default_commands=False)
+def make(project_name, factory, db, celery, use_oauth):
 
-# Options
-# these options seem to be passed to the make_app function and also added
-# to the current_app instance
-manager.add_option(
-    '-d', '--debug', action='store_true', dest='debug', default=False
-)
+  manager = Manager(factory, with_default_commands=False)
 
-# Commands
-manager.add_command('shell', Shell())
-
-@manager.shell
-def make_shell_context():
-  db.create_connection(debug=current_app.debug, app=current_app)
-  return {
-    'app': current_app,
-    'db': db,
-    'celery': celery if USE_CELERY else None,
-    'User': User if USE_OAUTH else None,
-  }
-
-# App management
-# ==============
-
-@manager.option('-t', '--host', dest='host', default='0.0.0.0')
-@manager.option('-p', '--port', dest='port', default=5000)
-def run_server(host, port):
-  """Start the flask werkzeug server."""
-  db.create_connection(debug=current_app.debug, app=current_app)
-  current_app.run(
-      host=host,
-      port=int(port),
-      debug=current_app.debug
+  # Options
+  # these options seem to be passed to the make_app function and also added
+  # to the current_app instance
+  manager.add_option(
+      '-d', '--debug', action='store_true', dest='debug', default=False
   )
 
-@manager.command
-def view_app_config():
-  """View config currently used by the app."""
-  print 'App config:'
-  for key, value in sorted(current_app.config.items()):
-    print '%30s %s' % (key, value)
+  # Commands
+  manager.add_command('shell', Shell())
 
-if USE_OAUTH:
+  @manager.shell
+  def make_shell_context():
+    db.create_connection()
+    return {
+      'app': current_app,
+      'db': db,
+      'celery': celery,
+    }
 
-  @manager.command
-  def add_user():
-    """Add user to database."""
-    db.create_connection(debug=current_app.debug, app=current_app)
-    with db as session:
-      user_email = prompt('User email?')
-      user = User(user_email)
-      session.add(user)
-
-  @manager.command
-  def view_users():
-    """View all database users."""
-    db.create_connection(debug=current_app.debug, app=current_app)
-    with db as session:
-      users = session.query(User).all()
-      for user in users:
-        print '%10s %s' % (user.id, user.email)
+  @manager.option('-t', '--host', dest='host', default='0.0.0.0')
+  @manager.option('-p', '--port', dest='port', default=5000)
+  def run_server(host, port):
+    """Start the flask werkzeug server."""
+    db.create_connection(app=current_app)
+    current_app.run(
+        host=host,
+        port=int(port),
+        debug=current_app.debug
+    )
 
   @manager.command
-  def remove_user():
-    """Remove user."""
-    db.create_connection(debug=current_app.debug, app=current_app)
-    with db as session:
-      users = session.query(User).all()
-      for user in users:
-        print '%10s %s' % (user.id, user.email)
-      user_id = prompt('User id?')
-      session.delete(User.query.get(user_id))
+  def view_app_config():
+    """View config currently used by the app."""
+    print 'App config:'
+    for key, value in sorted(current_app.config.items()):
+      print '%30s %s' % (key, value)
 
-if USE_CELERY:
+  if use_oauth:
 
-  @manager.command
-  def run_worker():
-    """Start the Celery worker."""
-    if current_app.debug:
-      celery.worker_main([
-        'worker',
-        '--beat',
-        '--schedule=%s/core/schedules/production.sch' % APP_FOLDER,
-        '--hostname=development.%s' % PROJECT_NAME,
-        '--queues=development'
+    @manager.command
+    def add_user():
+      """Add user to database."""
+      db.create_connection()
+      with db as session:
+        user_email = prompt('User email?')
+        user = oauth.User(user_email)
+        session.add(user)
+
+    @manager.command
+    def view_users():
+      """View all database users."""
+      db.create_connection()
+      with db as session:
+        users = session.query(oauth.User).all()
+        for user in users:
+          print '%10s %s' % (user.id, user.email)
+
+    @manager.command
+    def remove_user():
+      """Remove user."""
+      db.create_connection()
+      with db as session:
+        users = session.query(oauth.User).all()
+        for user in users:
+          print '%10s %s' % (user.id, user.email)
+        user_id = prompt('User id?')
+        session.delete(oauth.User.query.get(user_id))
+
+  if celery:
+
+    @manager.command
+    def run_worker():
+      """Start the Celery worker."""
+      if current_app.debug:
+        celery.worker_main([
+          'worker',
+          '--beat',
+          '--schedule=%s/production.sch' % celery.conf['SCHEDULES_FOLDER'],
+          '--hostname=development.%s' % project_name,
+          '--queues=development'
+        ])
+      else:
+        celery.worker_main([
+          'worker',
+          '--beat',
+          '--schedule=%s/development.sch' % celery.conf['SCHEDULES_FOLDER'],
+          '--hostname=production.%s' % project_name,
+          '--queues=production'
+        ])
+
+    @manager.option('-p', '--port', dest='port', default='5555')
+    def run_flower(port):
+      """Run flow manager."""
+      celery.start([
+        'celery',
+        'flower',
+        '--broker=%s' % celery.conf['BROKER_URL'],
+        '--port=%s' % port
       ])
-    else:
-      celery.worker_main([
-        'worker',
-        '--beat',
-        '--schedule=%s/core/schedules/development.sch' % APP_FOLDER,
-        '--hostname=production.%s' % PROJECT_NAME,
-        '--queues=production'
-      ])
 
-  @manager.option('-p', '--port', dest='port', default='5555')
-  def run_flower(port):
-    """Run flow manager."""
-    celery.start([
-      'celery',
-      'flower',
-      '--broker=%s' % BROKER_URL,
-      '--port=%s' % port
-    ])
-
-if __name__ == '__main__':
-  manager.run()
+  return manager

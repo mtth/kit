@@ -3,21 +3,17 @@
 """The engine behind it all."""
 
 from flask import abort
-from functools import wraps
 from json import dumps, loads
 from logging import getLogger
 from sqlalchemy import create_engine, Column
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.ext.declarative import declarative_base, declared_attr, \
-has_inherited_table
+from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.orm import class_mapper, Query, scoped_session, sessionmaker
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.types import TypeDecorator, UnicodeText
-from time import time
 
-from app.core.config import BaseConfig, DebugConfig
-from app.lib.util import Cacheable, Jsonifiable, Loggable, uncamelcase
+from util import Cacheable, Jsonifiable, Loggable, uncamelcase
 
 logger = getLogger(__name__)
 
@@ -126,7 +122,6 @@ class ExpandedBase(Cacheable, Jsonifiable, Loggable):
       This prevents single table inheritance!
 
     """
-    bp_name = cls.__module__.split('.', 1)[1].replace('.models', '')
     return '%ss' % uncamelcase(cls.__name__)
 
   @classmethod
@@ -301,24 +296,18 @@ class Db(object):
 
   """
 
+  def __init__(self, db_url):
+    self.url = db_url
+
   def __enter__(self):
     return self.session()
 
   def __exit__(self, type, value, traceback):
     self.dismantle()
 
-  def create_connection(self, debug=False, app=None):
+  def create_connection(self, app=None):
     """Initialize database connection."""
-    if debug:
-      engine = create_engine(
-          DebugConfig.APP_DB_URL,
-          pool_recycle=3600
-      )
-    else:
-      engine = create_engine(
-          BaseConfig.APP_DB_URL,
-          pool_recycle=3600
-      )
+    engine = create_engine(self.url, pool_recycle=3600)
     Base.metadata.create_all(engine, checkfirst=True)
     self.session = scoped_session(sessionmaker(bind=engine))
     Base.query = _QueryProperty(self)
@@ -343,5 +332,3 @@ class Db(object):
       logger.error('Database error: %s' % e)
     finally:
       self.session.remove()
-
-db = Db()
