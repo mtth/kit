@@ -3,6 +3,7 @@
 from flasker import Flasker
 
 fk_config = {
+    'project_root': 'app',
     'db_url': 'sqlite:///app/db/db.sqlite',
     'logging_folder': 'logs',
     'oauth_credentials': {

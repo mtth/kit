@@ -1,4 +1,5 @@
-old
+dist
 venv
+*.egg-info/
 *.sch
 *.sqlite

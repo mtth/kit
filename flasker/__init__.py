@@ -5,6 +5,7 @@ from flask import Flask
 from flask.ext.login import current_user
 from logging import getLogger
 from logging.config import dictConfig
+from os import listdir
 from os.path import abspath, join
 
 import config
@@ -33,7 +34,7 @@ class Flasker(object):
     """
     self.project_name = project_name
     self.options = kwargs
-    self.project_root = abspath(kwargs.get('project_root', 'app'))
+    self.project_root = abspath(kwargs.get('project_root', '.'))
     if 'logging_folder' in kwargs:
       self.logging_folder = abspath(
         join(self.project_root, kwargs['logging_folder'])
@@ -74,6 +75,11 @@ class Flasker(object):
     self.app.config.from_object(app_config)
     use_oauth = 'oauth_credentials' in self.options
     if use_oauth:
+      if 'db_url' not in self.options:
+        raise Exception("""
+          OAuth requires a database backend to keep track of authorized users.
+          Please specify a db_url.
+        """)
       auth = oauth.make(self.options['oauth_credentials'])
       self.app.register_blueprint(auth['bp'])
       auth['login_manager'].setup_app(self.app)
