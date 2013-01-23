@@ -59,8 +59,8 @@ class OAuth(object):
     RESPONSE_TYPE = "token"
     GRANT_TYPE = "authorization_code"
     ACCESS_TYPE = "offline"
-    CLIENT_ID = oauth_credentials['google_client']
-    CLIENT_SECRET = oauth_credentials['google_secret']
+    CLIENT_ID = None # oauth_credentials['google_client']
+    CLIENT_SECRET = None # oauth_credentials['google_secret']
 
 def get_params():
     """Builds the dictionary of parameters required the API request.
@@ -238,8 +238,8 @@ def sign_out():
     }
     return render_template('sign_in_out.html', **values)
 
-def make(oauth_credentials):
-
-
+def make(credentials):
+  OAuth.CLIENT_ID = credentials['GOOGLE_CLIENT']
+  OAuth.CLIENT_SECRET = credentials['GOOGLE_SECRET']
   return {'bp': bp, 'login_manager': login_manager}
 

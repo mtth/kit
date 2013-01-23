@@ -3,49 +3,44 @@
 """Global configuration module."""
 
 from kombu import Exchange, Queue
-from os.path import join
+from os.path import abspath, join
 
 class BaseConfig(object):
 
-  """Base config class."""
+  """Base config class.
+
+  The DEFAULT and DEBUG dictionaries will take precedence on any other
+  settings.  This allows new configurations by simply subclassing and
+  implementing these two entries.
+  
+  """
+
+  DEFAULT = {}
+  DEBUG = {}
 
   @classmethod
-  def default(cls, flasker):
-    return {}
+  def default(cls, project):
+    return cls.DEFAULT
 
   @classmethod
-  def debug(cls, flasker):
-    return {}
+  def debug(cls, project):
+    return cls.DEBUG
 
   @classmethod
-  def get(cls, flasker, debug):
-    rv = cls.default(flasker)
+  def generate(cls, project, debug):
+    rv = cls.default(project)
+    rv.update(cls.DEFAULT)
     if debug:
-      rv.update(cls.debug(flasker))
+      rv.update(cls.debug(project))
+      rv.update(cls.DEBUG)
     return rv
-
-class FlaskerConfig(BaseConfig):
-
-  """Base flasker global configuration."""
-
-  @classmethod
-  def default(cls, flasker):
-    return {
-      'DB_URL': 'sqlite://',
-      'LOGGING_FOLDER': None,
-      'APP_STATIC_FOLDER': None,
-      'APP_TEMPLATE_FOLDER': None,
-      'CELERY_SCHEDULE_FOLDER': None,
-      'STATIC_URL': None,
-      'OAUTH_CREDENTIALS': None,
-    }
 
 class AppConfig(BaseConfig):
 
   """Base app configuration."""
 
   @classmethod
-  def default(cls, flasker):
+  def default(cls, project):
     return {
       'DEBUG': False,
       'LOGGER_NAME': 'app',
@@ -55,7 +50,7 @@ class AppConfig(BaseConfig):
     }
 
   @classmethod
-  def debug(cls, flasker):
+  def debug(cls, project):
     return {
       'DEBUG': True,
       'TESTING': True,
@@ -68,8 +63,9 @@ class LoggerConfig(BaseConfig):
   """Logger configuration."""
 
   @classmethod
-  def default(cls, flasker):
-    rv = {
+  def default(cls, project):
+    logging_folder = abspath(project.LOGGING_FOLDER)
+    return {
       'version': 1,        
       'formatters': {
         'standard': {
@@ -82,34 +78,12 @@ class LoggerConfig(BaseConfig):
           'class':'logging.StreamHandler',
           'formatter': 'standard',
         },  
-      },
-      'loggers': {
-        '': {
-          'handlers': ['stream'],
-          'level': 'INFO',
-          'propagate': True
-        },
-      }
-    }
-    if flasker.config['LOGGING_FOLDER']:
-      rv['handlers']['file'] = {
-        'level':'DEBUG',    
-        'class':'logging.FileHandler',
-        'formatter': 'standard',
-        'filename': join(logging_folder, 'debug.log')
-      }
-      rv['loggers']['']['handlers'].append('file')
-
-  @classmethod
-  def debug(cls, flasker):
-    return {
-      'handlers': {
-        'file': ,  
-        'stream': {
-          'level':'INFO',    
-          'class':'logging.StreamHandler',
+        'file': {
+          'level':'DEBUG',    
+          'class':'logging.FileHandler',
           'formatter': 'standard',
-        },  
+          'filename': join(logging_folder, 'debug.log')
+        },
       },
       'loggers': {
         '': {
@@ -125,8 +99,8 @@ class CeleryConfig(BaseConfig):
   """Base Celery configuration."""
 
   @classmethod
-  def default(cls, flasker):
-    hostname = flasker.name.lower().replace(' ', '_')
+  def default(cls, project):
+    hostname = project.NAME.lower().replace(' ', '_')
     exchange = Exchange(hostname, type='direct')
     return {
       'DEBUG': False,
@@ -153,13 +127,14 @@ class CeleryConfig(BaseConfig):
       'CELERY_TRACK_STARTED': True,
       'CELERYD_CONCURRENCY': 3,
       'CELERYD_PREFETCH_MULTIPLIER': 1,
-      'SCHEDULES_FOLDER': celery_folder
     }
 
   @classmethod
-  def debug(cls, flasker):
+  def debug(cls, project):
+    hostname = project.NAME.lower().replace(' ', '_')
     return {
       'DEBUG': True,
-      'CELERY_DEFAULT_ROUTING_KEY': 'development.%s' % code_name,
+      'CELERY_DEFAULT_ROUTING_KEY': 'development.%s' % hostname,
       'CELERY_DEFAULT_QUEUE': 'development'
     }
+

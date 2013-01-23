@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
-from core import Flasker
+from manager import ProjectManager
+from project import BaseProject
 
-flasker = Flasker()
+__all__ = ['project', 'manager', 'config', 'util']
+
