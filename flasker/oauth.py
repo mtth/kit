@@ -3,11 +3,12 @@
 """This is where the auth magic happens."""
 
 from flask import Blueprint, flash, request, redirect, render_template, url_for
-from flask.ext.login import current_user, login_user, logout_user, LoginManager, UserMixin
+from flask.ext.login import current_user, login_required, login_user, logout_user, LoginManager, UserMixin
 from json import loads
 from logging import getLogger
 from os.path import abspath, join, dirname
 from sqlalchemy import Boolean, Column, DateTime, Integer, Unicode, String, Text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import backref, relationship
 from urllib import urlencode
 from urllib2 import Request, urlopen
@@ -239,7 +240,7 @@ def sign_out():
     return render_template('sign_in_out.html', **values)
 
 def make(credentials):
-  OAuth.CLIENT_ID = credentials['GOOGLE_CLIENT']
-  OAuth.CLIENT_SECRET = credentials['GOOGLE_SECRET']
+  OAuth.CLIENT_ID = credentials
+  OAuth.CLIENT_SECRET = ''
   return {'bp': bp, 'login_manager': login_manager}
 

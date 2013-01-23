@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
-from app import *
-from flasker.manager import ProjectManager
+from flasker import ProjectManager
 
-pm = ProjectManager(project.project)
+from app.project import project
 
-pm.run()
+pm = ProjectManager(project)
+
+if __name__ == '__main__':
+  pm.run()

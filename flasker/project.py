@@ -7,10 +7,14 @@ from celery.signals import worker_process_init, after_setup_logger
 from celery.task import periodic_task
 from flask import current_app, Flask
 from flask.ext.login import current_user
+from imp import load_source
 from logging import getLogger
 from logging.config import dictConfig
-from os.path import abspath, dirname, join
+from os import listdir
+from os.path import abspath, dirname, join, split, splitext
 from sys import modules
+from weakref import proxy
+from werkzeug.local import LocalProxy
 
 from . import config
 from . import database
@@ -26,6 +30,8 @@ class BaseProject(object):
 
   """
 
+  __current__ = None
+
   NAME = None
   DB_URL = 'sqlite://'
   LOGGING_FOLDER = 'logs'
@@ -35,29 +41,37 @@ class BaseProject(object):
   APP_CONFIG = config.AppConfig
   CELERY_CONFIG = config.CeleryConfig
   LOGGER_CONFIG = config.LoggerConfig
+  MODULES = None
   STATIC_URL = None
-  OAUTH_CREDENTIALS = None
+  OAUTH_GOOGLE_CLIENT = None
 
   def __init__(self):
     # BaseProject must be subclassed to gain access to project directory
     if not self.NAME:
       raise Exception("Subclass necessary.")
+    else:
+      if BaseProject.__current__ is not None:
+        raise Exception("More than one project initialized.")
+      BaseProject.__current__ = proxy(self)
 
     # Making all paths absolute
     root_dir = abspath(dirname(modules[self.__class__.__module__].__file__))
+    self.root_dir = root_dir
     self.LOGGING_FOLDER = join(root_dir, self.LOGGING_FOLDER)
     self.APP_STATIC_FOLDER = join(root_dir, self.APP_STATIC_FOLDER)
     self.APP_TEMPLATE_FOLDER = join(root_dir, self.APP_TEMPLATE_FOLDER)
     self.CELERY_SCHEDULE_FOLDER = join(root_dir, self.CELERY_SCHEDULE_FOLDER)
 
-    # Creating project
+    # Currently, 3 elements to a project
     self.app = None
     self.celery = None
     self.db = None
-    self.make()
+
+  def __repr__(self):
+    return '<BaseProject %r>' % self.NAME
 
   def use_oauth(self):
-    return bool(self.OAUTH_CREDENTIALS)
+    return bool(self.OAUTH_GOOGLE_CLIENT)
 
   def _make_db(self, debug):
     self.db = database.Db(self.DB_URL)
@@ -72,7 +86,7 @@ class BaseProject(object):
     self.app.config.update(self.APP_CONFIG.generate(self, debug))
 
     if self.use_oauth():
-      auth = oauth.make(self.OAUTH_CREDENTIALS)
+      auth = oauth.make(self.OAUTH_GOOGLE_CLIENT)
       self.app.register_blueprint(auth['bp'])
       auth['login_manager'].setup_app(self.app)
 
@@ -117,9 +131,28 @@ class BaseProject(object):
     dictConfig(self.LOGGER_CONFIG.generate(self, debug))
 
   def make(self, debug=False):
+    print 'calling make app'
     self._make_db(debug)
     self._make_app(debug)
     self._make_celery(debug)
     self._make_logger(debug)
+    print self.__class__.__module__
+    if self.MODULES:
+      project_modules = [
+        '%s.py' % join(self.root_dir, module)
+        for module in self.MODULES
+      ]
+    else:
+      project_modules = []
+    for module in project_modules:
+      load_source(
+        '%s.%s' % (split(dirname(module))[1], splitext(split(module)[1])[0]),
+        module
+      )
     return self.app
 
+  @classmethod
+  def get_current_project(cls):
+    return BaseProject.__current__
+
+current_project = LocalProxy(lambda: BaseProject.get_current_project())

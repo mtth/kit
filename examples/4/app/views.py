@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 from flask import jsonify
-from project import project
+from flasker import current_project
 
-app = project.app
+app = current_project.app
 
 @app.route('/')
 def index():

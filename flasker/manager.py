@@ -6,11 +6,7 @@ class ProjectManager(object):
 
   def __init__(self, project):
 
-    app = project.app
-    db = project.db
-    celery = project.celery
-
-    manager = Manager(app, with_default_commands=False)
+    manager = Manager(project.make, with_default_commands=False)
 
     # these options seem to be passed to the make_app function and
     # also added  to the current_app instance
@@ -24,8 +20,8 @@ class ProjectManager(object):
 
     @manager.shell
     def make_shell_context():
-      db.create_connection()
-      return {'app': app, 'db': db, 'celery': celery}
+      project.db.create_connection()
+      return {'app': project.app, 'db': project.db, 'celery': project.celery}
 
     # Server
 
@@ -33,14 +29,14 @@ class ProjectManager(object):
     @manager.option('-p', '--port', dest='port', default=5000)
     def run_server(host, port):
       """Start the flask werkzeug server."""
-      db.create_connection(app=app)
-      app.run(host=host, port=int(port), debug=app.debug)
+      project.db.create_connection(app=project.app)
+      project.app.run(host=host, port=int(port), debug=project.app.debug)
 
     @manager.command
     def view_app_config():
       """View config currently used by the app."""
       print 'App config:'
-      for key, value in sorted(app.config.items()):
+      for key, value in sorted(project.app.config.items()):
         print '%30s %s' % (key, value)
 
     # OAuth
@@ -50,8 +46,8 @@ class ProjectManager(object):
       @manager.command
       def add_user():
         """Add user to database."""
-        db.create_connection()
-        with db as session:
+        project.db.create_connection()
+        with project.db as session:
           user_email = prompt('User email?')
           user = oauth.User(user_email)
           session.add(user)
@@ -59,8 +55,8 @@ class ProjectManager(object):
       @manager.command
       def view_users():
         """View all database users."""
-        db.create_connection()
-        with db as session:
+        project.db.create_connection()
+        with project.db as session:
           users = session.query(oauth.User).all()
           for user in users:
             print '%10s %s' % (user.id, user.email)
@@ -68,8 +64,8 @@ class ProjectManager(object):
       @manager.command
       def remove_user():
         """Remove user."""
-        db.create_connection()
-        with db as session:
+        project.db.create_connection()
+        with project.db as session:
           users = session.query(oauth.User).all()
           for user in users:
             print '%10s %s' % (user.id, user.email)
@@ -81,19 +77,19 @@ class ProjectManager(object):
     @manager.command
     def run_worker():
       """Start the Celery worker."""
-      if app.debug:
-        celery.worker_main([
+      if project.app.debug:
+        project.celery.worker_main([
           'worker',
           '--beat',
-          '--schedule=%s/production.sch' % celery.conf['SCHEDULES_FOLDER'],
+          '--schedule=%s/production.sch' % project.CELERY_SCHEDULE_FOLDER,
           '--hostname=development.%s' % self.name,
           '--queues=development'
         ])
       else:
-        celery.worker_main([
+        project.celery.worker_main([
           'worker',
           '--beat',
-          '--schedule=%s/development.sch' % celery.conf['SCHEDULES_FOLDER'],
+          '--schedule=%s/development.sch' % project.CELERY_SCHEDULE_FOLDER,
           '--hostname=production.%s' % self.name,
           '--queues=production'
         ])
@@ -103,15 +99,16 @@ class ProjectManager(object):
     @manager.option('-p', '--port', dest='port', default='5555')
     def run_flower(port):
       """Run flow manager."""
-      celery.start([
+      project.celery.start([
         'celery',
         'flower',
-        '--broker=%s' % celery.conf['BROKER_URL'],
+        '--broker=%s' % project.celery.conf['BROKER_URL'],
         '--port=%s' % port
       ])
 
     self.manager = manager
 
   def run(self):
+    print 'RUN'
     self.manager.run()
 

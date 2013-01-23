@@ -2,8 +2,9 @@
 
 from flasker import BaseProject
 
-class Pj(BaseProject):
+class Project(BaseProject):
 
   NAME = 'Hi'
+  MODULES = ['views']
 
-project = Pj()
+project = Project()
