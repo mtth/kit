@@ -1,24 +1,13 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import
-
-from celery import Celery
-from celery.signals import worker_process_init, after_setup_logger
-from celery.task import periodic_task
-from flask import current_app, Flask
-from flask.ext.login import current_user
-from imp import load_source
 from logging import getLogger
 from logging.config import dictConfig
-from os import listdir
-from os.path import abspath, dirname, join, split, splitext
+from os.path import abspath, dirname, join, split
 from sys import modules
 from weakref import proxy
 from werkzeug.local import LocalProxy
 
 from . import config
-from . import database
-from . import oauth
 
 logger = getLogger()
 
@@ -33,12 +22,12 @@ class BaseProject(object):
   __current__ = None
 
   NAME = None
-  FILES = None
-  DB_URL = 'sqlite://'
-  LOGGING_FOLDER = '.'
+  MODULES = None
+  DB_URL = None
+  LOGGING_FOLDER = 'logs'
   APP_STATIC_FOLDER = 'static'
   APP_TEMPLATE_FOLDER = 'templates'
-  CELERY_SCHEDULE_FOLDER = '.'
+  CELERY_SCHEDULE_FOLDER = 'celery'
   APP_CONFIG = config.AppConfig
   CELERY_CONFIG = config.CeleryConfig
   LOGGER_CONFIG = config.LoggerConfig
@@ -62,8 +51,10 @@ class BaseProject(object):
     self.APP_STATIC_FOLDER = join(root_dir, self.APP_STATIC_FOLDER)
     self.APP_TEMPLATE_FOLDER = join(root_dir, self.APP_TEMPLATE_FOLDER)
     self.CELERY_SCHEDULE_FOLDER = join(root_dir, self.CELERY_SCHEDULE_FOLDER)
+    if self.DB_URL is None:
+      self.DB_URL = 'sqlite:///%s' % join(root_dir, 'db', 'db.sqlite')
 
-    # Currently, 3 elements to a project
+    # Currently, 3 parts to a project
     self.app = None
     self.celery = None
     self.db = None
@@ -74,79 +65,16 @@ class BaseProject(object):
   def use_oauth(self):
     return bool(self.OAUTH_GOOGLE_CLIENT)
 
-  def _make_db(self, debug):
-    self.db = database.Db(self.DB_URL)
-
-  def _make_app(self, debug):
-    """Configure and generate the Flask app."""
-    self.app = Flask(
-      self.NAME,
-      static_folder=self.APP_STATIC_FOLDER,
-      template_folder=self.APP_TEMPLATE_FOLDER
-    )
-    self.app.config.update(self.APP_CONFIG.generate(self, debug))
-
-    if self.use_oauth():
-      auth = oauth.make(self.OAUTH_GOOGLE_CLIENT)
-      self.app.register_blueprint(auth['bp'])
-      auth['login_manager'].setup_app(self.app)
-
-    @self.app.context_processor
-    def inject():
-
-      def static_url(request):
-        return self.STATIC_URL or request.url_root + 'static/assets'
-
-      def is_logged_in():
-        return self.use_oauth() and current_user.is_authenticated()
-
-      return {
-        'project_name': self.name,
-        'static_url': static_url,
-        'is_logged_in': is_logged_in
-      }
-
-  def _make_celery(self, debug):
-    """Configure and generate the Celery app."""
-    self.celery = Celery()
-    self.celery.conf.update(self.CELERY_CONFIG.generate(self, debug))
-    self.celery.periodic_task = periodic_task
-
-    @after_setup_logger.connect
-    def after_setup_logger_handler(logger, loglevel, logfile, **kwrds):
-        """Setting up logger configuration for the worker."""
-        self._make_logger(debug)
-
-    def create_worker_connection(*args, **kwargs):
-      """Initialize database connection.
-
-      This has to be done after the worker processes have been started otherwise
-      the connection will fail.
-
-      """
-      self.db.create_connection()
-
-    worker_process_init.connect(create_worker_connection)
-
-  def _make_logger(self, debug):
-    dictConfig(self.LOGGER_CONFIG.generate(self, debug))
-
   def make(self, debug=False):
-    self._make_db(debug)
-    self._make_app(debug)
-    self._make_celery(debug)
-    self._make_logger(debug)
-    if self.FILES:
-      project_modules = [
-        join(self.root_dir, module)
-        for module in self.FILES
-      ]
-    else:
-      project_modules = []
-    for module in project_modules:
-      load_source(
-        '%s.%s' % (split(dirname(module))[1], splitext(split(module)[1])[0]),
-        module
+    self.debug = debug
+    dictConfig(self.LOGGER_CONFIG.generate(self))
+    __import__('flasker.parts.app')
+    __import__('flasker.parts.database')
+    __import__('flasker.parts.celery')
+    if self.MODULES:
+      map(
+        __import__, 
+        ['%s.%s' % (split(self.root_dir)[1], mod) for mod in self.MODULES]
       )
     return self.app
 

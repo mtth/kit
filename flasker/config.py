@@ -29,10 +29,10 @@ class BaseConfig(object):
     return cls.DEBUG
 
   @classmethod
-  def generate(cls, project, debug):
+  def generate(cls, project):
     rv = cls.default(project)
     rv.update(cls.DEFAULT)
-    if debug:
+    if project.debug:
       rv.update(cls.debug(project))
       rv.update(cls.DEBUG)
     return rv
@@ -146,9 +146,10 @@ class LoggerConfig(BaseConfig):
         'standard': {
           'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
         },
+      },
       'handlers': {
         'stream': {
-          'level':'INFO',  
+          'level':'DEBUG',  
           'class':'logging.StreamHandler',
           'formatter': 'standard',
         },  

@@ -4,7 +4,8 @@ from flasker import BaseProject
 
 class Project(BaseProject):
 
-  NAME = 'Hi'
-  FILES = ['views.py']
+  NAME = 'My first Flasker project'
+  MODULES = ['views', 'tasks']
+  OAUTH_GOOGLE_CLIENT = 'hi'
 
 project = Project()

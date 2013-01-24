@@ -3,15 +3,15 @@
 """This is where the auth magic happens."""
 
 from flask import Blueprint, flash, request, redirect, render_template, url_for
-from flask.ext.login import current_user, login_required, login_user, logout_user, LoginManager, UserMixin
+from flask.ext.login import current_user, login_user, logout_user, LoginManager, UserMixin
 from json import loads
 from os.path import abspath, join, dirname
-from sqlalchemy import Boolean, Column, DateTime, Integer, Unicode, String, Text
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy import Column, Integer, String
 from urllib import urlencode
 from urllib2 import Request, urlopen
 
-import database
+from ..project import current_project
+from ..util import Base
 
 # Login manager instance
 # ======================
@@ -117,7 +117,7 @@ def get_user_info_from_token(token):
 # Model
 # =====
 
-class User(database.Base, UserMixin):
+class User(Base, UserMixin):
 
     """User class.
 
