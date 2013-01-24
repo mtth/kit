@@ -2,27 +2,53 @@
 
 """To load templates."""
 
+from argparse import ArgumentParser, REMAINDER
 from distutils.dir_util import copy_tree
 from flask.ext.script import prompt_bool
+from imp import load_source
 from os import mkdir
-from os.path import abspath, dirname, join
-from shutil import move
+from os.path import abspath, dirname, join, sep
+from sys import path
 
-def main():
-  if prompt_bool('Create a new project in this folder'):
-    copy_example(1)
+from project import current_project
 
-def copy_templates():
-  src = join(dirname(__file__), 'examples', 'templates')
-  copy_tree(src, join('app', 'templates'))
+parser = ArgumentParser('Flasker')
 
-def copy_example(version):
-  src = join(dirname(__file__), 'examples', str(version))
-  copy_tree(src, 'app')
-  for folder in ['celery', 'db', 'logs', 'static']:
-    mkdir(join('app', folder))
-  move(join('app', 'manage.py'), 'manage.py')
-  copy_templates()
+parser.add_argument(
+  'command',
+  nargs=REMAINDER
+)
+
+parser.add_argument(
+  '-p',
+  '--project',
+  default='project.py',
+  dest='project',
+  help='Project module'
+)
+
+def start_project(version=1):
+  """Start a new project"""
+  src = join(dirname(__file__), 'examples')
+  # copy project files
+  copy_tree(join(src, str(version)), '.')
+  # copy html files
+  copy_tree(join(src, 'templates'), join('app', 'templates'))
+  # create default directories
+  mkdir(join('app', 'static'))
+  for folder in ['celery', 'db', 'logs']:
+    mkdir(folder)
 
 if __name__ == '__main__':
-  main()
+  args = parser.parse_args()
+  if args.command == ['new']:
+    if prompt_bool('Start a new project'):
+      start_project()
+  else:
+    try:
+      path.append(abspath('.')) # necessary for reloader to work
+      load_source('project', args.project)
+    except ImportError, e:
+      print e
+    else:
+      __import__('flasker.manager')

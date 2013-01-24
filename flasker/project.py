@@ -7,7 +7,7 @@ from sys import modules
 from weakref import proxy
 from werkzeug.local import LocalProxy
 
-from . import config
+from config import AppConfig, CeleryConfig, LoggerConfig
 
 logger = getLogger()
 
@@ -25,13 +25,14 @@ class BaseProject(object):
   NAME = None
   MODULES = None
   DB_URL = None
-  LOGGING_FOLDER = 'logs'
+  APP_FOLDER = 'app'
   APP_STATIC_FOLDER = 'static'
   APP_TEMPLATE_FOLDER = 'templates'
+  LOGGING_FOLDER = 'logs'
   CELERY_SCHEDULE_FOLDER = 'celery'
-  APP_CONFIG = config.AppConfig
-  CELERY_CONFIG = config.CeleryConfig
-  LOGGER_CONFIG = config.LoggerConfig
+  APP_CONFIG = AppConfig
+  CELERY_CONFIG = CeleryConfig
+  LOGGER_CONFIG = LoggerConfig
   STATIC_URL = None
   OAUTH_GOOGLE_CLIENT = None
 
@@ -46,10 +47,12 @@ class BaseProject(object):
 
     # Making all paths absolute
     root_dir = abspath(dirname(modules[self.__class__.__module__].__file__))
+    app_folder = join(root_dir, self.APP_FOLDER)
     self.root_dir = root_dir
+    self.APP_FOLDER = app_folder
+    self.APP_STATIC_FOLDER = join(app_folder, self.APP_STATIC_FOLDER)
+    self.APP_TEMPLATE_FOLDER = join(app_folder, self.APP_TEMPLATE_FOLDER)
     self.LOGGING_FOLDER = join(root_dir, self.LOGGING_FOLDER)
-    self.APP_STATIC_FOLDER = join(root_dir, self.APP_STATIC_FOLDER)
-    self.APP_TEMPLATE_FOLDER = join(root_dir, self.APP_TEMPLATE_FOLDER)
     self.CELERY_SCHEDULE_FOLDER = join(root_dir, self.CELERY_SCHEDULE_FOLDER)
     if self.DB_URL is None:
       self.DB_URL = 'sqlite:///%s' % join(root_dir, 'db', 'db.sqlite')
@@ -73,10 +76,7 @@ class BaseProject(object):
     __import__('flasker.components.database')
     __import__('flasker.components.celery')
     if self.MODULES:
-      map(
-        __import__, 
-        ['%s.%s' % (split(self.root_dir)[1], mod) for mod in self.MODULES]
-      )
+      map(__import__, self.MODULES)
     return self.app
 
   @classmethod

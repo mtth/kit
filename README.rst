@@ -1,8 +1,6 @@
 Flasker
 =======
 
-*Build an app for you project in five seconds*
-
 **What Flasker is**
 Flask_ webapp template with optional Celery_ backend.
 
