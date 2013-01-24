@@ -15,7 +15,8 @@ class BaseProject(object):
 
   """Base project class.
 
-  All folder paths indicated here are relative to the current folder.
+  All folder paths indicated here are relative to the folder where the project
+  class is defined.
 
   """
 
@@ -40,8 +41,7 @@ class BaseProject(object):
     if not self.NAME:
       raise Exception("Subclass necessary.")
     else:
-      if BaseProject.__current__ is not None:
-        raise Exception("More than one project initialized.")
+      assert BaseProject.__current__ is None, 'More than one project.'
       BaseProject.__current__ = proxy(self)
 
     # Making all paths absolute
@@ -54,7 +54,7 @@ class BaseProject(object):
     if self.DB_URL is None:
       self.DB_URL = 'sqlite:///%s' % join(root_dir, 'db', 'db.sqlite')
 
-    # Currently, 3 parts to a project
+    # Currently, 3 components to a project
     self.app = None
     self.celery = None
     self.db = None
@@ -67,10 +67,11 @@ class BaseProject(object):
 
   def make(self, debug=False):
     self.debug = debug
+    self.logger = logger
     dictConfig(self.LOGGER_CONFIG.generate(self))
-    __import__('flasker.parts.app')
-    __import__('flasker.parts.database')
-    __import__('flasker.parts.celery')
+    __import__('flasker.components.app')
+    __import__('flasker.components.database')
+    __import__('flasker.components.celery')
     if self.MODULES:
       map(
         __import__, 

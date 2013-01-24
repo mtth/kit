@@ -3,24 +3,26 @@
 """To load templates."""
 
 from distutils.dir_util import copy_tree
-from flask.ext.script import prompt, prompt_choices
-from os.path import abspath
+from flask.ext.script import prompt_bool
+from os import mkdir
+from os.path import abspath, dirname, join
+from shutil import move
 
 def main():
-  choice = int(prompt_choices(
-    'What would you like to do',
-    [
-      ('1', 'Load example 1'),
-      ('2', 'Load example 2'),
-      ('3', 'Load example 3'),
-      ('0', 'Exit'),
-    ],
-    resolve=lambda e: str(e)
-  ))
-  if choice > 0:
-    directory = abspath(prompt('In which directory', default='.'))
-    print 'Copying example %s...' % choice
-    copy_tree()
+  if prompt_bool('Create a new project in this folder'):
+    copy_example(1)
+
+def copy_templates():
+  src = join(dirname(__file__), 'examples', 'templates')
+  copy_tree(src, join('app', 'templates'))
+
+def copy_example(version):
+  src = join(dirname(__file__), 'examples', str(version))
+  copy_tree(src, 'app')
+  for folder in ['celery', 'db', 'logs', 'static']:
+    mkdir(join('app', folder))
+  move(join('app', 'manage.py'), 'manage.py')
+  copy_templates()
 
 if __name__ == '__main__':
   main()

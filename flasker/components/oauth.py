@@ -5,6 +5,7 @@
 from flask import Blueprint, flash, request, redirect, render_template, url_for
 from flask.ext.login import current_user, login_user, logout_user, LoginManager, UserMixin
 from json import loads
+from logging import getLogger
 from os.path import abspath, join, dirname
 from sqlalchemy import Column, Integer, String
 from urllib import urlencode
@@ -12,6 +13,8 @@ from urllib2 import Request, urlopen
 
 from ..project import current_project
 from ..util import Base
+
+logger = getLogger(__name__)
 
 # Login manager instance
 # ======================
