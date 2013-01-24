@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='flasker',
-    version='0.1.2',
+    version='0.1.5',
     description='Flasker',
     long_description=open('README.rst').read(),
     author='Matthieu Monsch',
@@ -21,14 +21,10 @@ setup(
       'redis',
       'flower'
     ],
-    package_data={'flasker': ['components/templates/*']},
+    package_data={'flasker': [
+      'components/templates/*',
+      'examples/**/*',
+    ]},
+    include_package_data=True,
     entry_points={'console_scripts': ['flasker = flasker.__main__:main']},
-    # data_files=[
-    #   ('example', ['example/manage.py']),
-    #   ('example/app', [
-    #     'example/app/project.py',
-    #     'example/app/views.py',
-    #     'example/app/__init__.py',
-    #   ])
-    # ]
 )

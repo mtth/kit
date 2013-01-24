@@ -1,7 +1,13 @@
-Flask App Template
-==================
+Flasker
+=======
 
+*Build an app for you project in five seconds*
+
+**What Flasker is**
 Flask_ webapp template with optional Celery_ backend.
+
+**What Flasker isn't**
+An easy way to learn Flask, SQLAlchemy and Celery. Flasker works behind the scene to tie these three tools together so that it 'works' but at the same time exposes the bare webapp, celery worker and database objects. This integration is meant to be as transparent as possible, to let you configure these individually according to your project needs.
 
 Feature highlights
 ==================
@@ -16,14 +22,13 @@ Quickstart
 
 * **Installation**::
 
-    $ git clone git://github.com/mtth/flasker.git
-    $ cd flasker
-    $ pip install -r requirements.txt
+    $ pip install flasker
 
-* **Running the app**::
+* **To create a new project**::
 
-    $ python manage.py run_server -p 5050
+    $ flasker
 
+  You will be prompted...
   This will run the server (using Werkzeug) on port 5050. Also:
 
   * Append the ``-d`` flag to run the server in debug mode (enables autoreload and in-browser debugger)
