@@ -536,9 +536,9 @@ class Loggable(object):
   """
 
   def _logger(self, message, loglevel):
-    if not hasattr(self, 'logger'):
-      self.logger = getLogger(self.__module__)
-    action = getattr(self.logger, loglevel)
+    if not hasattr(self, '__logger__'):
+      self.__logger__ = getLogger(self.__module__)
+    action = getattr(self.__logger__, loglevel)
     return action('%s :: %s' % (self, message))
 
   def __getattr__(self, varname):

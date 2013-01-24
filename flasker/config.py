@@ -2,6 +2,8 @@
 
 """Global configuration module."""
 
+import logging
+from logging import getLogger, StreamHandler
 from kombu import Exchange, Queue
 from os.path import abspath, join
 
@@ -58,42 +60,6 @@ class AppConfig(BaseConfig):
       'USE_X_SENDFILE': False
     }
 
-class LoggerConfig(BaseConfig):
-
-  """Logger configuration."""
-
-  @classmethod
-  def default(cls, project):
-    logging_folder = abspath(project.LOGGING_FOLDER)
-    return {
-      'version': 1,        
-      'formatters': {
-        'standard': {
-          'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
-        },
-      },
-      'handlers': {
-        'stream': {
-          'level':'WARN',  
-          'class':'logging.StreamHandler',
-          'formatter': 'standard',
-        },  
-        'file': {
-          'level':'DEBUG',    
-          'class':'logging.FileHandler',
-          'formatter': 'standard',
-          'filename': join(logging_folder, 'debug.log')
-        },
-      },
-      'loggers': {
-        '': {
-          'handlers': ['stream', 'file'],
-          'level': 'DEBUG',
-          'propagate': True
-        },
-      }
-    }
-
 class CeleryConfig(BaseConfig):
 
   """Base Celery configuration."""
@@ -136,5 +102,66 @@ class CeleryConfig(BaseConfig):
       'DEBUG': True,
       'CELERY_DEFAULT_ROUTING_KEY': 'development.%s' % hostname,
       'CELERY_DEFAULT_QUEUE': 'development'
+    }
+
+class LoggerConfig(BaseConfig):
+
+  """Logger configuration."""
+
+  @classmethod
+  def default(cls, project):
+    logging_folder = abspath(project.LOGGING_FOLDER)
+    return {
+      'version': 1,        
+      'formatters': {
+        'standard': {
+          'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
+        },
+      },
+      'handlers': {
+        'stream': {
+          'level':'WARN',  
+          'class':'logging.StreamHandler',
+          'formatter': 'standard',
+        },  
+        'file': {
+          'level':'INFO',    
+          'class':'logging.FileHandler',
+          'formatter': 'standard',
+          'filename': join(logging_folder, 'info.log')
+        },
+      },
+      'root': {
+        'handlers': ['stream', 'file'],
+        'level': 'INFO',
+      },
+    }
+
+  @classmethod
+  def debug(cls, project):
+    logging_folder = abspath(project.LOGGING_FOLDER)
+    return {
+      'version': 1,        
+      'formatters': {
+        'standard': {
+          'format': '%(asctime)s : %(name)s : %(levelname)s :: %(message)s'
+        },
+      'handlers': {
+        'stream': {
+          'level':'INFO',  
+          'class':'logging.StreamHandler',
+          'formatter': 'standard',
+        },  
+        'file': {
+          'level':'DEBUG',    
+          'class':'logging.FileHandler',
+          'formatter': 'standard',
+          'filename': join(logging_folder, 'debug.log')
+        },
+      },
+      'root': {
+        'handlers': ['stream', 'file'],
+        'level': 'DEBUG',
+      },
     }
 

@@ -20,7 +20,7 @@ from . import config
 from . import database
 from . import oauth
 
-logger = getLogger(__name__)
+logger = getLogger()
 
 class BaseProject(object):
 
@@ -33,19 +33,20 @@ class BaseProject(object):
   __current__ = None
 
   NAME = None
+  FILES = None
   DB_URL = 'sqlite://'
-  LOGGING_FOLDER = 'logs'
+  LOGGING_FOLDER = '.'
   APP_STATIC_FOLDER = 'static'
   APP_TEMPLATE_FOLDER = 'templates'
-  CELERY_SCHEDULE_FOLDER = 'celery'
+  CELERY_SCHEDULE_FOLDER = '.'
   APP_CONFIG = config.AppConfig
   CELERY_CONFIG = config.CeleryConfig
   LOGGER_CONFIG = config.LoggerConfig
-  MODULES = None
   STATIC_URL = None
   OAUTH_GOOGLE_CLIENT = None
 
   def __init__(self):
+
     # BaseProject must be subclassed to gain access to project directory
     if not self.NAME:
       raise Exception("Subclass necessary.")
@@ -68,7 +69,7 @@ class BaseProject(object):
     self.db = None
 
   def __repr__(self):
-    return '<BaseProject %r>' % self.NAME
+    return '<%s %r (%r)>' % (self.__class__.__name__, self.NAME, self.root_dir)
 
   def use_oauth(self):
     return bool(self.OAUTH_GOOGLE_CLIENT)
@@ -131,16 +132,14 @@ class BaseProject(object):
     dictConfig(self.LOGGER_CONFIG.generate(self, debug))
 
   def make(self, debug=False):
-    print 'calling make app'
     self._make_db(debug)
     self._make_app(debug)
     self._make_celery(debug)
     self._make_logger(debug)
-    print self.__class__.__module__
-    if self.MODULES:
+    if self.FILES:
       project_modules = [
-        '%s.py' % join(self.root_dir, module)
-        for module in self.MODULES
+        join(self.root_dir, module)
+        for module in self.FILES
       ]
     else:
       project_modules = []

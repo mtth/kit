@@ -5,6 +5,6 @@ from flasker import BaseProject
 class Project(BaseProject):
 
   NAME = 'Hi'
-  MODULES = ['views']
+  FILES = ['views.py']
 
 project = Project()

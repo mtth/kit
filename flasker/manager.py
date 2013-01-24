@@ -77,12 +77,13 @@ class ProjectManager(object):
     @manager.command
     def run_worker():
       """Start the Celery worker."""
+      hostname = project.NAME.lower().replace(' ', '_')
       if project.app.debug:
         project.celery.worker_main([
           'worker',
           '--beat',
           '--schedule=%s/production.sch' % project.CELERY_SCHEDULE_FOLDER,
-          '--hostname=development.%s' % self.name,
+          '--hostname=development.%s' % hostname,
           '--queues=development'
         ])
       else:
@@ -90,7 +91,7 @@ class ProjectManager(object):
           'worker',
           '--beat',
           '--schedule=%s/development.sch' % project.CELERY_SCHEDULE_FOLDER,
-          '--hostname=production.%s' % self.name,
+          '--hostname=production.%s' % hostname,
           '--queues=production'
         ])
 
@@ -109,6 +110,5 @@ class ProjectManager(object):
     self.manager = manager
 
   def run(self):
-    print 'RUN'
     self.manager.run()
 

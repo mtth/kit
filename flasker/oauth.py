@@ -5,17 +5,13 @@
 from flask import Blueprint, flash, request, redirect, render_template, url_for
 from flask.ext.login import current_user, login_required, login_user, logout_user, LoginManager, UserMixin
 from json import loads
-from logging import getLogger
 from os.path import abspath, join, dirname
 from sqlalchemy import Boolean, Column, DateTime, Integer, Unicode, String, Text
-from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import backref, relationship
 from urllib import urlencode
 from urllib2 import Request, urlopen
 
 import database
-
-logger = getLogger(__name__)
 
 # Login manager instance
 # ======================
