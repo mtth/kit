@@ -12,10 +12,9 @@ logger = getLogger(__name__)
 app = current_project.app
 
 @app.route('/')
-#@login_required
+@login_required
 def index():
-  logger.warn('HIIIII')
-  # return jsonify({'success': 'yes!'})
+  logger.warn('INDEX')
   return render_template('index.html')
 
 @app.route('/add')
@@ -24,4 +23,3 @@ def add():
   tasks.add.delay() 
   return jsonify({'success': 'yes!'})
 
-print 'VIEWS'
