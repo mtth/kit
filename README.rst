@@ -1,15 +1,17 @@
 Flasker
 =======
 
-* **What Flasker is**
+* **What Flasker is!**
 
-  Flasker is a Flask_ webapp project manager with built in ORM'ed database (using SQLAlchemy_) and Celery_ backend support.
+  * Flasker is a Flask_ webapp project manager with built in ORM'ed database (using SQLAlchemy_) and Celery_ backend support.
   
-  Flasker handles the integration between these components as transparently as possible and lets you configure these individually according to your project needs via a single ``.cfg`` file.
+  * Flasker handles the integration between these components as transparently as possible and lets you configure these individually according to your project needs via a single ``.cfg`` file.
+  
+  * Flasker also provides you with a very simple pattern to organize your application via the ``current_project`` proxy. No more complicated import schemes!
 
-* **What Flasker isn't**
+* **What Flasker isn't?**
 
-  An easy way to learn Flask, SQLAlchemy and Celery. Flasker handles all the setup but lets you interact with the raw Flask, Celery and database objects. It does however provide you with a very simple pattern to organize your application via a ``current_project`` proxy. No more complicated import schemes!
+  * A dumbed down verion of Flask, SQLAlchemy and Celery. Flasker handles the setup but purposefully leaves you free to interact with the raw Flask, Celery and database objects. Some knowledge of these frameworks is therefore required. 
 
 Quickstart
 ==========
@@ -24,11 +26,9 @@ Quickstart
 
   This will create a default project configuration file ``project.cfg`` in the current directory (the ``-a`` flag triggers the creation of a basic boostrap app).
 
-* **Editing your project**
+* **Editing your project**:
 
-  The ``flasker`` module exposes a ``current_project`` proxy which grants you access to the Flask app, the Celery application and the SQLAlchemy database object respectively through its attributes ``app``, ``celery``, ``db``.
-
-  Inside each project module (defined in the ``MODULES`` option of the configuration file), you can then do::
+  The ``flasker`` module exposes a ``current_project`` proxy which grants you access to the Flask app, the Celery application and the SQLAlchemy database object respectively through its attributes ``app``, ``celery``, ``db``. Inside each project module (defined in the ``MODULES`` option of the configuration file), you can then do::
 
     from flasker import current_project
 
