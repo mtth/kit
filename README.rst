@@ -1,11 +1,15 @@
 Flasker
 =======
 
-**What Flasker is**
-Flask_ webapp template with ORM'ed database (using SQLAlchemy_) and Celery_ backend. The integration between these components is meant to be as transparent as possible, to let you configure these individually according to your project needs.
+* **What Flasker is**
 
-**What Flasker isn't**
-An easy way to learn Flask, SQLAlchemy and Celery. Flasker handles all the setup but lets you interact with the raw Flask, Celery and database objects.
+  Flasker is a Flask_ webapp project manager with built in ORM'ed database (using SQLAlchemy_) and Celery_ backend support.
+  
+  Flasker handles the integration between these components as transparently as possible and lets you configure these individually according to your project needs via a single ``.cfg`` file.
+
+* **What Flasker isn't**
+
+  An easy way to learn Flask, SQLAlchemy and Celery. Flasker handles all the setup but lets you interact with the raw Flask, Celery and database objects.
 
 Quickstart
 ==========
