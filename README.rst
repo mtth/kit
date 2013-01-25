@@ -20,9 +20,22 @@ Quickstart
 
 * **To create a new project**::
 
-    $ flasker new -a default
+    $ flasker new -a dev
 
   This will create a default project configuration file ``project.cfg`` in the current directory (the ``-a`` flag triggers the creation of a basic boostrap app).
+
+* **Editing your project**
+
+  The ``flasker`` module exposes a ``current_project`` proxy which grants you access to the Flask app, the Celery application and the SQLAlchemy database object respectively through its attributes ``app``, ``celery``, ``db``.
+
+  Inside each project module (defined in the ``MODULES`` option of the configuration file), you can then do::
+
+    from flasker import current_project
+
+    app = current_project.app
+    # do stuff with the app
+
+  Flasker will take care of resolving all the necessary imports.
 
 * **Next steps**::
 
@@ -38,6 +51,10 @@ Quickstart
   Extra help is available for each command by typing::
 
     $ flasker <insert_command> -h
+
+Docs not up to date after here....
+
+
 
 Feature highlights
 ==================
@@ -82,13 +99,6 @@ Inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE
     def some_protected_page():
       return render_templage('template.html')
 
-  At first, there are no authorized users, in order to authorize someone to log in, run the following command and enter the email you want to authorize when prompted::
-
-    $ python manage.py add_user
-
-  You can view the list of authorized users at any time by running::
-
-    $ python manage.py view_users
 
 Running and scheduling jobs with Celery
 ---------------------------------------
@@ -104,8 +114,6 @@ First, if you don't yet have Redis, here is how to install it::
     $ make test
     $ sudo cp redis-server /usr/local/bin/
     $ sudo cp redis-cli /usr/local/bin/
-  
-Finally, inside ``app/core/config.py``, set ``USE_CELERY = True``.
 
 * **Usage**
   
