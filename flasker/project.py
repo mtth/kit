@@ -77,7 +77,6 @@ class BaseProject(object):
     __import__('flasker.components.celery')
     if self.MODULES:
       map(__import__, self.MODULES)
-    return self.app
 
   @classmethod
   def get_current_project(cls):
