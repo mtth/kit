@@ -4,19 +4,19 @@ from ConfigParser import SafeConfigParser
 from logging import getLogger
 from logging.config import dictConfig
 from os.path import abspath, dirname, join, split
+from re import match
 from weakref import proxy
 from werkzeug.local import LocalProxy
 
 logger = getLogger()
 
+class ProjectImportError(Exception):
+
+  pass
+
 class Project(object):
 
-  """Base project class.
-
-  All folder paths indicated here are relative to the folder where the project
-  class is defined.
-
-  """
+  """Project class."""
 
   __current__ = None
 
@@ -24,6 +24,7 @@ class Project(object):
 
     self.root_dir = dirname(abspath(config_path))
     self.config = self.parse_config(config_path)
+    self.check_config()
 
     assert Project.__current__ is None, 'More than one project.'
     Project.__current__ = proxy(self)
@@ -42,7 +43,7 @@ class Project(object):
     Also makes folder paths absolute.
 
     """
-    if key.lower().endswith('folder'):
+    if key.lower().endswith('_folder'):
       v = abspath(value)
     else:
       if value.lower() == 'true':
@@ -62,14 +63,24 @@ class Project(object):
   def parse_config(self, config_path):
     parser = SafeConfigParser()
     parser.optionxform = str    # setting options to case-sensitive
-    parser.read(config_path)
+    try:
+      with open(config_path) as f:
+        parser.readfp(f)
+    except IOError as e:
+      raise ProjectImportError(
+        'No configuration file found at %s.' % config_path
+      )
     return dict(
       (s, dict(self.force_coerce(k, v) for (k, v) in parser.items(s)))
       for s in parser.sections()
     )
 
-  def use_oauth(self):
-    return bool(self.config['PROJECT']['OAUTH_CLIENT'])
+  def check_config(self):
+    """Make sure the configuration is valid."""
+    if not match('^[a-z_]+$', self.config['PROJECT']['SHORTNAME']):
+      raise ProjectImportError(
+        'Invalid project shortname (only lowercase and underscores allowed).'
+      )
 
   def make(self):
     self.logger = logger

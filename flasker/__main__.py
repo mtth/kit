@@ -7,9 +7,10 @@ from code import interact
 from distutils.dir_util import copy_tree
 from os import mkdir
 from os.path import abspath, dirname, join
+from shutil import copy
 from sys import path
 
-from flasker.project import Project
+from flasker.project import Project, ProjectImportError
 
 parser = ArgumentParser('flasker')
 parser.add_argument('-c', '--conf',
@@ -28,23 +29,18 @@ subparsers = parser.add_subparsers(
 
 new_parser = subparsers.add_parser('new', help='start new project')
 
-new_parser.add_argument('-d', '--dir',
-  action='store_true',
-  help='create default directories'
-)
-new_parser.add_argument('-t', '--template',
+new_parser.add_argument('-a', '--app',
   action='store_true',
   help='include basic bootstrap app template'
+)
+new_parser.add_argument('-n', '--name',
+  default='project.cfg',
+  help='name of the new config file [%(default)s]'
 )
 new_parser.add_argument('config',
   choices=['dev', 'prod'],
   help='the type of config to create'
 )
-
-# auth_parser = subparsers.add_parser(
-#   'auth',
-#   help='authentication admin'
-# )
 
 # Server
 
@@ -119,20 +115,20 @@ flower_parser.add_argument('-r', '--raw',
 def main():
   args = parser.parse_args()
   if args.command == 'new':
-    choice = raw_input('Start a new project? [y/N] ')
-    if choice == 'y':
-      src = join(dirname(__file__), 'examples')
-      copy_tree(join(src, '1'), '.') # project files
-      copy_tree(join(src, 'templates'), join('app', 'templates'))  # html files
-      mkdir(join('app', 'static')) # create default directories
-      for folder in ['celery', 'db', 'logs']:
-        mkdir(folder)
+    src = dirname(__file__)
+    copy(join(src, 'examples', '%s.cfg' % args.config), args.name)
+    print 'Project configuration file created.'
+    if args.app:
+      copy_tree(join(src, 'data'), '.')
+      print 'Bootstrap app folder created.'
+    print 'All set!'
   else:
+    path.append(abspath(dirname(args.conf))) # necessary for reloader to work
     try:
-      path.append(abspath('.')) # necessary for reloader to work
       pj = Project(args.conf)
-    except IOError as e:
-      print '%s (%s)' % (e, args.conf)
+    except ProjectImportError as e:
+      print e
+      return
     else:
       pj.make()
       if args.command == 'server':
@@ -161,14 +157,17 @@ def main():
         if args.verbose_help:
           pj.celery.worker_main(['worker', '-h'])
         else:
-          hostname = pj.NAME.lower().replace(' ', '_')
+          hostname = pj.config['PROJECT']['SHORTNAME']
           options = ['worker', '--hostname=%s.%s' % (args.name, hostname)]
           if args.queues:
             options.append('--queues=%s' % args.queues)
           if args.beat:
             options.extend([
               '--beat',
-              '--schedule=%s/dev.sch' % pj.CELERY_SCHEDULE_FOLDER
+              '--schedule=%s/%s.sch' % (
+                pj.config['PROJECT']['CELERY_SCHEDULES_FOLDER'],
+                args.name
+              )
             ])
           if args.raw:
             options.extend(args.raw)
