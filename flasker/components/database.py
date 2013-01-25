@@ -64,4 +64,4 @@ class Db(object):
     finally:
       self.session.remove()
 
-current_project.db = Db(current_project.DB_URL)
+current_project.db = Db(current_project.config['PROJECT']['DB_URL'])

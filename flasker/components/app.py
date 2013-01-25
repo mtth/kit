@@ -5,41 +5,30 @@ from __future__ import absolute_import
 from flask import Flask
 from flask.ext.login import current_user
 
+from ..project import current_project, Project
 from .oauth import make
-from ..project import current_project
 
-cp = current_project
+pj = current_project
+conf = pj.config['PROJECT']
 
 app = Flask(
   'flask',
-  static_folder=cp.APP_STATIC_FOLDER,
-  template_folder=cp.APP_TEMPLATE_FOLDER
+  static_folder=conf['APP_STATIC_FOLDER'],
+  template_folder=conf['APP_TEMPLATE_FOLDER']
 )
-
-app.config.update(cp.APP_CONFIG.generate(cp))
+app.config.update(pj.config['APP'])
 
 @app.context_processor
 def inject():
   def static_url(request):
-    return cp.STATIC_URL or request.url_root + cp.APP_STATIC_FOLDER
-  def is_logged_in():
-    try:
-      rv = current_user.is_authenticated()
-    except AttributeError as e:
-      # this will happen if this function is called when no
-      # OAuth credentials have been entered
-      rv = False
-    finally:
-      return rv
+    return conf['STATIC_URL'] or request.url_root + conf['APP_STATIC_FOLDER']
   return {
-    'project_name': cp.NAME,
+    'project_name': conf['NAME'],
     'static_url': static_url,
-    'is_logged_in': is_logged_in
   }
 
-if cp.use_oauth():
-  auth = make(cp.OAUTH_GOOGLE_CLIENT)
-  app.register_blueprint(auth['bp'])
-  auth['login_manager'].setup_app(app)
+auth = make(conf['OAUTH_CLIENT'])
+app.register_blueprint(auth['bp'])
+auth['login_manager'].setup_app(app)
 
-cp.app = app
+pj.app = app

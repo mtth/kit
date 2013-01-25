@@ -9,14 +9,17 @@ from logging.config import dictConfig
 
 from ..project import current_project
 
+pj = current_project
+
 celery = Celery()
-celery.conf.update(current_project.CELERY_CONFIG.generate(current_project))
+celery.conf.update(pj.config['CELERY'])
 celery.periodic_task = periodic_task
 
 @after_setup_logger.connect
 def after_setup_logger_handler(logger, loglevel, logfile, **kwrds):
     """Setting up logger configuration for the worker."""
-    dictConfig(current_project.LOGGER_CONFIG.generate(current_project))
+    # dictConfig(pj.LOGGER_CONFIG.generate(pj))
+    pass
 
 @worker_process_init.connect
 def create_worker_connection(*args, **kwargs):
@@ -26,6 +29,6 @@ def create_worker_connection(*args, **kwargs):
   the connection will fail.
 
   """
-  current_project.db.create_connection()
+  pj.db.create_connection()
 
-current_project.celery = celery
+pj.celery = celery

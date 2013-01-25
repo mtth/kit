@@ -5,21 +5,17 @@
 from argparse import ArgumentParser, REMAINDER
 from code import interact
 from distutils.dir_util import copy_tree
-from imp import load_source
 from os import mkdir
 from os.path import abspath, dirname, join
-from sys import argv, path
+from sys import path
 
-from project import current_project
+from flasker.project import Project
 
 parser = ArgumentParser('flasker')
 parser.add_argument('-c', '--conf',
   dest='conf',
-  help='path to configuration file'
-)
-parser.add_argument('-f', '--file',
-  default='project.py',
-  help='path to project file [%(default)s]'
+  default='project.cfg',
+  help='path to configuration file [%(default)s]'
 )
 subparsers = parser.add_subparsers(
   title='available commands',
@@ -31,6 +27,19 @@ subparsers = parser.add_subparsers(
 # New
 
 new_parser = subparsers.add_parser('new', help='start new project')
+
+new_parser.add_argument('-d', '--dir',
+  action='store_true',
+  help='create default directories'
+)
+new_parser.add_argument('-t', '--template',
+  action='store_true',
+  help='include basic bootstrap app template'
+)
+new_parser.add_argument('config',
+  choices=['dev', 'prod'],
+  help='the type of config to create'
+)
 
 # auth_parser = subparsers.add_parser(
 #   'auth',
@@ -109,40 +118,34 @@ flower_parser.add_argument('-r', '--raw',
 
 def main():
   args = parser.parse_args()
-  print args
-  if not args.command:
-    parser.print_help()
-  elif args.command == 'new':
+  if args.command == 'new':
     choice = raw_input('Start a new project? [y/N] ')
     if choice == 'y':
       src = join(dirname(__file__), 'examples')
-      # copy project files
-      copy_tree(join(src, '1'), '.')
-      # copy html files
-      copy_tree(join(src, 'templates'), join('app', 'templates'))
-      # create default directories
-      mkdir(join('app', 'static'))
+      copy_tree(join(src, '1'), '.') # project files
+      copy_tree(join(src, 'templates'), join('app', 'templates'))  # html files
+      mkdir(join('app', 'static')) # create default directories
       for folder in ['celery', 'db', 'logs']:
         mkdir(folder)
   else:
     try:
       path.append(abspath('.')) # necessary for reloader to work
-      load_source('project', args.file)
-    except (IOError, ImportError) as e:
-      print '%s (%s)' % (e, args.file)
+      pj = Project(args.conf)
+    except IOError as e:
+      print '%s (%s)' % (e, args.conf)
     else:
-      current_project.make(True)
+      pj.make()
       if args.command == 'server':
         host = '127.0.0.1' if args.restrict else '0.0.0.0'
-        current_project.db.create_connection(app=current_project.app)
-        current_project.app.run(host=host, port=args.port, debug=args.debug)
+        pj.db.create_connection(app=pj.app)
+        pj.app.run(host=host, port=args.port, debug=args.debug)
       elif args.command == 'shell':
-        current_project.db.create_connection(app=current_project.app)
+        pj.db.create_connection(app=pj.app)
         context = {
-          'project': current_project,
-          'db': current_project.db,
-          'app': current_project.app,
-          'celery': current_project.celery
+          'project': pj,
+          'db': pj.db,
+          'app': pj.app,
+          'celery': pj.celery
         }
         try:
           import IPython
@@ -156,28 +159,28 @@ def main():
           sh(global_ns=dict(), local_ns=context)
       elif args.command == 'worker':
         if args.verbose_help:
-          current_project.celery.worker_main(['worker', '-h'])
+          pj.celery.worker_main(['worker', '-h'])
         else:
-          hostname = current_project.NAME.lower().replace(' ', '_')
+          hostname = pj.NAME.lower().replace(' ', '_')
           options = ['worker', '--hostname=%s.%s' % (args.name, hostname)]
           if args.queues:
             options.append('--queues=%s' % args.queues)
           if args.beat:
             options.extend([
               '--beat',
-              '--schedule=%s/dev.sch' % current_project.CELERY_SCHEDULE_FOLDER
+              '--schedule=%s/dev.sch' % pj.CELERY_SCHEDULE_FOLDER
             ])
           if args.raw:
             options.extend(args.raw)
-          current_project.celery.worker_main(options)
+          pj.celery.worker_main(options)
       elif args.command == 'flower':
         if args.verbose_help:
-          current_project.celery.start(['celery', 'flower', '--help'])
+          pj.celery.start(['celery', 'flower', '--help'])
         else:
           options = ['celery', 'flower', '--port=%s' % args.port]
           if args.raw:
             options.extend(args.raw)
-          current_project.celery.start(options)
+          pj.celery.start(options)
 
 if __name__ == '__main__':
   main()

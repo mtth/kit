@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from project import BaseProject, current_project
+from project import current_project
 
-__all__ = ['project', 'config', 'util']
+__all__ = ['util']
 
