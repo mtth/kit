@@ -1,17 +1,19 @@
 Flasker
 =======
 
-* **What Flasker is!**
+A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ and Celery_ backend support.
 
-  * Flasker is a Flask_ webapp project manager with built in ORM'ed database (using SQLAlchemy_) and Celery_ backend support.
+* **What Flasker is!**
   
-  * Flasker handles the integration between these components as transparently as possible and lets you configure these individually according to your project needs via a single ``.cfg`` file.
-  
-  * Flasker also provides you with a very simple pattern to organize your application via the ``current_project`` proxy. No more complicated import schemes!
+    * Flasker handles the integration between Flask, SQLAlchemy and Celery as transparently as possible and lets you configure these individually according to your project needs via a single ``.cfg`` file.
+    
+    * Flasker also provides you with a very simple pattern to organize your application via the ``current_project`` proxy. No more complicated import schemes!
+
+    * Finally, flasker is a command line tool from where you can create new projects, launch the Flask buit in Werkzeug server, start Celery workers and the Flower_ tool, and run a shell in the current project context (inspired by Flask-Script_).
 
 * **What Flasker isn't?**
 
-  * A dumbed down verion of Flask, SQLAlchemy and Celery. Flasker handles the setup but purposefully leaves you free to interact with the raw Flask, Celery and database objects. Some knowledge of these frameworks is therefore required. 
+    * A dumbed down verion of Flask, SQLAlchemy and Celery. Flasker handles the setup but purposefully leaves you free to interact with the raw Flask, Celery and database objects. Some knowledge of these frameworks is therefore required. 
 
 Quickstart
 ==========
@@ -195,8 +197,10 @@ Sources
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
 .. _Flask: http://flask.pocoo.org/docs/api/
+.. _Flask-Script: http://flask-script.readthedocs.org/en/latest/
 .. _Jinja: http://jinja.pocoo.org/docs/
 .. _Celery: http://docs.celeryproject.org/en/latest/index.html
+.. _Flower: https://github.com/mher/flower
 .. _Datatables: http://datatables.net/examples/
 .. _SQLAlchemy: http://docs.sqlalchemy.org/en/rel_0_7/orm/tutorial.html
 .. _MySQL: http://dev.mysql.com/doc/
