@@ -162,13 +162,7 @@ def main():
           if args.queues:
             options.append('--queues=%s' % args.queues)
           if args.beat:
-            options.extend([
-              '--beat',
-              '--schedule=%s/%s.sch' % (
-                pj.config['PROJECT']['CELERY_SCHEDULES_FOLDER'],
-                args.name
-              )
-            ])
+            options.append('--beat')
           if args.raw:
             options.extend(args.raw)
           pj.celery.worker_main(options)
