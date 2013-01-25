@@ -9,14 +9,16 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
     
     * Flasker also provides you with a very simple pattern to organize your application via the ``current_project`` proxy. No more complicated import schemes!
 
-    * Finally, flasker is a command line tool from where you can create new projects, launch the Flask buit in Werkzeug server, start Celery workers and the Flower_ tool, and run a shell in the current project context (inspired by Flask-Script_).
+    * Flasker comes with OAuth integration (via Google OAuth2) and a bunch of utilities in the ``util`` module (for convenient logging, efficient API responses, property caching, and more).
+
+    * Finally, Flasker is a command line tool from where you can create new projects, launch the Flask buit in Werkzeug server, start Celery workers and the Flower_ tool, and run a shell in the current project context (inspired by Flask-Script_).
 
 * **What Flasker isn't?**
 
-    * A dumbed down verion of Flask, SQLAlchemy and Celery. Flasker handles the setup but purposefully leaves you free to interact with the raw Flask, Celery and database objects. Some knowledge of these frameworks is therefore required. 
+    * A simplified version of Flask, SQLAlchemy and Celery. Flasker handles the setup but purposefully leaves you free to interact with the raw Flask, Celery and database objects. Some knowledge of these frameworks is therefore required. 
 
 Quickstart
-==========
+----------
 
 * **Installation**::
 
@@ -35,9 +37,9 @@ Quickstart
     from flasker import current_project
 
     app = current_project.app
+
     # do stuff with the app
 
-  Flasker will take care of resolving all the necessary imports.
 
 * **Next steps**::
 
@@ -54,60 +56,23 @@ Quickstart
 
     $ flasker <insert_command> -h
 
-Docs not up to date after here....
+
+Using OAuth
+-----------
+
+To restrict access to your webapp to some users, you will need to enter your Google Client ID (from the `Google API console`_) in the ``OAUTH_CLIENT`` configuration option and also enter authorized emails in the ``AUTHORIZED_EMAILS`` option. Then, use the ``login_required`` decorator from Flask-Login_ to protect your views (cf. the docs for examples and a tutorial).
 
 
+Utilities
+---------
 
-Feature highlights
-==================
-
-* `Database backend ready to use`_
-* `Running and scheduling jobs with Celery`_
-* `User authentication using Google OAuth`_
-* Includes jQuery_ and Bootstrap_ CSS and JS libraries
-
-Features
-========
-
-Database backend ready to use
------------------------------
-
-The app uses SQLAlchemy_ and offers several helpers to create persistent models. By default, the database backend uses SQLite_ but this can be changed by editing ``APP_DB_URL`` in the ``app/core/config.py`` file. If MySQL_ is used, full write concurrency is supported (even with the Celery_ worker).
-
-Here are a few of the helpers available on the default ``Base`` model class:
-
-* Jsonifiable
-* Loggable
-* Cacheable
-
-And more:
-
-* api_response
-* Dict
-
-User authentication using Google OAuth
---------------------------------------
-
-* **Setup**
-
-Inside ``app/core/config.py``, set ``USE_OAUTH = True`` and fill in the ``GOOGLE_CLIENT_ID`` and ``GOOGLE_CLIENT_SECRET``. If you don't know what these are, you can read about them and create your own in the `Google API Console`_.
-
-* **Usage**
-
-  To restrict some pages to logged-in users, add the `login_required` to the corresponding view. E.g::
-
-    @app.route('/some_url')
-    @login_required
-    def some_protected_page():
-      return render_templage('template.html')
+TODO
 
 
-Running and scheduling jobs with Celery
----------------------------------------
+Other stuff
+-----------
 
-* **Setup**
-
-First, if you don't yet have Redis, here is how to install it::
+* **Setting up Redis**::
 
     $ curl -O http://download.redis.io/redis-stable.tar.gz
     $ tar xvzf redis-stable.tar.gz
@@ -117,17 +82,7 @@ First, if you don't yet have Redis, here is how to install it::
     $ sudo cp redis-server /usr/local/bin/
     $ sudo cp redis-cli /usr/local/bin/
 
-* **Usage**
-  
-  Run the following command to start the worker::
-
-    $ python manage.py run_worker
-
-  To learn how to create tasks and schedule them, please refer to the official Celery_ documentation.
-
-* **Optional extra steps**
-
-  * Daemonizing redis on a mac
+  To daemonize redis on a mac:
 
     Create a plist file::
 
@@ -150,40 +105,38 @@ First, if you don't yet have Redis, here is how to install it::
       </dict>
       </plist>
 
-Running the server on Apache
-----------------------------
+* **Running the server on Apache**:
 
-Create a file called `run.wsgi` in the main directory with the following contents::
+  Create a file called `run.wsgi` in the main directory with the following contents::
 
-  # Virtualenv activation
-  from os.path import abspath, dirname, join
-  activate_this = abspath(join(dirname(__file__), 'venv/bin/activate_this.py'))
-  execfile(activate_this, dict(__file__=activate_this))
+    # Virtualenv activation
+    from os.path import abspath, dirname, join
+    activate_this = abspath(join(dirname(__file__), 'venv/bin/activate_this.py'))
+    execfile(activate_this, dict(__file__=activate_this))
 
-  # Since the application isn't on the path
-  import sys
-  sys.path.insert(0, abspath(join(dirname(__file__)))
+    # Since the application isn't on the path
+    import sys
+    sys.path.insert(0, abspath(join(dirname(__file__)))
 
-  # App factory
-  from app import make_app
-  application = make_app()
+    # App factory
+    from app import make_app
+    application = make_app()
 
-Then add a virtualhost in your Apache virtual host configuration file (often found at `/etc/apache2/extra/httpd-vhosts.conf`) with the following configuration::
+  Then add a virtualhost in your Apache virtual host configuration file (often found at `/etc/apache2/extra/httpd-vhosts.conf`) with the following configuration::
 
-  <VirtualHost *:80>
-    ServerName [server_name]
-    WSGIDaemonProcess [process_name] user=[process_user] threads=5
-    WSGIScriptAlias / [path_to_wsgi_file]
-    <Directory [path_to_root_directory]>
-        WSGIProcessGroup [process_name]
-        WSGIApplicationGroup %{GLOBAL}
-        Order deny,allow
-        Allow from all
-    </Directory>
-    ErrorLog "[path_to_error_log]"
-    CustomLog "[path_to_access_log]" combined
-  </VirtualHost>
-
+    <VirtualHost *:80>
+      ServerName [server_name]
+      WSGIDaemonProcess [process_name] user=[process_user] threads=5
+      WSGIScriptAlias / [path_to_wsgi_file]
+      <Directory [path_to_root_directory]>
+          WSGIProcessGroup [process_name]
+          WSGIApplicationGroup %{GLOBAL}
+          Order deny,allow
+          Allow from all
+      </Directory>
+      ErrorLog "[path_to_error_log]"
+      CustomLog "[path_to_access_log]" combined
+    </VirtualHost>
   
 Sources
 =======
@@ -198,6 +151,7 @@ Sources
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
 .. _Flask: http://flask.pocoo.org/docs/api/
 .. _Flask-Script: http://flask-script.readthedocs.org/en/latest/
+.. _Flask-Login: http://packages.python.org/Flask-Login/
 .. _Jinja: http://jinja.pocoo.org/docs/
 .. _Celery: http://docs.celeryproject.org/en/latest/index.html
 .. _Flower: https://github.com/mher/flower
