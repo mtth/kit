@@ -6,26 +6,26 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
 - What Flasker is!
   
     - A transparent integration of Flask, SQLAlchemy and Celery which lets you
-    configure these individually according to your project needs via a single
-    ``.cfg`` file (cf. `Sample config file`_).
+      configure these individually according to your project needs via a single
+      ``.cfg`` file (cf. `Sample config file`_).
     
     - A very simple pattern to organize your project via the
-    ``current_project`` proxy. No more complicated import schemes!
+      ``current_project`` proxy. No more complicated import schemes!
 
     - OAuth (via `Google OAuth 2`_) and a bunch of utilities via the ``util``
-    module (for convenient logging, efficient API responses, property caching,
-    and more).
+      module (for convenient logging, efficient API responses, property caching,
+      and more).
 
     - A command line tool from where you can create new projects, launch the
-    Flask buit in Werkzeug server, start Celery workers and the Flower_ tool,
-    and run a shell in the current project context (inspired by Flask-Script_).
+      Flask buit in Werkzeug server, start Celery workers and the Flower_ tool,
+      and run a shell in the current project context (inspired by Flask-Script_).
 
 - What Flasker isn't?
 
     - A simplified version of Flask, SQLAlchemy and Celery. Flasker handles the
-    setup but purposefully leaves you free to interact with the raw Flask,
-    Celery and database objects. Some knowledge of these frameworks is
-    therefore required. 
+      setup but purposefully leaves you free to interact with the raw Flask,
+      Celery and database objects. Some knowledge of these frameworks is
+      therefore required. 
 
 Quickstart
 ----------
