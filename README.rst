@@ -2,18 +2,10 @@ Flasker
 =======
 
 **What Flasker is**
-Flask_ webapp template with optional Celery_ backend.
+Flask_ webapp template with ORM'ed database (using SQLAlchemy_) and Celery_ backend. The integration between these components is meant to be as transparent as possible, to let you configure these individually according to your project needs.
 
 **What Flasker isn't**
-An easy way to learn Flask, SQLAlchemy and Celery. Flasker works behind the scene to tie these three tools together so that it 'works' but at the same time exposes the bare webapp, celery worker and database objects. This integration is meant to be as transparent as possible, to let you configure these individually according to your project needs.
-
-Feature highlights
-==================
-
-* `Database backend ready to use`_
-* `User authentication using Google OAuth`_
-* `Running and scheduling jobs with Celery`_
-* Includes jQuery_ and Bootstrap_ CSS and JS libraries
+An easy way to learn Flask, SQLAlchemy and Celery. Flasker handles all the setup but lets you interact with the raw Flask, Celery and database objects.
 
 Quickstart
 ==========
@@ -24,13 +16,32 @@ Quickstart
 
 * **To create a new project**::
 
-    $ flasker
+    $ flasker new -a default
 
-  You will be prompted...
-  This will run the server (using Werkzeug) on port 5050. Also:
+  This will create a default project configuration file ``project.cfg`` in the current directory (the ``-a`` flag triggers the creation of a basic boostrap app).
 
-  * Append the ``-d`` flag to run the server in debug mode (enables autoreload and in-browser debugger)
-  * A list of available commands is available by running ``python manage.py``
+* **Next steps**::
+
+    $ flasker -h
+
+  This will list all available commands for that project:
+
+  * Running the app server
+  * Starting a worker for the Celery backend
+  * Running the flower worker management app
+  * Starting a shell in the current project context (useful for debugging)
+
+  Extra help is available for each command by typing::
+
+    $ flasker <insert_command> -h
+
+Feature highlights
+==================
+
+* `Database backend ready to use`_
+* `Running and scheduling jobs with Celery`_
+* `User authentication using Google OAuth`_
+* Includes jQuery_ and Bootstrap_ CSS and JS libraries
 
 Features
 ========
