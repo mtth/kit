@@ -9,7 +9,7 @@ Flasker
 
 * **What Flasker isn't**
 
-  An easy way to learn Flask, SQLAlchemy and Celery. Flasker handles all the setup but lets you interact with the raw Flask, Celery and database objects.
+  An easy way to learn Flask, SQLAlchemy and Celery. Flasker handles all the setup but lets you interact with the raw Flask, Celery and database objects. It does however provide you with a very simple pattern to organize your application via a ``current_project`` proxy. No more complicated import schemes!
 
 Quickstart
 ==========
