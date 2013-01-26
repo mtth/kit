@@ -2,6 +2,9 @@
 
 """The engine behind it all."""
 
+from __future__ import absolute_import
+
+from celery.signals import task_postrun
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.exc import InvalidRequestError
@@ -36,7 +39,7 @@ class Db(object):
   def __exit__(self, type, value, traceback):
     self.dismantle()
 
-  def create_connection(self, app=None):
+  def create_connection(self, app=None, celery=None):
     """Initialize database connection."""
     engine = create_engine(self.url, pool_recycle=3600)
     Base.metadata.create_all(engine, checkfirst=True)
@@ -45,7 +48,10 @@ class Db(object):
     if app:
       @app.teardown_request
       def teardown_request_handler(exception=None):
-        """Called after app requests return."""
+        self.dismantle()
+    if celery:
+      @task_postrun.connect
+      def task_postrun_handler(*args, **kwargs):
         self.dismantle()
 
   def dismantle(self, **kwrds):

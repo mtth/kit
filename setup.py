@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='flasker',
-    version='0.1.11',
+    version='0.1.12',
     description='Flasker',
     long_description=open('README.rst').read(),
     author='Matthieu Monsch',

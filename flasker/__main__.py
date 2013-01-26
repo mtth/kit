@@ -15,7 +15,7 @@ from flasker.project import Project, ProjectImportError
 parser = ArgumentParser('flasker')
 parser.add_argument('-c', '--conf',
   dest='conf',
-  default='project.cfg',
+  default='default.cfg',
   help='path to configuration file [%(default)s]'
 )
 subparsers = parser.add_subparsers(
@@ -34,11 +34,11 @@ new_parser.add_argument('-a', '--app',
   help='include basic bootstrap app template'
 )
 new_parser.add_argument('-n', '--name',
-  default='project.cfg',
+  default='default.cfg',
   help='name of the new config file [%(default)s]'
 )
 new_parser.add_argument('config',
-  choices=['dev', 'prod'],
+  choices=['default', 'empty'],
   help='the type of config to create'
 )
 
@@ -72,8 +72,8 @@ shell_parser = subparsers.add_parser('shell', help='start shell')
 worker_parser = subparsers.add_parser('worker', help='start worker')
 
 worker_parser.add_argument('-n', '--name',
-  default='dev',
-  help='hostname prefix [%(default)s]'
+  default='',
+  help='hostname prefix'
 )
 worker_parser.add_argument('-Q', '--queues',
   help='queues (comma separated)'
@@ -154,11 +154,13 @@ def main():
             sh = IPython.frontend.terminal.embed.InteractiveShellEmbed()
           sh(global_ns=dict(), local_ns=context)
       elif args.command == 'worker':
+        pj.db.create_connection(celery=pj.celery)
         if args.verbose_help:
           pj.celery.worker_main(['worker', '-h'])
         else:
-          hostname = pj.config['PROJECT']['SHORTNAME']
-          options = ['worker', '--hostname=%s.%s' % (args.name, hostname)]
+          domain = pj.config['PROJECT']['SHORTNAME']
+          subdomain = args.name or pj.config['PROJECT']['CONFIG']
+          options = ['worker', '--hostname=%s.%s' % (subdomain, domain)]
           if args.queues:
             options.append('--queues=%s' % args.queues)
           if args.beat:

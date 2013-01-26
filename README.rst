@@ -1,6 +1,8 @@
 Flasker
 =======
 
+Under development.
+
 A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ and Celery_ backend support.
 
 - What Flasker is!
@@ -101,6 +103,7 @@ Google Client ID (from the `Google API console`_) in the ``OAUTH_CLIENT``
 configuration option and also enter authorized emails in the
 ``AUTHORIZED_EMAILS`` option. Then, use the ``login_required`` decorator from
 Flask-Login_ to protect your views (cf. the docs for examples and a tutorial).
+The callback URL you should authorize is http://your.domain:port/oauth2callback.
 
 
 Utilities

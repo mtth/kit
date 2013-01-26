@@ -178,7 +178,7 @@ def sign_in():
 
   """
   values = {
-      'header': 'Hey, stranger',
+      'header': 'Welcome!',
       'color': 'primary',
       'sign_in_url': get_google_login_url()
   }
@@ -212,7 +212,7 @@ def catch_token():
   if not validate_token(token):
     logger.warn('Access token is invalid.')
     values = {
-        'header': 'You broke it',
+        'header': 'Invalid token',
         'color': 'danger',
         'sign_in_url': get_google_login_url()
     }
@@ -228,7 +228,7 @@ def catch_token():
   else:
     logger.warn('%s tried to sign in.' % user_infos['email'])
     values = {
-        'header': 'Have we met?',
+        'header': 'Unauthorized',
         'color': 'warning',
         'sign_in_url': get_google_login_url()
     }
@@ -245,7 +245,7 @@ def sign_out():
     current_user.info('Signed out.')
     logout_user()
   values = {
-      'header': 'Bye, friend',
+      'header': 'Goodbye',
       'color': 'success',
       'sign_in_url': get_google_login_url()
   }
