@@ -116,7 +116,7 @@ def main():
   args = parser.parse_args()
   if args.command == 'new':
     src = dirname(__file__)
-    copy(join(src, 'examples', '%s.cfg' % args.config), args.name)
+    copy(join(src, 'configs', '%s.cfg' % args.config), args.name)
     print 'Project configuration file created.'
     if args.app:
       copy_tree(join(src, 'data'), '.')

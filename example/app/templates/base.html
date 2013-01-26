@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8'>
+    <title>{{ project_name }}</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <meta name='description' content=''>
+    <meta name='author' content=''>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/css/bootstrap-combined.min.css">
+    <link rel="shortcut icon" href="//www.iconj.com/ico/w/d/wdgwj3n50t.ico" type="image/x-icon" />
+    <style>
+      @media (min-width: 979px) {
+        body {
+          padding-top: 50px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class='navbar navbar-fixed-top'>
+      <div class='navbar-inner'>
+        <div class='container'>
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class='brand' href='{{ url_for("index") }}'>{{ project_name }}</a>
+        </div>
+      </div>
+    </div>
+    <div id='flashed_messages' class='container'>
+      {% for category, message in get_flashed_messages(with_categories=True) %}
+        <div class='alert alert-{{ category }}'>
+          <a class="close" data-dismiss="alert" href="#">×</a>
+          <strong>{{ category | title }}:</strong> {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+    <div class='page'>
+      {% block content %}
+      {% endblock content %}
+    </div>
+    <script src='//code.jquery.com/jquery-1.9.0.min.js'></script>
+    <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
+  </body>
+</html>

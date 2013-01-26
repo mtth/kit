@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class='page-header'>
+  <div class='container'>
+    <h1>Hi, <small>how are you today?</small></h1>
+  </div>
+</div>
+<div class='page-content'>
+</div>
+<div class='page-footer'>
+  <div class='container'>
+    <div class='pull-left'>
+      Made with <a href='http://github.com/mtth/flasker'>Flasker</a>
+    </div>
+    <div class='pull-right'>
+      {% if current_user.is_authenticated() %}
+        <a href='{{ url_for("core.sign_out") }}'>Sign out</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
