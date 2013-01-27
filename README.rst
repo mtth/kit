@@ -100,7 +100,7 @@ Config file API
 The following keys are valid in the ``PROJECT`` section:
 
 * ``NAME``, name of the project
-* ``MODULES``, modules to import on project load
+* ``MODULES``, modules to import on project load (comma separated list)
 * ``DB_URL``, URL of database (defaults to the in memory ``sqlite://``)
 * ``APP_STATIC_FOLDER``, path to folder where the Flask static files lie
   (defaults to ``app/static``)

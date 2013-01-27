@@ -22,7 +22,8 @@ class Project(object):
 
   """Project class.
 
-  Some notes on the default configuration to go here.
+  Global container for the Flask and Celery apps and SQLAlchemy database
+  object.
   
   """
 
@@ -97,9 +98,11 @@ class Project(object):
     
     """
     conf = self.config
+    # make folder paths absolute
     for key in conf['PROJECT']:
       if key.endswith('_FOLDER'):
         conf['PROJECT'][key] = abspath(conf['PROJECT'][key])
+    # check that the project has a name
     if not conf['PROJECT']['NAME']:
       raise ProjectImportError('Missing project name.')
 
@@ -112,7 +115,10 @@ class Project(object):
     components = ['app', 'database', 'celery']
     map(__import__, ('flasker.components.%s' % c for c in components))
     if self.config['PROJECT']['MODULES']:
-      map(__import__, self.config['PROJECT']['MODULES'].split(','))
+      map(
+        __import__,
+        [mod.strip() for mod in self.config['PROJECT']['MODULES'].split(',')]
+      )
 
   @classmethod
   def get_current_project(cls):
