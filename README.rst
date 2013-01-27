@@ -40,9 +40,11 @@ Quickstart
 
     $ flasker new basic
 
-  This will create a default project configuration file ``default.cfg`` in the
+  This will create a project configuration file ``default.cfg`` in the
   current directory (cf `Config file API`_ for more info on the available
-  configurations through the ``new`` command).
+  configurations through the ``new`` command) and a basic bootstrap themed
+  app in an ``app`` folder (this can be turned off with the ``-a`` flag).
+  You should already be able to run your app by running ``flasker server``.
 
 - Editing your project:
 
@@ -56,7 +58,7 @@ Quickstart
 
     app = current_project.app
 
-    # do stuff with the app
+    # do stuff
 
 
 - Next steps::

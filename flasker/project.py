@@ -70,8 +70,8 @@ class Project(object):
   def parse_config(self, config_path):
     """Read the configuration file and return values as a dictionary.
 
-    Also makes all folder paths absolute (necessary because the app creation
-    will be relative to the flasker module path otherwise).
+    Raises ProjectImportError if no configuration file can be read at the
+    file path entered.
 
     """
     parser = SafeConfigParser()
@@ -83,23 +83,24 @@ class Project(object):
       raise ProjectImportError(
         'No configuration file found at %s.' % config_path
       )
-    rv = dict(
+    return dict(
       (s, dict((k, smart_coerce(v)) for (k, v) in parser.items(s)))
       for s in parser.sections()
     )
-    for key in rv['PROJECT']:
-      if key.endswith('_FOLDER'):
-        rv['PROJECT'][key] = abspath(rv['PROJECT'][key])
-    return rv
 
   def check_config(self):
     """Make sure the configuration is valid.
 
-    Any a priori configuration checks will go here.
+    Any a priori configuration checks will go here. Also makes all folder paths
+    absolute (necessary because the app creation will be relative to the
+    flasker module path otherwise).
     
     """
     conf = self.config
-    if not conf['NAME']:
+    for key in conf['PROJECT']:
+      if key.endswith('_FOLDER'):
+        conf['PROJECT'][key] = abspath(conf['PROJECT'][key])
+    if not conf['PROJECT']['NAME']:
       raise ProjectImportError('Missing project name.')
 
   def make(self):
