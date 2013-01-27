@@ -75,25 +75,40 @@ def uncamelcase(name):
   s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
   return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
-def convert(value, return_type):
+def smart_coerce(value, return_type=None):
   """Converts a string to another builtin type."""
-  if return_type == 'int':
-    return int(value)
-  elif return_type == 'float':
-    return float(value)
-  elif return_type == 'bool':
+  value = value.strip()
+  if return_type:
+    if return_type == 'int':
+      return int(value)
+    elif return_type == 'float':
+      return float(value)
+    elif return_type == 'bool':
+      if value.lower() == 'true' or value == '1':
+        return True
+      elif not value or value.lower() == 'false' or value == '0':
+        return False
+      else:
+        raise ConversionError('Can\'t convert %s to boolean.' % value)
+    elif return_type == 'unicode':
+      return unicode(value, encoding='utf-8', errors='replace')
+    elif return_type == 'str':
+      return value
+    # if we get here, something has gone wrong
+    raise ConversionError('Invalid conversion type: %s' % return_type)
+  else:
     if value.lower() == 'true' or value == '1':
       return True
-    elif not value or value.lower() == 'false' or value == '0':
+    elif value.lower() == 'false' or value == '0':
       return False
     else:
-      raise ConversionError('Can\'t convert %s to boolean.' % value)
-  elif return_type == 'unicode':
-    return unicode(value, encoding='utf-8', errors='replace')
-  elif return_type == 'str':
-    return value
-  # if we get here, something has gone wrong
-  raise ConversionError('Invalid conversion type: %s' % return_type)
+      try:
+        return int(value)
+      except ValueError:
+        try:
+          return float(value)
+        except ValueError:
+          return value
 
 def exponential_smoothing(data, alpha=0.5):
   """Helper function for smoothing data.
@@ -244,7 +259,7 @@ class SmartDictReader(DictReader):
     else:
       try:
         processed_row = dict(
-            (key, convert(value, self.fieldtypes[key]))
+            (key, smart_coerce(value, self.fieldtypes[key]))
             for key, value in row.iteritems()
             if self.fieldtypes[key]
         )

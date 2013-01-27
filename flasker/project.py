@@ -1,35 +1,65 @@
 #!/usr/bin/env python
 
 from ConfigParser import SafeConfigParser
-from logging import getLogger
-from logging.config import dictConfig
-from os.path import abspath, dirname, join, split
-from re import match
+from os.path import abspath, dirname, join, split, splitext
+from re import match, sub
 from weakref import proxy
 from werkzeug.local import LocalProxy
 
-logger = getLogger()
+from util import smart_coerce
 
 class ProjectImportError(Exception):
+
+  """Generic project import error.
+  
+  This will be raised for missing or invalid configuration files.
+  
+  """
 
   pass
 
 class Project(object):
 
-  """Project class."""
+  """Project class.
+
+  Some notes on the default configuration to go here.
+  
+  """
 
   __current__ = None
 
+  config = {
+    'PROJECT': {
+      'NAME': '',
+      'MODULES': '',
+      'DB_URL': 'sqlite://',
+      'APP_STATIC_FOLDER': 'app/static',
+      'APP_TEMPLATE_FOLDER': 'app/templates',
+      'OAUTH_CLIENT': '',
+      'AUTHORIZED_EMAILS': '',
+    },
+    'APP': {
+      'SECRET_KEY': '',
+    },
+    'CELERY': {
+      'BROKER_URL': 'redis://',
+      'CELERY_RESULT_BACKEND': 'redis://',
+      'CELERY_SEND_EVENTS': True
+    }
+  }
+
   def __init__(self, config_path):
-
-    self.root_dir = dirname(abspath(config_path))
-    self.config = self.parse_config(config_path)
+    config = self.parse_config(config_path)
+    for key in self.config:
+      self.config[key].update(config[key])
     self.check_config()
-
+    self.root_dir = dirname(abspath(config_path))
+    self.kind = splitext(split(config_path)[1])[0]
+    self.sname = sub(r'\W+', '_', self.config['PROJECT']['NAME'].lower())
+    # create current_project proxy
     assert Project.__current__ is None, 'More than one project.'
     Project.__current__ = proxy(self)
-
-    # Currently, 3 components to a project
+    # project components, 3 as of right now
     self.app = None
     self.celery = None
     self.db = None
@@ -37,30 +67,13 @@ class Project(object):
   def __repr__(self):
     return '<Project %r, %r>' % (self.config['PROJECT']['NAME'], self.root_dir)
 
-  def force_coerce(self, key, value):
-    """Coerce a string to something else, smartly.
-    
-    Also makes folder paths absolute.
+  def parse_config(self, config_path):
+    """Read the configuration file and return values as a dictionary.
+
+    Also makes all folder paths absolute (necessary because the app creation
+    will be relative to the flasker module path otherwise).
 
     """
-    if key.lower().endswith('_folder'):
-      v = abspath(value)
-    else:
-      if value.lower() == 'true':
-        v = True
-      elif value.lower() == 'false':
-        v = False
-      else:
-        try:
-          v = int(value)
-        except ValueError:
-          try:
-            v = float(value)
-          except ValueError:
-            v = value
-    return (key, v)
-
-  def parse_config(self, config_path):
     parser = SafeConfigParser()
     parser.optionxform = str    # setting options to case-sensitive
     try:
@@ -70,21 +83,29 @@ class Project(object):
       raise ProjectImportError(
         'No configuration file found at %s.' % config_path
       )
-    return dict(
-      (s, dict(self.force_coerce(k, v) for (k, v) in parser.items(s)))
+    rv = dict(
+      (s, dict((k, smart_coerce(v)) for (k, v) in parser.items(s)))
       for s in parser.sections()
     )
+    for key in rv['PROJECT']:
+      if key.endswith('_FOLDER'):
+        rv['PROJECT'][key] = abspath(rv['PROJECT'][key])
+    return rv
 
   def check_config(self):
-    """Make sure the configuration is valid."""
-    if not match('^[a-z_]+$', self.config['PROJECT']['SHORTNAME']):
-      raise ProjectImportError(
-        'Invalid project shortname (only lowercase and underscores allowed).'
-      )
+    """Make sure the configuration is valid.
+
+    Any a priori configuration checks will go here. None yet.
+    
+    """
+    pass
 
   def make(self):
-    self.logger = logger
-    # dictConfig(self.LOGGER_CONFIG.generate(self))
+    """Create all project components.
+
+    Note that the database connection isn't created here.
+    
+    """
     components = ['app', 'database', 'celery']
     map(__import__, ('flasker.components.%s' % c for c in components))
     if self.config['PROJECT']['MODULES']:
@@ -92,6 +113,8 @@ class Project(object):
 
   @classmethod
   def get_current_project(cls):
+    """Hook for ``current_project`` proxy."""
     return Project.__current__
 
 current_project = LocalProxy(lambda: Project.get_current_project())
+
