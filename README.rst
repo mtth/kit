@@ -14,13 +14,13 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
     - A very simple pattern to organize your project via the
       ``current_project`` proxy. No more complicated import schemes!
 
-    - OAuth (via `Google OAuth 2`_) and a bunch of utilities via the ``util``
-      module (for convenient logging, efficient API responses, property caching,
-      and more).
-
     - A command line tool from where you can create new projects, launch the
       Flask buit in Werkzeug server, start Celery workers and the Flower_ tool,
       and run a shell in the current project context (inspired by Flask-Script_).
+
+    - OAuth (via `Google OAuth 2`_) and a bunch of utilities via the ``util``
+      module (for convenient logging, efficient API responses, property caching,
+      and more).
 
 - What Flasker isn't?
 
@@ -80,20 +80,34 @@ Sample config file
 
 Here is a minimalistic project configuration file::
 
-  [DEFAULT]
-  NAME: My Project
-  SHORTNAME: my_project
-  CONFIG_TYPE: dev
   [PROJECT]
+  NAME: My Project
   MODULES: app.views,app.tasks
   DB_URL: sqlite:///db/db.sqlite
   [APP]
   DEBUG: True
   TESTING: True
   [CELERY]
-  BROKER_URL: redis://localhost:6379/0
+  BROKER_URL: redis://
   CELERYD_CONCURRENCY: 2
    
+
+Config file API
+---------------
+
+The following keys are valid in the ``PROJECT`` section:
+
+  * ``NAME``, name of the project
+  * ``MODULES``, modules to import on project load
+  * ``DB_URL``, URL of database
+  * ``APP_STATIC_FOLDER``, path to folder where the Flask static files lie
+  * ``APP_TEMPLATE_FOLDER``, path to folder where the Flask template files lie
+  * ``STATIC_URL``, optional URL to serve static files
+  * ``OAUTH_CLIENT``, cf. `Using OAuth`_
+  * ``AUTHORIZED_EMAILS``, df. `Using OAuth`_
+
+Note that all paths are relative to the configuration file.
+
 
 Using OAuth
 -----------

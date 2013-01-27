@@ -95,10 +95,12 @@ class Project(object):
   def check_config(self):
     """Make sure the configuration is valid.
 
-    Any a priori configuration checks will go here. None yet.
+    Any a priori configuration checks will go here.
     
     """
-    pass
+    conf = self.config
+    if not conf['NAME']:
+      raise ProjectImportError('Missing project name.')
 
   def make(self):
     """Create all project components.
