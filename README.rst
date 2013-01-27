@@ -38,11 +38,11 @@ Quickstart
 
 - To create a new project::
 
-    $ flasker new -a dev
+    $ flasker new basic
 
-  This will create a default project configuration file ``project.cfg`` in the
-  current directory (the ``-a`` flag triggers the creation of a basic boostrap
-  app).
+  This will create a default project configuration file ``default.cfg`` in the
+  current directory (cf `Config file API`_ for more info on the available
+  configurations through the ``new`` command).
 
 - Editing your project:
 
@@ -97,16 +97,21 @@ Config file API
 
 The following keys are valid in the ``PROJECT`` section:
 
-  * ``NAME``, name of the project
-  * ``MODULES``, modules to import on project load
-  * ``DB_URL``, URL of database
-  * ``APP_STATIC_FOLDER``, path to folder where the Flask static files lie
-  * ``APP_TEMPLATE_FOLDER``, path to folder where the Flask template files lie
-  * ``STATIC_URL``, optional URL to serve static files
-  * ``OAUTH_CLIENT``, cf. `Using OAuth`_
-  * ``AUTHORIZED_EMAILS``, df. `Using OAuth`_
+* ``NAME``, name of the project
+* ``MODULES``, modules to import on project load
+* ``DB_URL``, URL of database
+* ``APP_STATIC_FOLDER``, path to folder where the Flask static files lie
+* ``APP_TEMPLATE_FOLDER``, path to folder where the Flask template files lie
+* ``STATIC_URL``, optional URL to serve static files
+* ``OAUTH_CLIENT``, cf. `Using OAuth`_
+* ``AUTHORIZED_EMAILS``, df. `Using OAuth`_
 
 Note that all paths are relative to the configuration file.
+
+The following pregenerated configurations are available through the ``flasker new`` command:
+
+* ``basic``, minimal configuration
+* ``celery_dq``, sets up celery direct queueing
 
 
 Using OAuth

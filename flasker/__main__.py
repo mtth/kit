@@ -30,15 +30,15 @@ subparsers = parser.add_subparsers(
 new_parser = subparsers.add_parser('new', help='start new project')
 
 new_parser.add_argument('-a', '--app',
-  action='store_true',
-  help='include basic bootstrap app template'
+  action='store_false',
+  help='don\'t include basic bootstrap app template'
 )
 new_parser.add_argument('-n', '--name',
   default='default.cfg',
   help='name of the new config file [%(default)s]'
 )
 new_parser.add_argument('config',
-  choices=['default', 'empty'],
+  choices=['basic', 'celery_dq'],
   help='the type of config to create'
 )
 
