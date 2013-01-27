@@ -99,9 +99,11 @@ The following keys are valid in the ``PROJECT`` section:
 
 * ``NAME``, name of the project
 * ``MODULES``, modules to import on project load
-* ``DB_URL``, URL of database
+* ``DB_URL``, URL of database (defaults to the in memory ``sqlite://``)
 * ``APP_STATIC_FOLDER``, path to folder where the Flask static files lie
+  (defaults to ``app/static``)
 * ``APP_TEMPLATE_FOLDER``, path to folder where the Flask template files lie
+  (defaults to ``app/templates``)
 * ``STATIC_URL``, optional URL to serve static files
 * ``OAUTH_CLIENT``, cf. `Using OAuth`_
 * ``AUTHORIZED_EMAILS``, df. `Using OAuth`_
