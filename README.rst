@@ -1,7 +1,7 @@
 Flasker
 =======
 
-Under development.
+Under development. Visit https://github.com/mtth/flasker for the latest version.
 
 A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ and Celery_ backend support.
 
@@ -25,7 +25,7 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
 - What Flasker isn't?
 
     - A simplified version of Flask, SQLAlchemy and Celery. Flasker handles the
-      setup but purposefully leaves you free to interact with the raw Flask,
+      setup but intentionally leaves you free to interact with the raw Flask,
       Celery and database objects. Some knowledge of these frameworks is
       therefore required. 
 
@@ -42,7 +42,7 @@ Quickstart
 
   This will create a project configuration file ``default.cfg`` in the
   current directory (cf `Config file API`_ for more info on the available
-  configurations through the ``new`` command) and a basic bootstrap themed
+  configurations through the ``new`` command) and a basic Bootstrap_ themed
   app in an ``app`` folder (this can be turned off with the ``-a`` flag).
   You should already be able to run your app by running ``flasker server``.
 
@@ -108,7 +108,7 @@ The following keys are valid in the ``PROJECT`` section:
   (defaults to ``app/templates``)
 * ``STATIC_URL``, optional URL to serve static files
 * ``OAUTH_CLIENT``, cf. `Using OAuth`_
-* ``AUTHORIZED_EMAILS``, df. `Using OAuth`_
+* ``AUTHORIZED_EMAILS``, cf. `Using OAuth`_
 
 Note that all paths are relative to the configuration file.
 

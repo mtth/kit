@@ -12,9 +12,11 @@ pj = current_project
 conf = pj.config['PROJECT']
 
 app = Flask(
-  'flask',
+  conf['APP_FOLDER'],
   static_folder=conf['APP_STATIC_FOLDER'],
-  template_folder=conf['APP_TEMPLATE_FOLDER']
+  template_folder=conf['APP_TEMPLATE_FOLDER'],
+  instance_path=pj.root_dir,
+  instance_relative_config=True
 )
 app.config.update(pj.config['APP'])
 

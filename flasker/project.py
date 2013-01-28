@@ -34,8 +34,9 @@ class Project(object):
       'NAME': '',
       'MODULES': '',
       'DB_URL': 'sqlite://',
-      'APP_STATIC_FOLDER': 'app/static',
-      'APP_TEMPLATE_FOLDER': 'app/templates',
+      'APP_FOLDER': 'app',
+      'APP_STATIC_FOLDER': 'static',
+      'APP_TEMPLATE_FOLDER': 'templates',
       'OAUTH_CLIENT': '',
       'AUTHORIZED_EMAILS': '',
     },
@@ -55,8 +56,6 @@ class Project(object):
       self.config[key].update(config[key])
     self.check_config()
     self.root_dir = dirname(abspath(config_path))
-    self.kind = splitext(split(config_path)[1])[0]
-    self.sname = sub(r'\W+', '_', self.config['PROJECT']['NAME'].lower())
     # create current_project proxy
     assert Project.__current__ is None, 'More than one project.'
     Project.__current__ = proxy(self)
@@ -92,16 +91,10 @@ class Project(object):
   def check_config(self):
     """Make sure the configuration is valid.
 
-    Any a priori configuration checks will go here. Also makes all folder paths
-    absolute (necessary because the app creation will be relative to the
-    flasker module path otherwise).
+    Any a priori configuration checks will go here.
     
     """
     conf = self.config
-    # make folder paths absolute
-    for key in conf['PROJECT']:
-      if key.endswith('_FOLDER'):
-        conf['PROJECT'][key] = abspath(conf['PROJECT'][key])
     # check that the project has a name
     if not conf['PROJECT']['NAME']:
       raise ProjectImportError('Missing project name.')
