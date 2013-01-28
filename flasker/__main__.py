@@ -6,13 +6,57 @@ from argparse import ArgumentParser, REMAINDER
 from code import interact
 from distutils.dir_util import copy_tree
 from functools import wraps
-from os import mkdir
-from os.path import abspath, dirname, join
+from os import listdir, mkdir
+from os.path import abspath, dirname, exists, join, splitext
+from re import findall
 from shutil import copy
 from sys import path
 
 from flasker import current_project
 from flasker.project import Project, ProjectImportError
+
+def project_context(handler):
+  """Create the project context.
+  
+  If no configuration file was entered in the main parser through the -c
+  option, this function will look in the current directory for possible
+  matches. If a single file is run it will use it, otherwise it will yield an
+  error.
+
+  Some (most) subparser handlers require the project to be created before
+  returning, this decorator handles this.
+
+  """
+  @wraps(handler)
+  def wrapper(*args, **kwargs):
+    parsed_args = args[0]
+    try:
+      conf_file = parsed_args.conf
+      if not conf_file:
+        conf_files = [fn for fn in listdir('.') if splitext(fn)[1] == '.cfg']
+        if len(conf_files) == 0:
+          print (
+            'No configuration file found in current directory. '
+            'Please enter a path to one with the -c option.'
+          )
+          return
+        elif len(conf_files) > 1:
+          print (
+            'Several configuration files found in current directory: %s. '
+            'Please disambiguate with the -c option.'
+          ) % ', '.join(conf_files)
+          return
+        else:
+          conf_file = conf_files[0]
+      path.append(abspath(dirname(conf_file))) # for reloader to work
+      pj = Project(conf_file)
+    except ProjectImportError as e:
+      print e
+      return
+    else:
+      pj.make()
+      handler(*args, **kwargs)
+  return wrapper
 
 # Parsers
 
@@ -22,34 +66,13 @@ parser = ArgumentParser('flasker')
 
 parser.add_argument('-c', '--conf',
   dest='conf',
-  default='default.cfg',
-  help='path to configuration file [%(default)s]'
+  default='',
+  help='path to configuration file'
 )
 subparsers = parser.add_subparsers(
   title='available commands',
   dest='command',
 )
-
-def project_context(handler):
-  """Create the project context.
-  
-  Some (most) subparser handlers require the project to be created before
-  returning, this decorator handles this.
-
-  """
-  @wraps(handler)
-  def wrapper(*args, **kwargs):
-    parsed_args = args[0]
-    path.append(abspath(dirname(parsed_args.conf))) # for reloader to work
-    try:
-      pj = Project(parsed_args.conf)
-    except ProjectImportError as e:
-      print e
-      return
-    else:
-      pj.make()
-      handler(*args, **kwargs)
-  return wrapper
 
 # New
 
@@ -60,22 +83,36 @@ new_parser.add_argument('-a', '--app',
   help='don\'t include basic bootstrap app template'
 )
 new_parser.add_argument('-n', '--name',
-  default='default.cfg',
+  default='default',
   help='name of the new config file [%(default)s]'
 )
 new_parser.add_argument('config',
-  choices=['basic', 'celery_dq'],
+  choices=[
+    splitext(name)[0] for name in listdir(join(dirname(__file__), 'configs'))
+  ],
   help='the type of config to create'
 )
 
 def new_handler(parsed_args):
   src = dirname(__file__)
-  copy(join(src, 'configs', '%s.cfg' % parsed_args.config), parsed_args.name)
-  print 'Project configuration file created.'
+  conf_name = '%s.cfg' % parsed_args.name
+  if exists(conf_name):
+    print (
+      'There already exists a configuration file with this name. '
+      'Please enter a different name with the -n option.'
+    )
+  else:
+    copy(join(src, 'configs', '%s.cfg' % parsed_args.config), conf_name)
+    print 'Project configuration file created!'
   if parsed_args.app:
-    copy_tree(join(src, 'data'), '.')
-    print 'Bootstrap app folder created.'
-  print 'All set!'
+    if exists('app'):
+      print (
+        'There already seems to be an app folder here. '
+        'App creation skipped.'
+      )
+    else:
+      copy_tree(join(src, 'data'), '.')
+      print 'Bootstrap app folder created!'
 
 new_parser.set_defaults(handler=new_handler)
 
@@ -84,9 +121,7 @@ new_parser.set_defaults(handler=new_handler)
 server_parser = subparsers.add_parser('server', help='start server')
 
 server_parser.add_argument('-r', '--restrict',
-  default=False,
   action='store_true',
-  dest='restrict',
   help='disallow remote server connections'
 )
 server_parser.add_argument('-p', '--port',
@@ -95,7 +130,6 @@ server_parser.add_argument('-p', '--port',
   help='listen on port [%(default)s]'
 )
 server_parser.add_argument('-d', '--debug',
-  default=False,
   action='store_true',
   help='run in debug mode (autoreload and debugging)'
 )
@@ -118,10 +152,10 @@ def shell_handler(parsed_args):
   pj = current_project
   pj.db.create_connection(app=pj.app)
   context = {
-    'project': pj,
+    'pj': pj,
     'db': pj.db,
     'app': pj.app,
-    'celery': pj.celery
+    'cel': pj.celery
   }
   try:
     import IPython
@@ -144,16 +178,11 @@ worker_parser.add_argument('-n', '--name',
   default='',
   help='hostname prefix'
 )
-worker_parser.add_argument('-Q', '--queues',
-  help='queues (comma separated)'
-)
-worker_parser.add_argument('-B', '--beat',
-  default=False,
+worker_parser.add_argument('-o', '--only-direct',
   action='store_true',
-  help='run with celerybeat'
+  help='only listen to direct queue'
 )
 worker_parser.add_argument('-v', '--verbose-help',
-  default=False,
   action='store_true',
   help='show full help from celery worker'
 )
@@ -166,16 +195,21 @@ worker_parser.add_argument('-r', '--raw',
 def worker_handler(parsed_args):
   pj = current_project
   pj.db.create_connection(celery=pj.celery)
+  # find the active worker names
+  pj_worker_names = [d.keys()[0] for d in pj.celery.control.ping()]
+  worker_pattern = r'w(\d+)\.%s.%s' % (pj.subdomain, pj.domain)
+  worker_numbers = [
+    findall(worker_pattern, worker_name) or ['0']
+    for worker_name in pj_worker_names
+  ]
+  wkn = max([int(n[0]) for n in worker_numbers] or [0]) + 1
   if parsed_args.verbose_help:
     pj.celery.worker_main(['worker', '-h'])
   else:
-    domain = pj.config['PROJECT']['SHORTNAME']
-    subdomain = parsed_args.name or pj.config['PROJECT']['CONFIG']
-    options = ['worker', '--hostname=%s.%s' % (subdomain, domain)]
-    if parsed_args.queues:
-      options.append('--queues=%s' % parsed_args.queues)
-    if parsed_args.beat:
-      options.append('--beat')
+    hostname = parsed_args.name or 'w%s.%s.%s' % (wkn, pj.subdomain, pj.domain)
+    options = ['worker', '--hostname=%s' % hostname]
+    if parsed_args.only_direct:
+      options.append('--queues=%s.dq' % hostname)
     if parsed_args.raw:
       options.extend(parsed_args.raw)
     pj.celery.worker_main(options)
@@ -192,7 +226,6 @@ flower_parser.add_argument('-p', '--port',
   help='listen on port [%(default)s]'
 )
 flower_parser.add_argument('-v', '--verbose-help',
-  default=False,
   action='store_true',
   help='show full help from celery flower'
 )

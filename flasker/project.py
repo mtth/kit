@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from ConfigParser import SafeConfigParser
-from os.path import abspath, dirname, join, split, splitext
+from os.path import abspath, dirname, join, sep, split, splitext
 from re import match, sub
 from weakref import proxy
 from werkzeug.local import LocalProxy
@@ -32,6 +32,8 @@ class Project(object):
   config = {
     'PROJECT': {
       'NAME': '',
+      'DOMAIN': '',
+      'SUBDOMAIN': '',
       'MODULES': '',
       'DB_URL': 'sqlite://',
       'APP_FOLDER': 'app',
@@ -56,6 +58,14 @@ class Project(object):
       self.config[key].update(config[key])
     self.check_config()
     self.root_dir = dirname(abspath(config_path))
+    self.domain = (
+      self.config['PROJECT']['DOMAIN'] or
+      sub(r'\W+', '_', self.config['PROJECT']['NAME'].lower())
+    )
+    self.subdomain = (
+      self.config['PROJECT']['SUBDOMAIN'] or
+      splitext(config_path)[0].replace(sep, '-')
+    )
     # create current_project proxy
     assert Project.__current__ is None, 'More than one project.'
     Project.__current__ = proxy(self)
@@ -81,7 +91,7 @@ class Project(object):
         parser.readfp(f)
     except IOError as e:
       raise ProjectImportError(
-        'No configuration file found at %s.' % config_path
+        'Unable to parse configuration file at %s.' % config_path
       )
     return dict(
       (s, dict((k, smart_coerce(v)) for (k, v) in parser.items(s)))

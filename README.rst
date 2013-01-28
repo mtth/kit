@@ -109,13 +109,20 @@ The following keys are valid in the ``PROJECT`` section:
 * ``STATIC_URL``, optional URL to serve static files
 * ``OAUTH_CLIENT``, cf. `Using OAuth`_
 * ``AUTHORIZED_EMAILS``, cf. `Using OAuth`_
+* ``DOMAIN``, cf. `Using Celery`_ (defaults to the project name, 'sluggified')
+* ``SUBDOMAIN``, cf. `Using Celery`_ (defaults to the configuration filename)
 
 Note that all paths are relative to the configuration file.
 
 The following pregenerated configurations are available through the ``flasker new`` command:
 
 * ``basic``, minimal configuration
-* ``celery_dq``, sets up celery direct queueing
+* ``celery``, sets up celery (cf. `Using Celery`_)
+
+Using Celery
+------------
+
+TODO
 
 
 Using OAuth
