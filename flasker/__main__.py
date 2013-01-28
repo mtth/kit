@@ -20,8 +20,7 @@ def project_context(handler):
   
   If no configuration file was entered in the main parser through the -c
   option, this function will look in the current directory for possible
-  matches. If a single file is run it will use it, otherwise it will yield an
-  error.
+  matches. If a single file is found it will use it.
 
   Some (most) subparser handlers require the project to be created before
   returning, this decorator handles this.
@@ -136,6 +135,7 @@ server_parser.add_argument('-d', '--debug',
 
 @project_context
 def server_handler(parsed_args):
+  """Start a Werkzeug server for the Flask application."""
   pj = current_project
   host = '127.0.0.1' if parsed_args.restrict else '0.0.0.0'
   pj.db.create_connection(app=pj.app)
@@ -149,6 +149,7 @@ shell_parser = subparsers.add_parser('shell', help='start shell')
 
 @project_context
 def shell_handler(parsed_args):
+  """Start a shell in the context of the project."""
   pj = current_project
   pj.db.create_connection(app=pj.app)
   context = {
@@ -174,10 +175,6 @@ shell_parser.set_defaults(handler=shell_handler)
 
 worker_parser = subparsers.add_parser('worker', help='start worker')
 
-worker_parser.add_argument('-n', '--name',
-  default='',
-  help='hostname prefix'
-)
 worker_parser.add_argument('-o', '--only-direct',
   action='store_true',
   help='only listen to direct queue'
@@ -193,20 +190,36 @@ worker_parser.add_argument('-r', '--raw',
 
 @project_context
 def worker_handler(parsed_args):
+  """Starts a celery worker.
+
+  If no hostname is provided, one will be generated automatically using the
+  project domain and subdomain and current worker count. For example, the first
+  two workers started for project ``my_project`` and configuration ``default``
+  will have respective hostnames:
+
+  * w1.default.my_project
+  * w2.default.my_project
+
+  The ``-o`` flag can be used to have the worker only listen to its direct
+  queue (this option requires the CELERY_WORKER_DIRECT to be set to ``True``).
+
+  """
   pj = current_project
   pj.db.create_connection(celery=pj.celery)
-  # find the active worker names
   pj_worker_names = [d.keys()[0] for d in pj.celery.control.ping()]
   worker_pattern = r'w(\d+)\.%s.%s' % (pj.subdomain, pj.domain)
   worker_numbers = [
     findall(worker_pattern, worker_name) or ['0']
     for worker_name in pj_worker_names
   ]
-  wkn = max([int(n[0]) for n in worker_numbers] or [0]) + 1
+  wkn = min(
+    set(range(1, len(worker_numbers) + 2)) -
+    set([int(n[0]) for n in worker_numbers] or [len(worker_numbers) + 2]) 
+  )
   if parsed_args.verbose_help:
     pj.celery.worker_main(['worker', '-h'])
   else:
-    hostname = parsed_args.name or 'w%s.%s.%s' % (wkn, pj.subdomain, pj.domain)
+    hostname = 'w%s.%s.%s' % (wkn, pj.subdomain, pj.domain)
     options = ['worker', '--hostname=%s' % hostname]
     if parsed_args.only_direct:
       options.append('--queues=%s.dq' % hostname)
@@ -236,6 +249,7 @@ flower_parser.add_argument('-r', '--raw',
 
 @project_context
 def flower_handler(parsed_args):
+  """Start flower worker manager."""
   pj = current_project
   if parsed_args.verbose_help:
     pj.celery.start(['celery', 'flower', '--help'])
