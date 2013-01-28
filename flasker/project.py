@@ -43,7 +43,7 @@ class Project(object):
       'AUTHORIZED_EMAILS': '',
     },
     'APP': {
-      'SECRET_KEY': '',
+      'SECRET_KEY': 'adefaultunsafekey',
     },
     'CELERY': {
       'BROKER_URL': 'redis://',
