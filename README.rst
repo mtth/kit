@@ -117,7 +117,7 @@ Note that all paths are relative to the configuration file.
 The following pregenerated configurations are available through the ``flasker new`` command:
 
 * ``basic``, minimal configuration
-* ``celery``, sets up celery (cf. `Using Celery`_)
+* ``celery``, includes default celery configuration (cf. `Using Celery`_)
 
 Using Celery
 ------------

@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 
 from ConfigParser import SafeConfigParser
+from logging import getLogger
 from os.path import abspath, dirname, join, sep, split, splitext
 from re import match, sub
 from weakref import proxy
 from werkzeug.local import LocalProxy
 
 from util import smart_coerce
+
+logger = getLogger('project')
 
 class ProjectImportError(Exception):
 
@@ -108,6 +111,14 @@ class Project(object):
     # check that the project has a name
     if not conf['PROJECT']['NAME']:
       raise ProjectImportError('Missing project name.')
+
+  def setup_logger(self):
+    """Setup the project logger.
+    
+    TODO.
+    
+    """
+    pass
 
   def make(self):
     """Create all project components.

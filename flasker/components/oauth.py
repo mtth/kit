@@ -2,8 +2,10 @@
 
 """This is where the auth magic happens."""
 
-from flask import Blueprint, flash, request, redirect, render_template, url_for
-from flask.ext.login import current_user, login_user, logout_user, LoginManager, UserMixin
+from flask import (Blueprint, current_app, flash, request, redirect,
+  render_template, url_for)
+from flask.ext.login import (current_user, login_user, logout_user,
+  LoginManager, UserMixin)
 from json import loads
 from logging import getLogger
 from os.path import abspath, join, dirname
@@ -15,7 +17,15 @@ from ..project import current_project
 from ..util import Loggable
 
 pj = current_project
-logger = getLogger(__name__)
+
+# Creating the Blueprint
+# ======================
+
+bp = Blueprint(
+  'core',
+  __name__,
+  template_folder=abspath(join(dirname(__file__), 'templates'))
+)
 
 # Login manager instance
 # ======================
@@ -135,6 +145,10 @@ class User(Loggable, UserMixin):
   def __repr__(self):
     return '<User id=%r>' % self.id
 
+  @property
+  def __logger__(self):
+    return current_app.logger
+
   def get_id(self):
     """Necessary for Flask login extension."""
     return self.id
@@ -155,15 +169,6 @@ User.populate(
   email.strip()
   for email in pj.config['PROJECT']['AUTHORIZED_EMAILS'].split(',')
   if email.strip()
-)
-
-# Creating the Blueprint
-# ======================
-
-bp = Blueprint(
-    'core',
-    __name__,
-    template_folder=abspath(join(dirname(__file__), 'templates'))
 )
 
 # Handlers
@@ -194,7 +199,9 @@ def oauth2callback():
   then catches the token information and redirects to ``catch_token``.
 
   """
-  logger.debug('Callback call from google. Tranferring to catch the token.')
+  current_app.logger.debug(
+    'Callback call from google. Tranferring to catch the token.'
+  )
   values = {'catch_token_url': url_for('.catch_token')}
   return render_template('get_token_from_hash.html', **values)
 
@@ -208,25 +215,25 @@ def catch_token():
 
   """
   token = request.args['access_token']
-  logger.debug('Successfully caught access token.')
+  current_app.logger.debug('Successfully caught access token.')
   if not validate_token(token):
-    logger.warn('Access token is invalid.')
+    current_app.logger.warn('Access token is invalid.')
     values = {
         'header': 'Invalid token',
         'color': 'danger',
         'sign_in_url': get_google_login_url()
     }
     return render_template('sign_in_out.html', **values)
-  logger.debug('Access token is valid.')
+  current_app.logger.debug('Access token is valid.')
   user_infos = get_user_info_from_token(token)
-  logger.debug('Gathered user infos successfully.')
+  current_app.logger.debug('Gathered user infos successfully.')
   user = User.get_from_id(user_infos['email'])
   if user:
     login_user(user)
     user.info('Signed in.')
     return redirect(request.args['state'])
   else:
-    logger.warn('%s tried to sign in.' % user_infos['email'])
+    current_app.logger.warn('%s tried to sign in.' % user_infos['email'])
     values = {
         'header': 'Unauthorized',
         'color': 'warning',
