@@ -52,7 +52,7 @@ class Project(object):
 
   def __init__(self, config_path):
     config = self.parse_config(config_path)
-    for key in self.config:
+    for key in config:
       self.config[key].update(config[key])
     self.check_config()
     self.root_dir = dirname(abspath(config_path))
