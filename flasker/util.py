@@ -8,7 +8,6 @@ from datetime import datetime
 from flask import abort, jsonify, request
 from json import dumps, loads
 from functools import partial, wraps
-from logging import getLogger
 from re import sub
 from sqlalchemy import Column
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
@@ -21,8 +20,6 @@ from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
 from traceback import format_exc
 from werkzeug.exceptions import HTTPException
-
-logger = getLogger(__name__)
 
 # Errors
 # ======
@@ -48,10 +45,13 @@ class APIError(HTTPException):
   def __repr__(self):
     return '<APIError %r: %r>' % (self.code, self.message)
 
-# Helpers
-# =======
+# General helpers
+# ===============
 
-def prod(iterable, key=None, restrict=None):
+# Utility functions
+# -----------------
+
+def prod(iterable, key=None):
   """Helper function for cumulative products.
 
   :param key: function called on each element of the iterable, if none then
@@ -64,19 +64,19 @@ def prod(iterable, key=None, restrict=None):
   """
   rv = 1
   for index, elem in enumerate(iterable):
-    if not restrict or not restrict(elem):
-      if key is None:
-        rv *= elem
-      else:
-        rv *= key(elem)
+    if key is None:
+      rv *= elem
+    else:
+      rv *= key(elem)
   return rv
 
 def uncamelcase(name):
+  """Transform CamelCase to underscore_case."""
   s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
   return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
-def smart_coerce(value, return_type=None):
-  """Converts a string to another builtin type."""
+def convert(value, return_type=None):
+  """Converts a string to a boolean, int or float."""
   value = value.strip()
   if return_type:
     if return_type == 'int':
@@ -97,503 +97,21 @@ def smart_coerce(value, return_type=None):
     # if we get here, something has gone wrong
     raise ConversionError('Invalid conversion type: %s' % return_type)
   else:
-    if value.lower() == 'true' or value == '1':
-      return True
-    elif value.lower() == 'false' or value == '0':
-      return False
-    else:
+    try:
+      return int(value)
+    except ValueError:
       try:
-        return int(value)
+        return float(value)
       except ValueError:
-        try:
-          return float(value)
-        except ValueError:
+        if value.lower() == 'true':
+          return True
+        elif value.lower() == 'false':
+          return False
+        else:
           return value
 
-def exponential_smoothing(data, alpha=0.5):
-  """Helper function for smoothing data.
-
-  :param data: list of tuples. The smoothing will be done on
-    the first item of each tuple.
-  :type data: ``list``
-  :param alpha: the discount factor
-  :type alpha: ``float``
-  :rtype: ``list``
-  
-  """
-  sorted_data = sorted(data, key=lambda e: e[0])
-  return [(x, sum(_y * alpha ** (x - _x) for (_x, _y) in sorted_data[:i+1])
-        / sum(alpha ** (x - _x) for (_x, _y) in sorted_data[:i+1]))
-      for i, (x, y) in enumerate(sorted_data)]
-
-def histogram(
-    data,
-    key=lambda a: a,
-    bins=50,
-    restrict=None,
-    categories=None,
-    order=0,
-    expand=False
-):
-  """Returns a histogram of counts for the data.
-
-    :param restrict: if provided, only data elements which return `True`
-      will be included in the histogram. Default is `None` (all elements
-      are included).
-    :type restrict: function or None
-    :param categories: if provided, elements will be counted in separate
-      categories. This changes the format of the output to a dictionary
-      with the different categories as keys in each bin.
-    :type categories: function or None
-    :param bins: either an int (total number of bins, which will be 
-      uniformly spread) or a list of increasing bin values. smaller
-      values will be in the first bin, larger in the last one.
-    :type bins: int or list(int)
-    :param order: 0 if data isn't sorted, 1 if sorted in ascending, -1 if
-      sorted in descending order.
-    :type order: string
-
-  Possible extension: allow categories to return a list of keys, which would
-  allow elements to be included in several counts.
-
-  """
-  if isinstance(bins, int):
-    n_bins = bins
-    if not n_bins > 0: raise Exception("Number of bins must be > 0.")
-    if order == '1':
-      max_value = key(data[-1])
-      min_value = key(data[0])
-    elif order == '-1':
-      max_value = key(data[0])
-      min_value = key(data[-1])
-    else:
-      max_value = max(key(e) for e in data)
-      min_value = min(key(e) for e in data)
-    if n_bins == 1 or max_value == min_value:
-      # If everything is equal, or just one bin, return one bin. Duh.
-      return {min_value: len(data)}
-    else:
-      bin_width = float(max_value - min_value) / n_bins
-      bins = [min_value + float(i) * bin_width for i in xrange(n_bins)]
-      def find_bin(e):
-        # this is faster than default iterating over bins
-        index = min(int((key(e) - min_value) / bin_width), n_bins - 1)
-        return bins[index]
-  else:
-    if len(bins) == 1:
-      # not very interesting but for compatibility
-      return {bins[0]: len(data)}
-    def find_bin(a):
-      # default bin iterator
-      if a < bins[0]:
-        return bins[0]
-      for bin in reversed(bins):
-        if a >= bin:
-          return bin
-  if categories is None:
-    data_histogram = dict.fromkeys(bins, 0)
-    for e in data:
-      if restrict is None or restrict(e):
-        data_histogram[find_bin(key(e))] += 1
-    return data_histogram
-  else:
-    data_histogram = defaultdict(lambda: defaultdict(int))
-    for e in data:
-      if restrict is None or restrict(e):
-        data_histogram[find_bin(key(e))][categories(e)] += 1
-    data_histogram = dict((k, dict(v)) for (k, v) in data_histogram.iteritems())
-    if expand:
-      keys = set(key for v in data_histogram.values() for key in v.keys())
-      data_histogram = dict(
-          (key, dict((k, v.get(key, 0)) for (k, v) in data_histogram.iteritems()))
-          for key in keys
-      )
-    return data_histogram
-
-# Classes
-# -------
-
-class SmartDictReader(DictReader):
-
-  """Helper for importing .csv files.
-
-  :param csvfile: open file instance
-  :type csvfile: ``file``
-  :param fields: sequence of tuples (fieldname, fieldtype)
-  :rtype: generator
-
-  Some csv files have unicode data which raises errors. This helper function
-  automatically replaces non-ascii characters.
-
-  Interesting values for kwargs can be:
-  * delimiter = '\t'
-  * quotechar = '\x07'
-
-  """
-
-  def __init__(self, csvfile, fields, silent=True, **kwargs):
-    self.csvfile = csvfile
-    self.n_imports = 0
-    self.n_errors = 0
-    self.silent = silent
-    kwargs['fieldnames'] = [field[0] for field in fields]
-    self.fieldtypes = dict(fields)
-    DictReader.__init__(self, csvfile, **kwargs)
-
-  def next(self):
-    try:
-      row = DictReader.next(self)
-    except StopIteration:
-      if self.n_errors:
-        logger.warn('%s: %s rows imported, %s errors.' % (
-            self.csvfile.name,
-            self.n_imports,
-            self.n_errors
-        ))
-      else:
-        logger.info('%s: %s rows imported.' % (
-            self.csvfile.name,
-            self.n_imports
-        ))
-      raise StopIteration
-    else:
-      try:
-        processed_row = dict(
-            (key, smart_coerce(value, self.fieldtypes[key]))
-            for key, value in row.iteritems()
-            if self.fieldtypes[key]
-        )
-      except (ValueError, ConversionError) as e:
-        logger.error(
-            'Row processing error: %s. Full row: %s' % (e, row)
-        )
-        self.n_errors += 1
-        if not self.silent:
-          raise
-      else:
-        self.n_imports += 1
-        return processed_row
-
-# Caching
-# ==========
-
-class Cacheable(object):
-
-  def get_cached_properties(self):
-    return [
-        varname
-        for varname in dir(self.__class__)
-        if isinstance(getattr(self.__class__, varname), CachedProperty)
-    ]
-
-  def refresh_cache(self):
-    """Refresh all cached properties."""
-    for varname in self.get_cached_properties():
-      setattr(self, varname, True)
-
-def cached_property(func):
-  """Faster than smart_property."""
-  return CachedProperty(func)
-
-class CachedProperty(property):
-
-  """Instance of a cached property for a model.
-
-  Based on the emulation of PyProperty_Type() in Objects/descrobject.c from 
-  http://infinitesque.net/articles/2005/enhancing%20Python's%20property.xhtml
-
-  """
-
-  def __init__(self, func):
-    self.func = func
-    self.__doc__ = func.__doc__
-
-  def __get__(self, obj, objtype=None):
-    """Gets the value from cache (creating and refreshing as necessary)."""
-    if obj is None:
-      return self
-    else:
-      if not obj._cache or not self.func.__name__ in obj._cache:
-        return {}
-      return obj._cache[self.func.__name__][0]
-
-  def __set__(self, obj, value):
-    """Sets the value in the cache."""
-    if not obj._cache: obj._cache = {}
-    if value:
-      obj._cache[self.func.__name__] = (self.func(obj), time())
-      obj._cache.changed()
-
-  def __repr__(self):
-    return '<CachedProperty %s>' % self.func.__name__
-
-def lazy_property(func):
-  return LazyProperty(func)
-
-class LazyProperty(property):
-
-  """To distinguish certain properties.
-
-  This is to emulate lazy loading. If we are at depth 0, we do not want
-  to compute these properties.
-
-  """
-
-  pass
-
-# Smart properties
-# ----------------
-
-def smart_property(cache=True, cache_category='', cache_history=False, jsonify=True):
-  """A bit slow for now.
-
-  @smart_property(cache=True)
-  def foo(self, ...):
-    ...
-
-  * cache = False: no caching
-  * cache = True: caching on a private variable
-  * cache = 'some_string': caching on 'some_string' property
-
-  The last one supports assignment as well (it wouldn't make sense for
-  the second one to).
-
-  * jsonify = True: always jsonified
-  * jsonify = False: never jsonified
-  * jsonify = 3: only jsonified if object jsonified at depth 3 or more
-
-  """
-  def wrapper(func):
-    if cache == False:
-      return SmartProperty(func, jsonify)
-    if cache == True:
-      return SmartLazyProperty(func, jsonify)
-    elif cache and isinstance(cache, str):
-      return SmartCachedProperty(func, cache, cache_category, jsonify)
-  return wrapper
-
-class SmartProperty(property):
-
-  def __init__(self, func, jsonify):
-    self.func = func
-    self.__doc__ = func.__doc__
-    self.min_depth = jsonify
-    self.cache = None
-
-  def __repr__(self):
-    return '<SmartProperty %s>' % self.func.__name__
-
-class SmartLazyProperty(SmartProperty):
-
-  def __get__(self, obj, objtype=None):
-    """Gets the value from cache (creating and refreshing as necessary)."""
-    if obj is None:
-      return self
-    else:
-      if self.cache is None:
-        self.__set__(obj, self.func(obj))
-      return self.cache
-
-  def __set__(self, obj, value):
-    if value:
-      self.cache = value
-
-  def __repr__(self):
-    return '<LazyProperty %s>' % self.func.__name__
-
-class SmartCachedProperty(SmartProperty):
-
-  def __init__(self, func, jsonify, cache=None, cache_category=''):
-    super(SmartCachedProperty, self).__init__(func, jsonify)
-    self.cache = cache
-    self.cache_cateogry = cache_category
-
-  def __get__(self, obj, objtype=None):
-    """Gets the value from cache (creating and refreshing as necessary)."""
-    if obj is None:
-      return self
-    else:
-      try:
-        getattr(obj, self.cache)[self.func.__name__][0]
-      except (AttributeError, TypeError):
-        self.__set__(obj, self.func(obj))
-
-  def __set__(self, obj, value):
-    """Sets the value in the cache."""
-    if not hasattr(obj, self.cache):
-      setattr(obj, self.cache, {})
-    if value:
-      obj._cache[self.func.__name__] = (self.func(obj), time())
-      # this should automatically be detected by the mutable if the
-      # cache is an instance of a mutation dict
-      # obj._cache.changed()
-
-  def __repr__(self):
-    return '<CachedProperty %s>' % self.func.__name__
-
-# Jsonifification
-# ===============
-
-class Jsonifiable(object):
-
-  """For easy API calls.
-
-  We keep track of what has already been jsonified. There might still be
-  some repetition given that we do not control the order of exploration.
-  If a key is revisited at a lower depth, it will be reparsed to allow for
-  more exploration.
-
-  """
-
-  _json_depth = -1
-  _json_cost = {}
-  _json_lazy = {}
-
-  def get_id(self):
-    if hasattr(self, 'id'):
-      return {'id': self.id}
-    else:
-      return dict(
-          (varname[:-3], {'id': getattr(self, varname)})
-          for varname in dir(self)
-          if varname.endswith('_id') and not varname == 'get_id'
-      )
-
-  def jsonify(self, depth=0, simple=True, verbose=False, show_keys=False):
-    """Returns all keys and properties of an instance in a dictionary.
-
-    :param depth:
-    :type depth: int
-    :param simple: wrap the result in a `Dict` before returning it
-    :type simple: bool
-    :param verbose: include non jsonifiable attribute names
-    :type verbose: bool
-    :param show_keys: show keys of nested models when at depth 0
-    :type show_keys: bool
-    :rtype: Dict or dict
-
-    Keys and properties marked as private will not be returned.
-    Lazy properties will only be returned if ...
-
-    """
-    if depth <= self._json_depth:
-      # this instance has already been jsonified at a greater or
-      # equal depth, so we simply return its key
-      return self.get_id()
-    self._json_depth = depth
-    if isinstance(self, dict):
-      d = dict(self)
-    else:
-      d = {}
-    cls = self.__class__
-    varnames = [
-        e for e in dir(cls)
-        if not e.startswith('_')  # don't show private properties
-        if not e == 'metadata'    # for when used with models
-    ]
-    varnames = filter(
-        lambda e: e == 'id' or not e.endswith('id'),
-        varnames
-    )
-    for varname in varnames:
-      cls_value = getattr(cls, varname)
-      if isinstance(cls_value, (property, InstrumentedAttribute)):
-        if not depth < cls._json_lazy.get(varname, 0):
-          try:
-            value = getattr(self, varname)
-          except AttributeError:
-            message = (
-                'Can\'t read attribute %s on %s.'
-                'Traceback: %s' % (varname, self, format_exc())
-            )
-            raise Exception(message)
-          if hasattr(value, 'jsonify'):
-            new_depth = depth - cls._json_cost.get(varname, 1)
-            if new_depth >= 0:
-              d[varname] = value.jsonify(depth=new_depth)
-          elif isinstance(
-                value,
-                (dict, float, int, long, str, unicode)
-          ):
-            d[varname] = value
-          elif isinstance(value, datetime):
-            d[varname] = str(value)
-          elif isinstance(value, list):
-            list_elements = []
-            # we do a check on the first element for efficiency
-            if value:
-              if isinstance(
-                  value[0],
-                  (dict, float, int, long, str, unicode)
-              ):
-                for e in value:
-                  list_elements.append(e)
-              elif hasattr(value[0], 'jsonify'):
-                new_depth = depth - cls._json_cost.get(varname, 1)
-                if new_depth >= 0:
-                  for e in value:
-                    list_elements.append(e.jsonify(depth=new_depth))
-                elif show_keys and value[0]._json_cost > 0:
-                  for e in value:
-                    list_elements.append(e.get_id())
-            d[varname] = list_elements
-          elif verbose:
-            # for debugging mostly
-            if not value:
-              d[varname] = None
-            else:
-              d[varname] = str(type(value))
-    return d if simple else Dict(d)
-
-class Loggable(object):
-
-  """To easily log stuff.
-
-  This implements the main logging methods ('debug', 'info', 'warn', 'error')
-  directly on the class instance. For example, this allows something like::
-
-    instance.log('Some message.')
-
-  """
-
-  def _logger(self, message, loglevel):
-    if not hasattr(self, '__logger__'):
-      self.__logger__ = getLogger(self.__module__)
-    action = getattr(self.__logger__, loglevel)
-    return action('%s :: %s' % (self, message))
-
-  def __getattr__(self, varname):
-    if varname in ['debug', 'info', 'warn', 'error']:
-      return partial(self._logger, loglevel=varname)
-    else:
-      raise AttributeError
-
-class RunningStatistic(object):
-
-  """ To compute running statistics efficiently."""
-
-  def __init__(self):
-    self.count = 0
-    self.mean = float(0)
-    self.unweighted_variance = float(0)
-
-  def push(self, n):
-    if n == None:
-      return
-    self.count += 1
-    if self.count == 1:
-      self.mean = float(n)
-      self.unweighted_variance = float(0)
-    else:
-      mean = self.mean
-      s = self.unweighted_variance
-      self.mean = mean + (n - mean) / self.count
-      self.unweighted_variance = s + (n - self.mean) * (n - mean)
-
-  def variance(self):
-      if self.count>1:
-        return self.unweighted_variance/(self.count-1)
-      return 0
+# Utility Classes
+# ---------------
 
 class Dict(dict):
 
@@ -728,6 +246,268 @@ class Dict(dict):
         d[key[-1]] = dic[sep.join(key)]
     return result
 
+class SmartDictReader(DictReader):
+
+  """Helper for importing .csv files.
+
+  :param csvfile: open file instance
+  :type csvfile: ``file``
+  :param fields: list of fieldnames or list of tuples (fieldname, fieldtype)
+  :rtype: iterable
+
+  Interesting values for kwargs can be:
+  * delimiter = '\t'
+  * quotechar = '\x07'
+
+  """
+
+  def __init__(self, csvfile, fields=None, silent=False, **kwargs):
+    self.csvfile = csvfile
+    self.rows_imported = 0
+    self.errors = []
+    self.field_types = {}
+    self.silent = silent
+    if fields:
+      if isinstance(fields[0], list):
+        kwargs['fieldnames'] = [field[0] for field in fields]
+        self.field_types.update(dict(fields))
+      else:
+        kwargs['fieldnames'] = fields
+    DictReader.__init__(self, csvfile, **kwargs)
+
+  def next(self):
+    row = DictReader.next(self)
+    try:
+      processed_row = dict(
+          (key, convert(value, self.field_types.get(key)))
+          for key, value in row.iteritems()
+      )
+    except ConversionError as e:
+      self.errors.append((e, row))
+      if not self.silent:
+        raise
+    else:
+      self.rows_imported += 1
+      return processed_row
+
+# Caching
+# ==========
+
+def cached_property(func):
+  return _CachedProperty(func)
+
+class Cacheable(object):
+
+  def _get_cached_properties(self):
+    return [
+        varname
+        for varname in dir(self.__class__)
+        if isinstance(getattr(self.__class__, varname), _CachedProperty)
+    ]
+
+  def refresh_cached_property(self, name, expiration=0):
+    setattr(self, name, _CacheRefresh(expiration))
+
+  def refresh_all_cached_properties(self, expiration=0):
+    for varname in self._get_cached_properties():
+      setattr(self, varname, _CacheRefresh(expiration))
+
+class _CacheRefresh(object):
+
+  def __init__(self, expiration):
+    self.expiration = expiration
+
+class _CachedProperty(property):
+
+  """Instance of a cached property for a model.
+
+  Based on the emulation of PyProperty_Type() in Objects/descrobject.c from 
+  http://infinitesque.net/articles/2005/enhancing%20Python's%20property.xhtml
+
+  """
+
+  def __init__(self, func):
+    self.func = func
+    self.__doc__ = func.__doc__
+
+  def __get__(self, obj, objtype=None):
+    """Gets the value from cache (creating and refreshing as necessary)."""
+    if obj is None:
+      return self
+    else:
+      if not obj._cache or not self.func.__name__ in obj._cache:
+        return None
+      return obj._cache[self.func.__name__][0]
+
+  def __set__(self, obj, value):
+    """Sets the value in the cache.
+
+    If the _cache is a JSONEncodedDict, this will also mark the dictionary
+    as changed.
+    
+    """
+    if not hasattr(obj, '_cache') or not obj._cache:
+      obj._cache = {}
+    if value:
+      if isinstance(value, _CacheRefresh):
+        t = time() - obj._cache[self.func.__name__][1]
+        if t > value.expiration:
+          obj._cache[self.func.__name__] = (self.func(obj), time())
+      else:
+        obj._cache[self.func.__name__] = (value, time())
+      try:
+        obj._cache.changed()
+      except:
+        pass
+
+  def __repr__(self):
+    return '<CachedProperty %r>' % self.func
+
+# Jsonifification
+# ===============
+
+class Jsonifiable(object):
+
+  """For easy API calls.
+
+  We keep track of what has already been jsonified. There might still be
+  some repetition given that we do not control the order of exploration.
+  If a key is revisited at a lower depth, it will be reparsed to allow for
+  more exploration.
+
+  """
+
+  _json_depth = -1
+  _json_cost = {}
+  _json_lazy = {}
+
+  def get_id(self):
+    if hasattr(self, 'id'):
+      return {'id': self.id}
+    else:
+      return dict(
+          (varname[:-3], {'id': getattr(self, varname)})
+          for varname in dir(self)
+          if varname.endswith('_id') and not varname == 'get_id'
+      )
+
+  def jsonify(self, depth=0, simple=True, verbose=False, show_keys=False):
+    """Returns all keys and properties of an instance in a dictionary.
+
+    :param depth:
+    :type depth: int
+    :param simple: wrap the result in a `Dict` before returning it
+    :type simple: bool
+    :param verbose: include non jsonifiable attribute names
+    :type verbose: bool
+    :param show_keys: show keys of nested models when at depth 0
+    :type show_keys: bool
+    :rtype: Dict or dict
+
+    Keys and properties marked as private will not be returned.
+    Lazy properties will only be returned if ...
+
+    """
+    if depth <= self._json_depth:
+      # this instance has already been jsonified at a greater or
+      # equal depth, so we simply return its key
+      return self.get_id()
+    self._json_depth = depth
+    if isinstance(self, dict):
+      d = dict(self)
+    else:
+      d = {}
+    cls = self.__class__
+    varnames = [
+        e for e in dir(cls)
+        if not e.startswith('_')  # don't show private properties
+        if not e == 'metadata'    # for when used with models
+    ]
+    for varname in varnames:
+      cls_value = getattr(cls, varname)
+      if isinstance(cls_value, (property, InstrumentedAttribute)):
+        if not depth < cls._json_lazy.get(varname, 0):
+          try:
+            value = getattr(self, varname)
+          except AttributeError:
+            message = (
+                'Can\'t read attribute %s on %s.'
+                'Traceback: %s' % (varname, self, format_exc())
+            )
+            raise Exception(message)
+          if hasattr(value, 'jsonify'):
+            new_depth = depth - cls._json_cost.get(varname, 1)
+            if new_depth >= 0:
+              d[varname] = value.jsonify(depth=new_depth)
+          elif isinstance(
+                value,
+                (dict, float, int, long, str, unicode)
+          ):
+            d[varname] = value
+          elif isinstance(value, datetime):
+            d[varname] = str(value)
+          elif isinstance(value, list):
+            list_elements = []
+            # we do a check on the first element for efficiency
+            if value:
+              if isinstance(
+                  value[0],
+                  (dict, float, int, long, str, unicode, tuple)
+              ):
+                for e in value:
+                  list_elements.append(e)
+              elif hasattr(value[0], 'jsonify'):
+                new_depth = depth - cls._json_cost.get(varname, 1)
+                if new_depth >= 0:
+                  for e in value:
+                    list_elements.append(e.jsonify(depth=new_depth))
+                elif show_keys and value[0]._json_cost > 0:
+                  for e in value:
+                    list_elements.append(e.get_id())
+            d[varname] = list_elements
+          elif verbose:
+            # for debugging mostly
+            if not value:
+              d[varname] = None
+            else:
+              d[varname] = str(type(value))
+    return d if simple else Dict(d)
+
+# Logging
+# =======
+
+class Loggable(object):
+
+  """To easily log stuff.
+
+  This implements the main logging methods ('debug', 'info', 'warn', 'error')
+  directly on the class instance. For example, this allows something like::
+
+    instance.log('Some message.')
+
+  Not using __getattr__ to preserve exception context. Otherwise the line where
+  the inexistent attribute was accessed will be lost.
+
+  """
+
+  def _logger(self, message, loglevel):
+    if not hasattr(self, '__logger__'):
+      self.__logger__ = getLogger(self.__module__)
+    action = getattr(self.__logger__, loglevel)
+    return action('%s :: %s' % (self, message))
+
+  def debug(self, message):
+    return self._logger(message, 'debug')
+
+  def info(self, message):
+    return self._logger(message, 'info')
+
+  def warn(self, message):
+    return self._logger(message, 'warn')
+
+  def error(self, message):
+    return self._logger(message, 'error')
+
 # Flask utilities
 # ---------------
 
@@ -763,13 +543,14 @@ def api_response(default_depth=0, default_limit=20, wrap=True):
           'content': str(e)
         }), e.code
       else:
-        offset = max(0, request.args.get('offset', 0, int))
-        limit = max(0, request.args.get('limit', default_limit, int))
-        depth = max(0, request.args.get('depth', default_depth, int))
+        params = dict(request.args) # request.args is immutable
+        offset = max(0, int(params.pop('offset', [0])[0]))
+        limit = max(0, int(params.pop('limit', [default_limit])[0]))
+        depth = max(0, int(params.pop('depth', [default_depth])[0]))
         if wrap == True or (
           isinstance(wrap, dict) and wrap[request.method] == True
         ):
-          loaded = request.args.get('loaded', '')
+          loaded = params.pop('loaded', '')
           if loaded:
             loaded = [int(e) for e in loaded.split(',')]
           else:
@@ -777,15 +558,26 @@ def api_response(default_depth=0, default_limit=20, wrap=True):
           processing_times.append(('request', time() - timer))
           timer = time()
           if isinstance(result, Query):
+            sort = params.pop('sort', '')
+            instance = result.column_descriptions[0]['type']
+            for k, v in params.items():
+              if hasattr(instance, k):
+                result = result.filter(getattr(instance, k) == v[0])
             total_matches = result.count()
             processing_times.append(('query', time() - timer))
             timer = time()
             if loaded:
-              instance = result.column_descriptions[0]['type']
               result = result.filter(~instance.id.in_(loaded))
+            if sort:
+              if sort[0] == '-':
+                result = result.order_by(-getattr(instance, sort[1:]))
+              else:
+                result = result.order_by(getattr(instance, sort))
+            if limit:
+              result = result.limit(limit)
             response_content = [
               e.jsonify(depth=depth)
-              for e in result.offset(offset).limit(limit)
+              for e in result.offset(offset)
             ]
           else:
             total_matches = len(result)
@@ -1080,17 +872,133 @@ class _QueryProperty(object):
     except UnmappedClassError:
       return None
 
+# Computations
+# ============
 
-# In progress
-# -----------
+class RunningStatistic(object):
 
-# def pagify(func):
-#   """Adds pagination to views."""
-#   @wraps(func)
-#   def wrapper(*args, **kwargs):
-#     if 'p' in request.args:
-#       page = max(0, int(request.args['p']) - 1)
-#     else:
-#       page = 0
-#     return func(*args, page=page, **kwargs)
-#   return wrapper
+  """ To compute running statistics efficiently."""
+
+  def __init__(self):
+    self.count = 0
+    self.mean = float(0)
+    self.unweighted_variance = float(0)
+
+  def push(self, n):
+    if n == None:
+      return
+    self.count += 1
+    if self.count == 1:
+      self.mean = float(n)
+      self.unweighted_variance = float(0)
+    else:
+      mean = self.mean
+      s = self.unweighted_variance
+      self.mean = mean + (n - mean) / self.count
+      self.unweighted_variance = s + (n - self.mean) * (n - mean)
+
+  def variance(self):
+      if self.count>1:
+        return self.unweighted_variance/(self.count-1)
+      return 0
+
+def exponential_smoothing(data, alpha=0.5):
+  """Helper function for smoothing data.
+
+  :param data: list of tuples. The smoothing will be done on
+    the first item of each tuple.
+  :type data: ``list``
+  :param alpha: the discount factor
+  :type alpha: ``float``
+  :rtype: ``list``
+  
+  """
+  sorted_data = sorted(data, key=lambda e: e[0])
+  return [(x, sum(_y * alpha ** (x - _x) for (_x, _y) in sorted_data[:i+1])
+        / sum(alpha ** (x - _x) for (_x, _y) in sorted_data[:i+1]))
+      for i, (x, y) in enumerate(sorted_data)]
+
+def histogram(
+    data,
+    key=lambda a: a,
+    bins=50,
+    restrict=None,
+    categories=None,
+    order=0,
+    expand=False
+):
+  """Returns a histogram of counts for the data.
+
+    :param restrict: if provided, only data elements which return `True`
+      will be included in the histogram. Default is `None` (all elements
+      are included).
+    :type restrict: function or None
+    :param categories: if provided, elements will be counted in separate
+      categories. This changes the format of the output to a dictionary
+      with the different categories as keys in each bin.
+    :type categories: function or None
+    :param bins: either an int (total number of bins, which will be 
+      uniformly spread) or a list of increasing bin values. smaller
+      values will be in the first bin, larger in the last one.
+    :type bins: int or list(int)
+    :param order: 0 if data isn't sorted, 1 if sorted in ascending, -1 if
+      sorted in descending order.
+    :type order: string
+
+  Possible extension: allow categories to return a list of keys, which would
+  allow elements to be included in several counts.
+
+  """
+  if isinstance(bins, int):
+    n_bins = bins
+    if not n_bins > 0: raise Exception("Number of bins must be > 0.")
+    if order == '1':
+      max_value = key(data[-1])
+      min_value = key(data[0])
+    elif order == '-1':
+      max_value = key(data[0])
+      min_value = key(data[-1])
+    else:
+      max_value = max(key(e) for e in data)
+      min_value = min(key(e) for e in data)
+    if n_bins == 1 or max_value == min_value:
+      # If everything is equal, or just one bin, return one bin. Duh.
+      return {min_value: len(data)}
+    else:
+      bin_width = float(max_value - min_value) / n_bins
+      bins = [min_value + float(i) * bin_width for i in xrange(n_bins)]
+      def find_bin(e):
+        # this is faster than default iterating over bins
+        index = min(int((key(e) - min_value) / bin_width), n_bins - 1)
+        return bins[index]
+  else:
+    if len(bins) == 1:
+      # not very interesting but for compatibility
+      return {bins[0]: len(data)}
+    def find_bin(a):
+      # default bin iterator
+      if a < bins[0]:
+        return bins[0]
+      for bin in reversed(bins):
+        if a >= bin:
+          return bin
+  if categories is None:
+    data_histogram = dict.fromkeys(bins, 0)
+    for e in data:
+      if restrict is None or restrict(e):
+        data_histogram[find_bin(key(e))] += 1
+    return data_histogram
+  else:
+    data_histogram = defaultdict(lambda: defaultdict(int))
+    for e in data:
+      if restrict is None or restrict(e):
+        data_histogram[find_bin(key(e))][categories(e)] += 1
+    data_histogram = dict((k, dict(v)) for (k, v) in data_histogram.iteritems())
+    if expand:
+      keys = set(key for v in data_histogram.values() for key in v.keys())
+      data_histogram = dict(
+          (key, dict((k, v.get(key, 0)) for (k, v) in data_histogram.iteritems()))
+          for key in keys
+      )
+    return data_histogram
+

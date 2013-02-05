@@ -66,8 +66,9 @@ class Db(object):
     except InvalidRequestError as e:
       self.session.rollback()
       self.session.expunge_all()
-      logger.error('Database error: %s' % e)
+      # logger.error('Database error: %s' % e)
     finally:
       self.session.remove()
 
 current_project.db = Db(current_project.config['PROJECT']['DB_URL'])
+

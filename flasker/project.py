@@ -7,7 +7,7 @@ from re import match, sub
 from weakref import proxy
 from werkzeug.local import LocalProxy
 
-from util import smart_coerce
+from util import convert
 
 logger = getLogger('project')
 
@@ -97,7 +97,7 @@ class Project(object):
         'Unable to parse configuration file at %s.' % config_path
       )
     return dict(
-      (s, dict((k, smart_coerce(v)) for (k, v) in parser.items(s)))
+      (s, dict((k, convert(v)) for (k, v) in parser.items(s)))
       for s in parser.sections()
     )
 
