@@ -126,13 +126,11 @@ class Project(object):
     Note that the database connection isn't created here.
     
     """
-    components = ['app', 'database', 'celery']
-    map(__import__, ('flasker.components.%s' % c for c in components))
-    if self.config['PROJECT']['MODULES']:
-      map(
-        __import__,
-        [mod.strip() for mod in self.config['PROJECT']['MODULES'].split(',')]
-      )
+    for mod in  ['app', 'database', 'celery']:
+      __import__('flasker.core.%s' % mod)
+    project_modules = self.config['PROJECT']['MODULES'].split(',') or []
+    for mod in project_modules:
+      __import__(mod.strip())
 
   @classmethod
   def get_current_project(cls):

@@ -10,7 +10,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.exc import InvalidRequestError
 
 from ..project import current_project
-from ..util import Base, _QueryProperty
+from ..util import Model, _QueryProperty
 
 class Db(object):
 
@@ -42,9 +42,9 @@ class Db(object):
   def create_connection(self, app=None, celery=None):
     """Initialize database connection."""
     engine = create_engine(self.url, pool_recycle=3600)
-    Base.metadata.create_all(engine, checkfirst=True)
+    Model.metadata.create_all(engine, checkfirst=True)
     self.session = scoped_session(sessionmaker(bind=engine))
-    Base.query = _QueryProperty(self)
+    Model.query = _QueryProperty(self)
     if app:
       @app.teardown_request
       def teardown_request_handler(exception=None):

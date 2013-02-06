@@ -10,11 +10,12 @@ from json import dumps, loads
 from functools import partial, wraps
 from re import sub
 from sqlalchemy import Column
-from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.ext.declarative import declarative_base, declared_attr, DeclarativeMeta
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.orm import class_mapper, Query
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.collections import InstrumentedList
+from sqlalchemy.orm.properties import RelationshipProperty
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
@@ -265,21 +266,24 @@ class SmartDictReader(DictReader):
     self.csvfile = csvfile
     self.rows_imported = 0
     self.errors = []
-    self.field_types = {}
     self.silent = silent
     if fields:
-      if isinstance(fields[0], list):
+      if isinstance(fields[0], (list, tuple)):
         kwargs['fieldnames'] = [field[0] for field in fields]
-        self.field_types.update(dict(fields))
+        self.field_types = dict(fields)
       else:
         kwargs['fieldnames'] = fields
-    DictReader.__init__(self, csvfile, **kwargs)
+        self.field_types = dict.fromkeys(fields, None)
+      DictReader.__init__(self, csvfile, **kwargs)
+    else:
+      DictReader.__init__(self, csvfile, **kwargs)
+      self.field_types = dict.fromkeys(self.fieldnames, None)
 
   def next(self):
     row = DictReader.next(self)
     try:
       processed_row = dict(
-          (key, convert(value, self.field_types.get(key)))
+          (key, convert(value, self.field_types[key]))
           for key, value in row.iteritems()
       )
     except ConversionError as e:
@@ -291,7 +295,7 @@ class SmartDictReader(DictReader):
       return processed_row
 
 # Caching
-# ==========
+# =======
 
 def cached_property(func):
   return _CachedProperty(func)
@@ -370,6 +374,8 @@ class Jsonifiable(object):
 
   """For easy API calls.
 
+  This is depth first (different from the one in the ExpandedBase class).
+
   We keep track of what has already been jsonified. There might still be
   some repetition given that we do not control the order of exploration.
   If a key is revisited at a lower depth, it will be reparsed to allow for
@@ -377,101 +383,56 @@ class Jsonifiable(object):
 
   """
 
-  _json_depth = -1
-  _json_cost = {}
-  _json_lazy = {}
+  @property
+  def _json_attributes(self):
+    """Default implementation of the attributes to jsonify.
 
-  def get_id(self):
-    if hasattr(self, 'id'):
-      return {'id': self.id}
-    else:
-      return dict(
-          (varname[:-3], {'id': getattr(self, varname)})
-          for varname in dir(self)
-          if varname.endswith('_id') and not varname == 'get_id'
-      )
+    This is relatively slow (because it is evaluated for each jsonify call).
+    Consider overwriting it for better performance.
+    
+    """
+    return [
+      varname for varname in dir(self)
+      if not varname.startswith('_')
+      if not hasattr(getattr(self, varname), '__call__')
+    ]
 
-  def jsonify(self, depth=0, simple=True, verbose=False, show_keys=False):
+  @classmethod
+  def _jsonify(cls, value, depth):
+    if isinstance(value, dict):
+      return dict((k, cls._jsonify_value(v, depth)) for k, v in value.items())
+    if isinstance(value, list):
+      return [cls._jsonify_value(v, depth) for v in value]
+    if hasattr(value, 'jsonify'):
+      return value.jsonify(depth=depth - 1)
+    if isinstance(value, (float, int, long, str, unicode, tuple)):
+      return value
+    if isinstance(value, datetime):
+      return str(value)
+    if value is None:
+      return None
+    raise ValueError('not jsonifiable')
+
+  def jsonify(self, depth=0):
     """Returns all keys and properties of an instance in a dictionary.
+
+    Overrides the basic jsonify method to specialize it for models.
+
+    This function minimizes the number of lookups it does (no dynamic
+    type checking on the properties for example) to maximize speed.
 
     :param depth:
     :type depth: int
-    :param simple: wrap the result in a `Dict` before returning it
-    :type simple: bool
-    :param verbose: include non jsonifiable attribute names
-    :type verbose: bool
-    :param show_keys: show keys of nested models when at depth 0
-    :type show_keys: bool
-    :rtype: Dict or dict
-
-    Keys and properties marked as private will not be returned.
-    Lazy properties will only be returned if ...
+    :rtype: dict
 
     """
-    if depth <= self._json_depth:
-      # this instance has already been jsonified at a greater or
-      # equal depth, so we simply return its key
-      return self.get_id()
-    self._json_depth = depth
-    if isinstance(self, dict):
-      d = dict(self)
-    else:
-      d = {}
-    cls = self.__class__
-    varnames = [
-        e for e in dir(cls)
-        if not e.startswith('_')  # don't show private properties
-        if not e == 'metadata'    # for when used with models
-    ]
-    for varname in varnames:
-      cls_value = getattr(cls, varname)
-      if isinstance(cls_value, (property, InstrumentedAttribute)):
-        if not depth < cls._json_lazy.get(varname, 0):
-          try:
-            value = getattr(self, varname)
-          except AttributeError:
-            message = (
-                'Can\'t read attribute %s on %s.'
-                'Traceback: %s' % (varname, self, format_exc())
-            )
-            raise Exception(message)
-          if hasattr(value, 'jsonify'):
-            new_depth = depth - cls._json_cost.get(varname, 1)
-            if new_depth >= 0:
-              d[varname] = value.jsonify(depth=new_depth)
-          elif isinstance(
-                value,
-                (dict, float, int, long, str, unicode)
-          ):
-            d[varname] = value
-          elif isinstance(value, datetime):
-            d[varname] = str(value)
-          elif isinstance(value, list):
-            list_elements = []
-            # we do a check on the first element for efficiency
-            if value:
-              if isinstance(
-                  value[0],
-                  (dict, float, int, long, str, unicode, tuple)
-              ):
-                for e in value:
-                  list_elements.append(e)
-              elif hasattr(value[0], 'jsonify'):
-                new_depth = depth - cls._json_cost.get(varname, 1)
-                if new_depth >= 0:
-                  for e in value:
-                    list_elements.append(e.jsonify(depth=new_depth))
-                elif show_keys and value[0]._json_cost > 0:
-                  for e in value:
-                    list_elements.append(e.get_id())
-            d[varname] = list_elements
-          elif verbose:
-            # for debugging mostly
-            if not value:
-              d[varname] = None
-            else:
-              d[varname] = str(type(value))
-    return d if simple else Dict(d)
+    rv = {}
+    for varname in self._json_attributes:
+      try:
+        rv[varname] = self.__class__._jsonify(getattr(self, varname), depth)
+      except ValueError as e:
+        rv[varname] = e.message
+    return rv
 
 # Logging
 # =======
@@ -686,58 +647,10 @@ class MutableDict(Mutable, dict):
 # Attach the mutation listeners to the JSONEncodedDict class globally
 MutableDict.associate_with(JSONEncodedDict)
 
-# SQLAlchemy setup
-# ================
-
-class ExpandedBase(Cacheable, Jsonifiable, Loggable):
-
-  """Adding a few features to the declarative base.
-
-  Currently:
-
-  * Automatic table naming
-  * Caching
-  * Jsonifying
-  * Logging
-
-  The `_cache` column enables the use of cached properties (declared with the
-  `cached_property` decorator. These allow offline computations of properties
-  which are then saved and can later quickly be read.
-
-  In the future, I would like to only generate the ``_cache`` column when
-  the table has a cached property (perhaps using metaclasses for example).
-
-  """
-
-  _cache = Column(JSONEncodedDict)
-
-  @declared_attr
-  def __tablename__(cls):
-    """Automatically create the table name.
-
-    .. warning::
-      This prevents single table inheritance!
-
-    """
-    return '%ss' % uncamelcase(cls.__name__)
-
-  @classmethod
-  def find_or_create(cls, name):
-    """Find or create a model from its name.
-
-    Useful for models where the only __init__ parameter is the name.
-
-    """
-    model = cls.query.filter(cls.name == name).first()
-    if not model:
-      model = cls(name)
-    return model
-
-# Creating the base used by all models
-Base = declarative_base(cls=ExpandedBase)
+# SQLAlchemy
+# ==========
 
 # Inspired by Flask-SQLAlchemy
-# ============================
 
 class Pagination(object):
 
@@ -871,6 +784,150 @@ class _QueryProperty(object):
         return BaseQuery(mapper, session=self.db.session())
     except UnmappedClassError:
       return None
+
+class ExpandedBase(Cacheable, Loggable):
+
+  """Adding a few features to the declarative base.
+
+  Currently:
+
+  * Automatic table naming
+  * Caching
+  * Jsonifying
+  * Logging
+
+  The `_cache` column enables the use of cached properties (declared with the
+  `cached_property` decorator. These allow offline computations of properties
+  which are then saved and can later quickly be read.
+
+  In the future, I would like to only generate the ``_cache`` column when
+  the table has a cached property (perhaps using metaclasses for example).
+
+  """
+
+  _cache = Column(JSONEncodedDict)
+  _json_depth = -1
+
+  json_exclude = None
+  json_include = None
+  query = None
+
+  @declared_attr
+  def __tablename__(cls):
+    """Automatically create the table name.
+
+    Override this to choose your own tablename (e.g. for single table
+    inheritance).
+
+    """
+    return '%ss' % uncamelcase(cls.__name__)
+
+  @declared_attr
+  def _json_attributes(cls):
+    """Create the dictionary of attributes that will be JSONified.
+
+    This is only run once, on class initialization, which makes jsonify calls
+    much faster.
+
+    By default, includes all public (don't start with _):
+
+    * properties
+    * columns that aren't foreignkeys.
+    * joined relationships (where lazy is False)
+
+    """
+    rv = set(
+        varname for varname in dir(cls)
+        if not varname.startswith('_')  # don't show private properties
+        if (
+          isinstance(getattr(cls, varname), property) 
+        ) or (
+          isinstance(getattr(cls, varname), Column) and
+          not getattr(cls, varname).foreign_keys
+        ) or (
+          isinstance(getattr(cls, varname), RelationshipProperty) and
+          not getattr(cls, varname).lazy
+        )
+      )
+    if cls.json_include:
+      rv = rv | set(cls.json_include)
+    if cls.json_exclude:
+      rv = rv - set(cls.json_exclude)
+    return rv
+
+  def jsonify(self, depth=0):
+    """Special implementation of jsonify for Model objects.
+    
+    Overrides the basic jsonify method to specialize it for models.
+
+    This function minimizes the number of lookups it does (no dynamic
+    type checking on the properties for example) to maximize speed.
+
+    :param depth:
+    :type depth: int
+    :rtype: dict
+
+    """
+    if depth <= self._json_depth:
+      # this instance has already been jsonified at a greater or
+      # equal depth, so we simply return its key
+      return self.get_primary_keys()
+    rv = {}
+    self._json_depth = depth
+    for varname in self._json_attributes:
+      try:
+        # direct call to Jsonifiable for speed
+        rv[varname] = Jsonifiable._jsonify(getattr(self, varname), depth)
+      except ValueError as e:
+        rv[varname] = e.message
+    return rv
+
+  def __init__(self, **kwargs):
+    for k, v in kwargs.items():
+      setattr(self, k, v)
+
+  def __repr__(self):
+    primary_keys = ', '.join(
+      '%s=%r' % (k, getattr(self, k))
+      for k in self.__class__.get_primary_key_names()
+    )
+    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
+
+  def get_primary_keys(self):
+    return dict(
+      (k, getattr(self, k))
+      for k in self.__class__.get_primary_key_names()
+    )
+
+  @classmethod
+  def find_or_create(cls, **kwargs):
+    instance = self.filter_by(**kwargs).first()
+    if instance:
+      return instance, False
+    instance = cls(**kwargs)
+    session = cls.query.db.session
+    session.add(instance)
+    session.flush()
+    return instance, True
+
+  @classmethod
+  def get_columns(cls):
+    return class_mapper(cls).columns
+
+  @classmethod
+  def get_relationships(cls):
+    return class_mapper(cls).relationships
+
+  @classmethod
+  def get_related_models(cls):
+    return [(k, v.mapper.class_) for k, v in cls.get_relationships().items()]
+
+  @classmethod
+  def get_primary_key_names(cls):
+    return [key.name for key in class_mapper(cls).primary_key]
+
+# Creating the base used by all models
+Model = declarative_base(cls=ExpandedBase)
 
 # Computations
 # ============

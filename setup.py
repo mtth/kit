@@ -28,7 +28,7 @@ setup(
       'flower'
     ],
     package_data={'flasker': [
-      'components/templates/*',
+      'core/templates/*',
       'configs/*',
       'data/**/**/*',
     ]},
