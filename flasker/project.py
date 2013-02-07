@@ -58,7 +58,10 @@ class Project(object):
   def __init__(self, config_path):
     config = self.parse_config(config_path)
     for key in config:
-      self.config[key].update(config[key])
+      if key in self.config:
+        self.config[key].update(config[key])
+      else:
+        self.config[key] = config[key]
     self.check_config()
     self.root_dir = dirname(abspath(config_path))
     self.domain = (
@@ -131,6 +134,15 @@ class Project(object):
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
+
+  def register_manager(self, manager, config_section=None):
+    """Register a manager."""
+    if config_section:
+      for k, v in self.config[config_section].items():
+        manager.config[k] = v
+    manager.before_register(self)
+    self.app.register_blueprint(manager.blueprint)
+    manager.after_register(self)
 
   @classmethod
   def get_current_project(cls):

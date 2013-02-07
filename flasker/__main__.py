@@ -87,7 +87,8 @@ new_parser.add_argument('-n', '--name',
 )
 new_parser.add_argument('config',
   choices=[
-    splitext(name)[0] for name in listdir(join(dirname(__file__), 'configs'))
+    splitext(name)[0]
+    for name in listdir(join(dirname(__file__), 'data', 'configs'))
   ],
   help='the type of config to create'
 )

@@ -22,30 +22,6 @@ from time import time
 from traceback import format_exc
 from werkzeug.exceptions import HTTPException
 
-# Errors
-# ======
-
-class ConversionError(Exception):
-
-  """Thrown when a row can't be parsed."""
-
-  pass
-
-class APIError(HTTPException):
-
-  """Thrown when an API call is invalid.
-
-  The error code will sent as error code for the response.
-
-  """
-
-  def __init__(self, code, message):
-    self.code = code
-    super(APIError, self).__init__(message)
-
-  def __repr__(self):
-    return '<APIError %r: %r>' % (self.code, self.message)
-
 # General helpers
 # ===============
 
@@ -90,13 +66,13 @@ def convert(value, return_type=None):
       elif not value or value.lower() == 'false' or value == '0':
         return False
       else:
-        raise ConversionError('Can\'t convert %s to boolean.' % value)
+        raise ValueError('Can\'t convert %s to boolean.' % value)
     elif return_type == 'unicode':
       return unicode(value, encoding='utf-8', errors='replace')
     elif return_type == 'str':
       return value
     # if we get here, something has gone wrong
-    raise ConversionError('Invalid conversion type: %s' % return_type)
+    raise ValueError('Invalid conversion type: %s' % return_type)
   else:
     try:
       return int(value)
@@ -286,10 +262,10 @@ class SmartDictReader(DictReader):
           (key, convert(value, self.field_types[key]))
           for key, value in row.iteritems()
       )
-    except ConversionError as e:
+    except ValueError as e:
       self.errors.append((e, row))
       if not self.silent:
-        raise
+        raise e
     else:
       self.rows_imported += 1
       return processed_row
@@ -301,6 +277,8 @@ def cached_property(func):
   return _CachedProperty(func)
 
 class Cacheable(object):
+
+  """Adds a few cache maintenance utilities."""
 
   def _get_cached_properties(self):
     return [
@@ -400,9 +378,9 @@ class Jsonifiable(object):
   @classmethod
   def _jsonify(cls, value, depth):
     if isinstance(value, dict):
-      return dict((k, cls._jsonify_value(v, depth)) for k, v in value.items())
+      return dict((k, cls._jsonify(v, depth)) for k, v in value.items())
     if isinstance(value, list):
-      return [cls._jsonify_value(v, depth) for v in value]
+      return [cls._jsonify(v, depth) for v in value]
     if hasattr(value, 'jsonify'):
       return value.jsonify(depth=depth - 1)
     if isinstance(value, (float, int, long, str, unicode, tuple)):
