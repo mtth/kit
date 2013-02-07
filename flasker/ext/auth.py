@@ -2,7 +2,7 @@
 
 """This is where the auth magic happens."""
 
-from flask import (Blueprint, current_app, request, redirect,
+from flask import (Blueprint, current_app, flash, request, redirect,
   render_template, url_for)
 from flask.ext.login import (current_user, login_user, logout_user,
   LoginManager, UserMixin)
@@ -47,7 +47,7 @@ class User(Loggable, UserMixin):
 class AuthManager(object):
 
   config = {
-    'URL_PREFIX': '/auth'
+    'URL_PREFIX': '/auth',
     'PROTECT_ALL_VIEWS': True,
   }
 
@@ -70,7 +70,7 @@ class AuthManager(object):
 
     login_manager = LoginManager()
     login_manager.login_view = self.config['URL_PREFIX'] + '/sign_in'
-    login_manager.login_message = ''
+    login_manager.login_message = 'Please sign in'
 
     @login_manager.user_loader
     def load_user(id):
@@ -84,20 +84,23 @@ class AuthManager(object):
     return login_manager
 
   def before_register(self, project):
+    """Will be called right before the blueprint is registered."""
 
     self.blueprint = self._create_blueprint()
     self.login_manager = self._create_login_manager()
 
   def after_register(self, project):
-    """Will be called when the manager is registered."""
+    """Will be called right after the blueprint is registered."""
+
     self.login_manager.setup_app(project.app)
+
     if self.config['PROTECT_ALL_VIEWS']:
 
       @project.app.before_request
       def check_if_logged_in():
         if (request.blueprint != 'auth'
-            and request.endpoint
-            and not request.endpoint == 'static'
+            and request.endpoint # favicon
+            and not request.endpoint == 'static' # static files
             and not current_user.is_authenticated()):
           return self.login_manager.unauthorized()
         return None
@@ -144,11 +147,7 @@ class GoogleAuthManager(AuthManager):
     @bp.route('/sign_in')
     def sign_in():
       """Sign in view."""
-      values = {
-          'header': 'Welcome!',
-          'color': 'primary',
-          'sign_in_url': self.login_url
-      }
+      values = {'sign_in_url': self.login_url}
       return render_template('google_sign_in.html', **values)
 
     @bp.route('/sign_out')
@@ -157,6 +156,7 @@ class GoogleAuthManager(AuthManager):
       if current_user.is_authenticated():
         current_user.info('Signed out.')
         logout_user()
+        flash('Goodbye')
       return redirect(url_for('.sign_in'))
 
 
@@ -184,6 +184,7 @@ class GoogleAuthManager(AuthManager):
       """
       token = request.args['access_token']
       if not self.validate_token(token):
+        flash('Invalid token')
         return redirect(url_for('.sign_in'))
       user_infos = self.get_user_info_from_token(token)
       user = User.get_from_id(user_infos['email'])
@@ -193,6 +194,7 @@ class GoogleAuthManager(AuthManager):
         return redirect(request.args['state'])
       else:
         current_app.logger.warn('%s tried to sign in.' % user_infos['email'])
+        flash('Unauthorized')
         return redirect(url_for('.sign_in'))
 
   @property

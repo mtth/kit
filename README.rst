@@ -84,7 +84,7 @@ Here is a minimalistic project configuration file::
 
   [PROJECT]
   NAME: My Project
-  MODULES: app.views,app.tasks
+  MODULES: app.views, app.tasks
   DB_URL: sqlite:///db/db.sqlite
   [APP]
   DEBUG: True
@@ -102,13 +102,12 @@ The following keys are valid in the ``PROJECT`` section:
 * ``NAME``, name of the project
 * ``MODULES``, modules to import on project load (comma separated list)
 * ``DB_URL``, URL of database (defaults to the in memory ``sqlite://``)
-* ``APP_STATIC_FOLDER``, path to folder where the Flask static files lie
-  (defaults to ``app/static``)
-* ``APP_TEMPLATE_FOLDER``, path to folder where the Flask template files lie
-  (defaults to ``app/templates``)
+* ``APP_FOLDER``, path to Flask application root folder (defaults to ``APP``)
+* ``APP_STATIC_FOLDER``, path to folder where the Flask static files lie,
+  relative to the Flask root folder (defaults to ``static``)
+* ``APP_TEMPLATE_FOLDER``, path to folder where the Flask template files lie,
+  relative to the Flask root folder (defaults to ``templates``)
 * ``STATIC_URL``, optional URL to serve static files
-* ``OAUTH_CLIENT``, cf. `Using OAuth`_
-* ``AUTHORIZED_EMAILS``, cf. `Using OAuth`_
 * ``DOMAIN``, cf. `Using Celery`_ (defaults to the project name, 'sluggified')
 * ``SUBDOMAIN``, cf. `Using Celery`_ (defaults to the configuration filename)
 
@@ -119,22 +118,55 @@ The following pregenerated configurations are available through the ``flasker ne
 * ``basic``, minimal configuration
 * ``celery``, includes default celery configuration (cf. `Using Celery`_)
 
+Using OAuth
+-----------
+
+Currently, only authentication using Google OAuth is supported. Other clients might
+get added in the future.
+
+To restrict access to your webapp to some users, simply import the ``GoogleAuthManager`` 
+and register it on your project through the ``register_manager`` method. The 
+``GoogleAuthManager`` requires a single parameter:
+
+* ``CLIENT_ID``, your Google client ID (which can be found in the `Google API console`_)
+
+Other optional parameters are:
+
+* ``AUTHORIZED_EMAILS``, a list or comma separated string of emails that can login
+  (defaults to the empty string)
+* ``PROTECT_ALL_VIEWS``, if ``True`` (default), all the views (not including statically served
+  files) will have their access restricted to logged in users. If set to ``False``, you
+  should use the ``login_required`` decorator from Flask-Login_ to protect individual
+* ``URL_PREFIX``, the blueprint url prefix (default to ``/auth``)
+* ``CALBACK_URL``, the callback URL for Google OAuth (defaults to ``/oauth2callback``). Note
+  that this string is concatenated with the ``URL_PREFIX`` so that the callback url you should
+  allow in your console would by default be ``/auth/oauth2callback``)
+
+These can be passed in two ways. Either directly to the constructor::
+
+  from flasker import current_project
+  from flasker.ext.auth import GoogleAuthManager
+
+  manager = GoogleAuthManager(
+    CLIENT_ID='your_google_client_id',
+    AUTHORIZED_EMAILS=['hers@email.com', 'his@gmail.com']
+  )
+
+  current_project.register_manager(manager)
+
+Or, if you would like to include the parameters in the global configuration file, you can
+do that too by passing the corresponding section to the ``register_manager`` method::
+
+  from flasker import current_project
+  from flasker.ext.auth import GoogleAuthManager
+
+  current_project.register(GoogleAuthManager(), config_section='AUTH')
+
+
 Using Celery
 ------------
 
 TODO
-
-
-Using OAuth
------------
-
-To restrict access to your webapp to some users, you will need to enter your
-Google Client ID (from the `Google API console`_) in the ``OAUTH_CLIENT``
-configuration option and also enter authorized emails in the
-``AUTHORIZED_EMAILS`` option. Then, use the ``login_required`` decorator from
-Flask-Login_ to protect your views (cf. the docs for examples and a tutorial).
-The callback URL you should authorize is http://your.domain:port/oauth2callback.
-
 
 Utilities
 ---------

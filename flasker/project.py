@@ -42,11 +42,9 @@ class Project(object):
       'APP_FOLDER': 'app',
       'APP_STATIC_FOLDER': 'static',
       'APP_TEMPLATE_FOLDER': 'templates',
-      'OAUTH_CLIENT': '',
-      'AUTHORIZED_EMAILS': '',
     },
     'APP': {
-      'SECRET_KEY': 'adefaultunsafekey',
+      'SECRET_KEY': 'a_default_unsafe_key',
     },
     'CELERY': {
       'BROKER_URL': 'redis://',
@@ -56,6 +54,7 @@ class Project(object):
   }
 
   def __init__(self, config_path):
+
     config = self.parse_config(config_path)
     for key in config:
       if key in self.config:
@@ -63,6 +62,7 @@ class Project(object):
       else:
         self.config[key] = config[key]
     self.check_config()
+
     self.root_dir = dirname(abspath(config_path))
     self.domain = (
       self.config['PROJECT']['DOMAIN'] or
@@ -72,10 +72,10 @@ class Project(object):
       self.config['PROJECT']['SUBDOMAIN'] or
       splitext(config_path)[0].replace(sep, '-')
     )
-    # create current_project proxy
+
     assert Project.__current__ is None, 'More than one project.'
     Project.__current__ = proxy(self)
-    # project components, 3 as of right now
+
     self.app = None
     self.celery = None
     self.db = None

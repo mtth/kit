@@ -31,8 +31,13 @@
 </head>
 <body>
   <div class='box'>
-    <h2>{{ header }}</h2>
-    <a href='{{ sign_in_url }}' class='btn btn-{{ color }} btn-large btn-block'>Sign in with Google</a>
+      {% set message = get_flashed_messages()[-1] %}
+      {% if message %}
+        <h2>{{ message }}</h2>
+      {% else %}
+        <h2>Welcome</h2>
+      {% endif %}
+    <a href='{{ sign_in_url }}' class='btn btn-primary btn-large btn-block'>Sign in with Google</a>
   </div>
 </body>
 </html>
