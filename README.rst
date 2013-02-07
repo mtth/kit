@@ -118,20 +118,18 @@ The following pregenerated configurations are available through the ``flasker ne
 * ``basic``, minimal configuration
 * ``celery``, includes default celery configuration (cf. `Using Celery`_)
 
+
 Using OAuth
 -----------
 
 Currently, only authentication using Google OAuth is supported. Other clients might
-get added in the future.
+get added in the future. Session management is handled by Flask-Login_.
 
-To restrict access to your webapp to some users, simply import the ``GoogleAuthManager`` 
+To restrict access to your webapp to some users, import the ``GoogleAuthManager`` 
 and register it on your project through the ``register_manager`` method. The 
-``GoogleAuthManager`` requires a single parameter:
+``GoogleAuthManager`` accepts the following parameters:
 
 * ``CLIENT_ID``, your Google client ID (which can be found in the `Google API console`_)
-
-Other optional parameters are:
-
 * ``AUTHORIZED_EMAILS``, a list or comma separated string of emails that can login
   (defaults to the empty string)
 * ``PROTECT_ALL_VIEWS``, if ``True`` (default), all the views (not including statically served
@@ -141,10 +139,10 @@ Other optional parameters are:
 * ``URL_PREFIX``, the blueprint url prefix (defaults to ``/auth``)
 * ``CALBACK_URL``, the callback URL for Google OAuth (defaults to ``/oauth2callback``).
 
-  Note that the ``CALLBACK_URL`` is concatenated with the ``URL_PREFIX`` so that the callback URL
-  you should allow in the `Google API console`_ would by default be ``/auth/oauth2callback``.
+Note that the ``CALLBACK_URL`` is concatenated with the ``URL_PREFIX`` so that the callback URL
+you should allow in the `Google API console`_ would by default be ``/auth/oauth2callback``.
 
-These can be passed in two ways. Either directly to the constructor::
+Parameters can be passed in two ways. Either directly to the constructor::
 
   from flasker import current_project
   from flasker.ext.auth import GoogleAuthManager
@@ -166,15 +164,31 @@ specified here will override the ones from the previous method)::
   current_project.register_manager(GoogleAuthManager(), config_section='AUTH')
 
 
-Using Celery
-------------
-
-TODO
-
 Utilities
 ---------
 
-TODO
+* Caching
+
+  * ``cached_property``
+  * ``Cacheable``
+
+* Jsonifying
+
+  * ``jsonify``
+  * ``Jsonifiable``
+
+* Logging
+
+  * ``Loggable``
+
+* Misc
+
+  * ``Dict``, dictionary with depth, width methods and ``flatten`` and
+    ``unflatten`` classmethods. Also comes with the ``table`` method to transform
+    nested dictionaries easily into HTML table headers.
+  * ``SmartDictReader``, like ``DictReader`` from ``csv`` but automatically converts
+    fields from strings to other types (either by smart guessing or by passing the
+    mapping as constructor argument)
 
 
 Other stuff

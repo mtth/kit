@@ -348,6 +348,21 @@ class _CachedProperty(property):
 # Jsonifification
 # ===============
 
+def jsonify(value, depth=0):
+  if isinstance(value, dict):
+    return dict((k, jsonify(v, depth)) for k, v in value.items())
+  if isinstance(value, list):
+    return [jsonify(v, depth) for v in value]
+  if hasattr(value, 'jsonify'):
+    return value.jsonify(depth=depth - 1)
+  if isinstance(value, (float, int, long, str, unicode, tuple)):
+    return value
+  if isinstance(value, datetime):
+    return str(value)
+  if value is None:
+    return None
+  raise ValueError('not jsonifiable')
+
 class Jsonifiable(object):
 
   """For easy API calls.
@@ -375,22 +390,6 @@ class Jsonifiable(object):
       if not hasattr(getattr(self, varname), '__call__')
     ]
 
-  @classmethod
-  def _jsonify(cls, value, depth):
-    if isinstance(value, dict):
-      return dict((k, cls._jsonify(v, depth)) for k, v in value.items())
-    if isinstance(value, list):
-      return [cls._jsonify(v, depth) for v in value]
-    if hasattr(value, 'jsonify'):
-      return value.jsonify(depth=depth - 1)
-    if isinstance(value, (float, int, long, str, unicode, tuple)):
-      return value
-    if isinstance(value, datetime):
-      return str(value)
-    if value is None:
-      return None
-    raise ValueError('not jsonifiable')
-
   def jsonify(self, depth=0):
     """Returns all keys and properties of an instance in a dictionary.
 
@@ -407,7 +406,7 @@ class Jsonifiable(object):
     rv = {}
     for varname in self._json_attributes:
       try:
-        rv[varname] = self.__class__._jsonify(getattr(self, varname), depth)
+        rv[varname] = jsonify(getattr(self, varname), depth)
       except ValueError as e:
         rv[varname] = e.message
     return rv
@@ -855,7 +854,7 @@ class ExpandedBase(Cacheable, Loggable):
     for varname in self._json_attributes:
       try:
         # direct call to Jsonifiable for speed
-        rv[varname] = Jsonifiable._jsonify(getattr(self, varname), depth)
+        rv[varname] = jsonify(getattr(self, varname), depth)
       except ValueError as e:
         rv[varname] = e.message
     return rv
