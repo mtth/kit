@@ -140,9 +140,9 @@ class Project(object):
     if config_section:
       for k, v in self.config[config_section].items():
         manager.config[k] = v
-    manager.before_register(self)
+    manager._before_register(self)
     self.app.register_blueprint(manager.blueprint)
-    manager.after_register(self)
+    manager._after_register(self)
 
   @classmethod
   def get_current_project(cls):

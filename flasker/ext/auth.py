@@ -11,10 +11,7 @@ from os.path import abspath, join, dirname
 from urllib import urlencode
 from urllib2 import Request, urlopen
 
-from ..project import current_project
 from ..util import Loggable
-
-pj = current_project
 
 class User(Loggable, UserMixin):
 
@@ -55,16 +52,14 @@ class AuthManager(object):
     for k, v in kwargs.items():
       self.config[k.upper()] = v
 
-  def _create_blueprint(self):
+  def _create_blueprint(self, project):
 
-    bp = Blueprint(
+    return Blueprint(
       'auth',
-      pj.config['PROJECT']['APP_FOLDER'] + '.auth',
+      project.config['PROJECT']['APP_FOLDER'] + '.auth',
       template_folder=abspath(join(dirname(__file__), 'templates', 'auth')),
       url_prefix=self.config['URL_PREFIX']
     )
-
-    return bp
 
   def _create_login_manager(self):
 
@@ -83,13 +78,13 @@ class AuthManager(object):
 
     return login_manager
 
-  def before_register(self, project):
+  def _before_register(self, project):
     """Will be called right before the blueprint is registered."""
 
-    self.blueprint = self._create_blueprint()
+    self.blueprint = self._create_blueprint(project)
     self.login_manager = self._create_login_manager()
 
-  def after_register(self, project):
+  def _after_register(self, project):
     """Will be called right after the blueprint is registered."""
 
     self.login_manager.setup_app(project.app)
@@ -128,9 +123,9 @@ class GoogleAuthManager(AuthManager):
     'ACCESS_TYPE': "offline",
   }
 
-  def before_register(self, project):
+  def _before_register(self, project):
 
-    super(GoogleAuthManager, self).before_register(project)
+    super(GoogleAuthManager, self)._before_register(project)
 
     emails = self.config['AUTHORIZED_EMAILS']
     if isinstance(emails, list):

@@ -31,9 +31,9 @@
 </head>
 <body>
   <div class='box'>
-      {% set message = get_flashed_messages()[-1] %}
-      {% if message %}
-        <h2>{{ message }}</h2>
+      {% set messages = get_flashed_messages() %}
+      {% if messages %}
+        <h2>{{ messages[-1] }}</h2>
       {% else %}
         <h2>Welcome</h2>
       {% endif %}

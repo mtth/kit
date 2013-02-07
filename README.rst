@@ -122,8 +122,8 @@ The following pregenerated configurations are available through the ``flasker ne
 Using OAuth
 -----------
 
-Currently, only authentication using Google OAuth is supported. Other clients might
-get added in the future. Session management is handled by Flask-Login_.
+Currently, only authentication using Google OAuth is supported. Session management is 
+handled by Flask-Login_.
 
 To restrict access to your webapp to some users, import the ``GoogleAuthManager`` 
 and register it on your project through the ``register_manager`` method. The 
@@ -162,6 +162,16 @@ specified here will override the ones from the previous method)::
   from flasker.ext.auth import GoogleAuthManager
 
   current_project.register_manager(GoogleAuthManager(), config_section='AUTH')
+
+Where your config file looks something like this::
+
+  [PROJECT]
+  ...
+  [APP]
+  ...
+  [AUTH]
+  CLIENT_ID = your_google_client_id
+  AUTHORIZED_EMAILS = hers@email.com, his@email.com
 
 
 Utilities

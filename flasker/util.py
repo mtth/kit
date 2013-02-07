@@ -5,7 +5,7 @@
 from collections import defaultdict
 from csv import DictReader
 from datetime import datetime
-from flask import abort, jsonify, request
+from flask import abort, jsonify as f_jsonify, request
 from json import dumps, loads
 from functools import partial, wraps
 from re import sub
@@ -349,12 +349,12 @@ class _CachedProperty(property):
 # ===============
 
 def jsonify(value, depth=0):
+  if hasattr(value, 'jsonify'):
+    return value.jsonify(depth=depth - 1)
   if isinstance(value, dict):
     return dict((k, jsonify(v, depth)) for k, v in value.items())
   if isinstance(value, list):
     return [jsonify(v, depth) for v in value]
-  if hasattr(value, 'jsonify'):
-    return value.jsonify(depth=depth - 1)
   if isinstance(value, (float, int, long, str, unicode, tuple)):
     return value
   if isinstance(value, datetime):
@@ -471,7 +471,7 @@ def api_response(default_depth=0, default_limit=20, wrap=True):
         result = func(*args, **kwargs)
       except HTTPException as e:
         logger.error(format_exc())
-        return jsonify({
+        return f_jsonify({
           'status': 'error',
           'request': {
             'base_url': request.base_url,
@@ -525,7 +525,7 @@ def api_response(default_depth=0, default_limit=20, wrap=True):
               if not e.id in loaded
             ]
           processing_times.append(('jsonification', time() - timer))
-          return jsonify({
+          return f_jsonify({
             'status': 'success',
             'processing_time': processing_times,
             'matches': {
@@ -823,7 +823,7 @@ class ExpandedBase(Cacheable, Loggable):
           not getattr(cls, varname).foreign_keys
         ) or (
           isinstance(getattr(cls, varname), RelationshipProperty) and
-          not getattr(cls, varname).lazy
+          not getattr(cls, varname).lazy == 'dynamic'
         )
       )
     if cls.json_include:
@@ -888,8 +888,11 @@ class ExpandedBase(Cacheable, Loggable):
     return instance, True
 
   @classmethod
-  def get_columns(cls):
-    return class_mapper(cls).columns
+  def get_columns(cls, show_private=False):
+    columns = class_mapper(cls).columns
+    if not show_private:
+      columns = [c for c in columns if not c.key.startswith('_')]
+    return columns
 
   @classmethod
   def get_relationships(cls):
