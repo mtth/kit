@@ -137,10 +137,12 @@ Other optional parameters are:
 * ``PROTECT_ALL_VIEWS``, if ``True`` (default), all the views (not including statically served
   files) will have their access restricted to logged in users. If set to ``False``, you
   should use the ``login_required`` decorator from Flask-Login_ to protect individual
-* ``URL_PREFIX``, the blueprint url prefix (default to ``/auth``)
-* ``CALBACK_URL``, the callback URL for Google OAuth (defaults to ``/oauth2callback``). Note
-  that this string is concatenated with the ``URL_PREFIX`` so that the callback url you should
-  allow in your console would by default be ``/auth/oauth2callback``)
+  views
+* ``URL_PREFIX``, the blueprint url prefix (defaults to ``/auth``)
+* ``CALBACK_URL``, the callback URL for Google OAuth (defaults to ``/oauth2callback``).
+
+  Note that the ``CALLBACK_URL`` is concatenated with the ``URL_PREFIX`` so that the callback URL
+  you should allow in the `Google API console`_ would by default be ``/auth/oauth2callback``.
 
 These can be passed in two ways. Either directly to the constructor::
 
@@ -149,18 +151,19 @@ These can be passed in two ways. Either directly to the constructor::
 
   manager = GoogleAuthManager(
     CLIENT_ID='your_google_client_id',
-    AUTHORIZED_EMAILS=['hers@email.com', 'his@gmail.com']
+    AUTHORIZED_EMAILS=['hers@email.com', 'his@email.com']
   )
 
   current_project.register_manager(manager)
 
 Or, if you would like to include the parameters in the global configuration file, you can
-do that too by passing the corresponding section to the ``register_manager`` method::
+do that too by passing the corresponding section to the ``register_manager`` method (options
+specified here will override the ones from the previous method)::
 
   from flasker import current_project
   from flasker.ext.auth import GoogleAuthManager
 
-  current_project.register(GoogleAuthManager(), config_section='AUTH')
+  current_project.register_manager(GoogleAuthManager(), config_section='AUTH')
 
 
 Using Celery
