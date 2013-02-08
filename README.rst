@@ -128,7 +128,10 @@ API
 
 This extension is meant to expose URL endpoints for your models.
 
-**Preface** There exist other great ReSTful extensions for Flask_. Here are the 
+Preface
+^^^^^^^
+
+There exist other great ReSTful extensions for Flask_. Here are the 
 main differences with two popular ones:
 
 * FlaskRESTful_
@@ -156,14 +159,46 @@ main differences with two popular ones:
   features offered by Flask-Restless (such as arbitrary queries and function
   evaluation).
 
-How to use::
+Example
+^^^^^^^
+
+The following file::
 
   from flasker import current_project
   from flasker.ext.api import APIManager
+  from flasker.util import Model
+  from sqlalchemy import Column, ForeignKey, Integer, Unicode
+
+  # Define the models
+
+  class House(Model):
+
+    id = Column(Integer, primary_key=True)
+    address = Column(Unicode(128))
+
+  class Cat(Model):
+
+    name = Column(Unicode(64), primary_key=True)
+    house_id = Column(ForeignKey('houses.id'))
+    house = relationship('House', backref='cats')
+
+  # Create the APIManager
 
   api_manager = APIManager()
-  api_manager.add_all_models(methods=['GET'])
+  api_manager.add_all_models()
   current_project.register_manager(api_manager)
+
+Will create the following endpoints:
+
+* ``/api/houses/ (GET, POST)``
+* ``/api/houses/<id> (GET, PUT, DELETE)``
+* ``/api/houses/<id>/cats/ (GET, PUT)``
+* ``/api/houses/<id>/cats/<position> (GET)``
+
+Documentation
+^^^^^^^^^^^^^
+
+Cf. the wiki.
 
 This will add URL endpoints for all registered models and allow GET requests for each.
 Models are defined as subclasses of the ``flasker.util.Model`` class. They can have
@@ -187,27 +222,8 @@ and ``add_all_models`` accept the same arguments:
 URLs are generated from the model's tablename and relationship keys. For example,
 assume we have defined the following models::
 
-  from flasker.util import Model
-  from sqlalchemy import Column, ForeignKey, Integer, Unicode
-
-  class House(Model):
-
-    id = Column(Integer, primary_key=True)
-    address = Column(Unicode(128))
-
-  class Cat(Model):
-
-    name = Column(Unicode(64), primary_key=True)
-    house_id = Column(ForeignKey('houses.id'))
-
-    house = relationship('House', backref='cats')
 
 Calling ``api_manager.add(House)`` will create the following endpoints:
-
-* ``/api/houses/``
-* ``/api/houses/<id>``
-* ``/api/houses/<id>/cats/``
-* ``/api/houses/<id>/cats/<position>``
 
 For convenience, the root url ``api/`` yields a list of all endpoints, columns
 and relationships available through the API.  Note that relationship endpoints
