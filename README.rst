@@ -44,9 +44,8 @@ Quickstart
     $ flasker new basic
 
   This will create a project configuration file ``default.cfg`` in the
-  current directory (cf `Config file API`_ for more info on the available
-  configurations through the ``new`` command) and a basic Bootstrap_ themed
-  app (this can be turned off with the ``-a`` flag).
+  current directory and a basic Bootstrap_ themed app (this can be turned off
+  with the ``-a`` flag).
 
 - Next steps::
 
@@ -54,10 +53,10 @@ Quickstart
 
   This will list all commands now available for that project:
 
-  - ``server``, to run the app server
-  - ``worker``, to start a worker for the Celery backend
-  - ``flower``, to run the flower worker management app
-  - ``shell``, to start a shell in the current project context (useful for
+  - ``server`` to run the app server
+  - ``worker`` to start a worker for the Celery backend
+  - ``flower`` to run the flower worker management app
+  - ``shell`` to start a shell in the current project context (useful for
     debugging)
 
   Extra help is available for each command by typing::
@@ -79,7 +78,6 @@ Here is a sample minimalistic project configuration file::
   TESTING: True
   [CELERY]
   BROKER_URL: redis://
-   
 
 When it starts, the ``flasker`` command line tool imports all the modules
 declared in the ``MODULES`` key of the configuration file (in the ``PROJECT``
@@ -91,12 +89,18 @@ is to do::
   from flask import render_template
   from flasker import current_project
 
-  # normally you probably woudln't need all three in a single file
-  # but you get the idea
-
+  # the Flask application
   app = current_project.app
+
+  # the Celery application
   celery = current_project.celery
+
+  # the SQLAlchemy scoped session maker is available on db.session
   db = current_project.db
+
+  # normally you probably wouldn't need all three in a single file
+  # but you get the idea :)
+  # and now you can do stuff with each...
 
   @app.route('/')
   def index():

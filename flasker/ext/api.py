@@ -36,6 +36,7 @@ class APIManager(object):
   Handles the creation and registration of all API views. Available options:
 
   * URL_PREFIX
+  * ADD_ALL_MODELS
   * DEFAULT_COLLECTION_DEPTH
   * DEFAULT_MODEL_DEPTH
   * DEFAULT_LIMIT
@@ -65,6 +66,10 @@ class APIManager(object):
 
   config = {
     'URL_PREFIX': '/api',
+    'ADD_ALL_MODELS': False,
+    'DEFAULT_METHODS': frozenset(['GET', 'POST', 'PUT', 'DELETE']),
+    'DEFAULT_ALLOW_PUT_MANY': False,
+    'DEFAULT_RELATIONSHIPS': True,
     'DEFAULT_COLLECTION_DEPTH': 0,
     'DEFAULT_MODEL_DEPTH': 1,
     'DEFAULT_LIMIT': 20,
@@ -76,11 +81,13 @@ class APIManager(object):
       self.config[k.upper()] = v
     self.Models = {}
 
-  def add_model(self, Model, relationships=True, allow_put_many=False,
-                methods=frozenset(['GET', 'POST', 'PUT', 'DELETE'])):
+  def add_model(self, Model, relationships=None, allow_put_many=None,
+                methods=None):
     """Flag a Model to be added.
     
     Will override any options previously set for that Model.
+
+    If any of the options is ``None``, the default value will be used.
 
     Relationships can either be ``True`` or a list of relationship keys. In the
     first case, all one to many relationships will have a hook created,
@@ -94,28 +101,12 @@ class APIManager(object):
     * all endpoints leading to the same Model yield the same columns
 
     """
-    if relationships is True:
-      relationships = set(Model.get_relationships().keys())
-    elif relationships is False:
-      relationships = set()
     self.Models[Model.__name__] = {
       'Model': Model,
       'methods': methods,
       'relationships': relationships,
       'allow_put_many': allow_put_many,
     }
-
-  def add_all_models(self, relationships=True, allow_put_many=False,
-                     methods=frozenset(['GET', 'POST', 'PUT', 'DELETE'])):
-    """Convenience method for adding all registered models.
-
-    Note that most of the time in this function, only the values ``True`` and 
-    ``False`` will make sense for the relationships parameter.
-    
-    """
-    Models = [k.class_ for k in mapperlib._mapper_registry]
-    for Model in Models:
-      self.add_model(Model, relationships, methods)
 
   def authorize(self, func):
     """Decorator to set the authorizer function.
@@ -192,7 +183,21 @@ class APIManager(object):
       template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
       url_prefix=self.config['URL_PREFIX']
     )
+    if self.config['ADD_ALL_MODELS']:
+      Models = [k.class_ for k in mapperlib._mapper_registry]
+      for Model in Models:
+        self.add_model(Model)
     for data in self.Models.values():
+      if data['relationships'] is None:
+        data['relationships'] = self.config['DEFAULT_RELATIONSHIPS']
+      if data['relationships'] is True:
+        data['relationships'] = set(Model.get_relationships().keys())
+      elif data['relationships'] is False:
+        data['relationships'] = set()
+      if data['allow_put_many'] is None:
+        data['allow_put_many'] = self.config['DEFAULT_ALLOW_PUT_MANY']
+      if data['methods'] is None:
+        data['methods'] = self.config['DEFAULT_METHODS']
       self._create_model_views(**data)
     index_view = IndexView()
     self.blueprint.add_url_rule(
