@@ -11,16 +11,12 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
       configure these individually according to your project needs via a single
       ``.cfg`` file (cf. `Sample config file`_).
     
-    - A very simple pattern to organize your project via the
-      ``current_project`` proxy. No more complicated import schemes!
+    - A simple pattern to organize your project via the ``current_project`` proxy.
+      No more complicated import schemes!
 
     - A command line tool from where you can create new projects, launch the
       Flask buit in Werkzeug server, start Celery workers and the Flower_ tool,
       and run a shell in the current project context (inspired by Flask-Script_).
-
-    - OAuth (via `Google OAuth 2`_) and a bunch of utilities via the ``util``
-      module (for convenient logging, efficient API responses, property caching,
-      and more).
 
 - What Flasker isn't?
 
@@ -28,6 +24,13 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
       setup but intentionally leaves you free to interact with the raw Flask,
       Celery and database objects. Some knowledge of these frameworks is
       therefore required. 
+
+Flasker also comes with two optional extensions:
+
+  - An Authentication_ extension using Flask-Login_ and `Google OAuth2`_.
+
+  - An API_ extension that automatically generates endpoints for database models.
+
 
 Quickstart
 ----------
@@ -44,22 +47,21 @@ Quickstart
   current directory (cf `Config file API`_ for more info on the available
   configurations through the ``new`` command) and a basic Bootstrap_ themed
   app in an ``app`` folder (this can be turned off with the ``-a`` flag).
-  You should already be able to run your app by running ``flasker server``.
+
+  Already, you should be able to run your app by running ``flasker server``.
 
 - Editing your project:
 
-  The ``flasker`` module exposes a ``current_project`` proxy which grants you
+  The ``flasker`` module exposes a ``current_project`` proxy which grants 
   access to the Flask app, the Celery application and the SQLAlchemy database
-  object respectively through its attributes ``app``, ``celery``, ``db``.
-  Inside each project module (defined in the ``MODULES`` option of the
+  object respectively through its attributes ``app``, ``celery``, and ``db``.
+  Inside each project module (as defined by the ``MODULES`` option of the
   configuration file) you can then do, for example::
 
     from flasker import current_project
 
     app = current_project.app
-
     # do stuff
-
 
 - Next steps::
 
@@ -77,10 +79,10 @@ Quickstart
     $ flasker <insert_command> -h
 
 
-Sample config file
-------------------
+Config file API
+---------------
 
-Here is a minimalistic project configuration file::
+Here is what a minimalistic project configuration file looks like::
 
   [PROJECT]
   NAME: My Project
@@ -93,10 +95,6 @@ Here is a minimalistic project configuration file::
   BROKER_URL: redis://
   CELERYD_CONCURRENCY: 2
    
-
-Config file API
----------------
-
 The following keys are valid in the ``PROJECT`` section:
 
 * ``NAME``, name of the project
@@ -113,14 +111,29 @@ The following keys are valid in the ``PROJECT`` section:
 
 Note that all paths are relative to the configuration file.
 
-The following pregenerated configurations are available through the ``flasker new`` command:
+The ``APP`` section can contain any Flask_ configuration options (as defined here: 
+http://flask.pocoo.org/docs/config/) and the ``CELERY`` section can contain any
+Celery_ configuration options (as defined here: http://docs.celeryproject.org/en/latest/configuration.html). Any options defined in either section will be passed along
+to the corresponding object.
+
+There are two pregenerated configurations available through the ``flasker new`` command:
 
 * ``basic``, minimal configuration
-* ``celery``, includes default celery configuration (cf. `Using Celery`_)
+* ``celery``, includes default celery configuration (cf. `Using Celery`_) with automatic
+  worker hostname generation and task routing
 
 
-Using OAuth
------------
+Extensions
+----------
+
+API
+***
+
+TODO
+
+
+Authentication
+**************
 
 Currently, only authentication using Google OAuth is supported. Session management is 
 handled by Flask-Login_.

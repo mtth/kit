@@ -6,27 +6,19 @@ Inspired by Flask-restless.
 
 """
 
-from flask import abort, Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request
 from os.path import abspath, dirname, join
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.orm import mapperlib
 from time import time
-from sys import modules
 from werkzeug.exceptions import HTTPException
 
-from ..project import current_project
-from ..util import Model as BaseModel
-
-db = current_project.db
+from ..project import current_project as pj
 
 
 class APIError(HTTPException):
 
-  """Thrown when an API call is invalid.
-
-  The error code will sent as error code for the response.
-
-  """
+  """Thrown when an API call is invalid."""
 
   def __init__(self, code, content):
     self.code = code
@@ -38,6 +30,35 @@ class APIError(HTTPException):
 
 
 class APIManager(object):
+
+  """Main API manager.
+
+  Handles the creation and registration of all API views. Available options:
+
+  * URL_PREFIX
+  * DEFAULT_COLLECTION_DEPTH
+  * DEFAULT_MODEL_DEPTH
+  * DEFAULT_LIMIT
+  * MAX_LIMIT
+
+  Models can be added in two ways. Either individually::
+    
+    manager.add_model(Model)
+
+  or globally::
+
+    manager.add_all_models()
+
+  Both functions accept the same additional options (cf. their respective doc).
+
+  It also exposes the `authorize` and `validate` decorators.
+
+  Once all the models have been added along with (optionally) the authorize and
+  validate functions, the manager should be registered with the project::
+
+    current_project.register_manager(manager)
+
+  """
 
   _authorize = None
   _validate = None
@@ -55,7 +76,7 @@ class APIManager(object):
       self.config[k.upper()] = v
     self.Models = {}
 
-  def add_model(self, Model, relationships=True,
+  def add_model(self, Model, relationships=True, allow_put_many=False,
                 methods=frozenset(['GET', 'POST', 'PUT', 'DELETE'])):
     """Flag a Model to be added.
     
@@ -81,9 +102,10 @@ class APIManager(object):
       'Model': Model,
       'methods': methods,
       'relationships': relationships,
+      'allow_put_many': allow_put_many,
     }
 
-  def add_all_models(self, relationships=True,
+  def add_all_models(self, relationships=True, allow_put_many=False,
                      methods=frozenset(['GET', 'POST', 'PUT', 'DELETE'])):
     """Convenience method for adding all registered models.
 
@@ -128,7 +150,7 @@ class APIManager(object):
     """
     self._validate = func
 
-  def _create_model_views(self, Model, relationships, methods):
+  def _create_model_views(self, Model, relationships, allow_put_many, methods):
     """Creates the views associated with the model.
 
     Sane defaults are chosen:
@@ -149,7 +171,10 @@ class APIManager(object):
     collection_methods = methods & set(['GET', 'POST'])
     if collection_methods:
       views.append(CollectionView(Model=Model, methods=collection_methods))
-    rel_methods = set(['GET']) & methods
+    if allow_put_many:
+      rel_methods = set(['GET', 'PUT']) & methods
+    else:
+      rel_methods = set(['GET']) & methods
     if rel_methods:
       for rel in Model.get_relationships().values():
         if rel.key in relationships and rel.uselist:
@@ -263,6 +288,8 @@ class APIView(object):
 
 class IndexView(APIView):
 
+  """API 'splash' page with a few helpful keys."""
+
   methods = set(['GET'])
 
   @property
@@ -298,6 +325,8 @@ class IndexView(APIView):
 
 
 class CollectionView(APIView):
+
+  """View for collection endpoints."""
 
   params = set(['depth', 'limit', 'offset', 'loaded', 'sort'])
 
@@ -349,9 +378,16 @@ class CollectionView(APIView):
   def post(self, params, **kwargs):
     if self.is_validated(request.json):
       model = Model(**request.json)
-      db.session.add(model)
-      db.session.commit() # generate an ID
+      pj.db.session.add(model)
+      pj.db.session.commit() # generate an ID
       return jsonify(model.jsonify(depth=params['depth']))
+    else:
+      raise APIError(400, 'Failed validation')
+
+  def put(self, params, **kwargs):
+    if self.is_validated(request.json):
+      #TODO
+      pass
     else:
       raise APIError(400, 'Failed validation')
 
@@ -417,6 +453,8 @@ class CollectionView(APIView):
 
 class ModelView(APIView):
 
+  """View for individual model endpoints."""
+
   params = set(['depth'])
 
   @property
@@ -476,7 +514,7 @@ class ModelView(APIView):
   def delete(self, params, **kwargs):
     model = self.Model.query.get(kwargs.values())
     if model:
-      db.session.delete(model)
+      pj.db.session.delete(model)
       return jsonify({'status': '200 Success', 'content': 'Resource deleted'})
     else:
       raise APIError(404, 'No resource found for this ID')
