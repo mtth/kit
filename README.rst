@@ -131,7 +131,7 @@ ReSTful API
 
 This extension is meant to very simply expose URL endpoints for your models.
 
-There exist other great ReSTful extensions for Flask_. Here are the 
+There exist other great ReSTful extensions for Flask. Here are the 
 main differences with two popular ones:
 
 * FlaskRESTful_ works at a sligthly lower level. It provides great tools but it
@@ -139,17 +139,17 @@ main differences with two popular ones:
   the Flasker model structure to do most of the work.
 
 * Flask-Restless_ is similar in that it also intends to bridge the gap between
-  views and SQLAlchemy models. However this extension is built to provide:
+  views and SQLAlchemy models. However the Flasker API is built to provide:
 
-    * *Faster queries*: the 'jsonification' of model entities is heavily optimized
-      for large queries.
-    * *More flexibility*: API responses are not restricted to returning model columns but
-      also return properties.
-    * *Convenient access to nested models*: queries can go arbitrarily deep
-      within nested models (the extension takes care of not repeating information).
-      This is especially useful with a client-side library such as Backbone-Relational_.
-    * *More endpoints*: each one-to-many relation can have its own model specific endpoint.
-    * *Support for models with composite primary keys*
+  * *Faster queries*: the 'jsonification' of model entities is heavily optimized
+    for large queries.
+  * *More flexibility*: API responses are not restricted to returning model columns but
+    also return properties.
+  * *Convenient access to nested models*: queries can go arbitrarily deep
+    within nested models (the extension takes care of not repeating information).
+    This is especially useful with a client-side library such as Backbone-Relational_.
+  * *More endpoints*: each one-to-many relation can have its own model specific endpoint.
+  * *Support for models with composite primary keys*
 
   Nevertheless this extension is much younger and currently lacks several great
   features offered by Flask-Restless (such as arbitrary queries and function
@@ -222,78 +222,9 @@ Available utilities include:
 * Jsonifying
 * Logging
 
-Cf. the Wiki_.
+Cf. the Wiki_ for a more detailed explanation on some of the available utilities.
 
 
-Other stuff
------------
-
-- Setting up Redis::
-
-    $ curl -O http://download.redis.io/redis-stable.tar.gz
-    $ tar xvzf redis-stable.tar.gz
-    $ cd redis-stable
-    $ make
-    $ make test
-    $ sudo cp redis-server /usr/local/bin/
-    $ sudo cp redis-cli /usr/local/bin/
-
-  To daemonize redis on a mac:
-
-    Create a plist file::
-
-      $ sudo vim /Library/LaunchDaemons/io.redis.redis-server.plist
-
-    Copy the following contents::
-    
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      <plist version="1.0">
-      <dict>
-        <key>Label</key>
-        <string>io.redis.redis-server</string>
-        <key>ProgramArguments</key>
-        <array>
-          <string>/usr/local/bin/redis-server</string>
-        </array>
-        <key>RunAtLoad</key>
-        <true/>
-      </dict>
-      </plist>
-
-- Running the server on Apache:
-
-  Create a file called `run.wsgi` in the main directory with the following contents::
-
-    # Virtualenv activation
-    from os.path import abspath, dirname, join
-    activate_this = abspath(join(dirname(__file__), 'venv/bin/activate_this.py'))
-    execfile(activate_this, dict(__file__=activate_this))
-
-    # Since the application isn't on the path
-    import sys
-    sys.path.insert(0, abspath(join(dirname(__file__)))
-
-    # App factory
-    from app import make_app
-    application = make_app()
-
-  Then add a virtualhost in your Apache virtual host configuration file (often found at `/etc/apache2/extra/httpd-vhosts.conf`) with the following configuration::
-
-    <VirtualHost *:80>
-      ServerName [server_name]
-      WSGIDaemonProcess [process_name] user=[process_user] threads=5
-      WSGIScriptAlias / [path_to_wsgi_file]
-      <Directory [path_to_root_directory]>
-          WSGIProcessGroup [process_name]
-          WSGIApplicationGroup %{GLOBAL}
-          Order deny,allow
-          Allow from all
-      </Directory>
-      ErrorLog "[path_to_error_log]"
-      CustomLog "[path_to_access_log]" combined
-    </VirtualHost>
-  
 Sources
 -------
 
