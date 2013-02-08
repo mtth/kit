@@ -9,7 +9,7 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
   
     - A transparent integration of Flask, SQLAlchemy and Celery which lets you
       configure these individually according to your project needs via a single
-      ``.cfg`` file (cf. `Config file API`_).
+      ``.cfg`` file (cf. `Structuring your project`_).
     
     - A simple pattern to organize your project via the ``current_project`` proxy.
       No more complicated import schemes!
@@ -70,14 +70,18 @@ Structuring your project
 Here is a sample minimalistic project configuration file::
 
   [PROJECT]
-  NAME: My Project
-  MODULES: app.views, app.tasks
-  DB_URL: sqlite:///db/db.sqlite
+  NAME = My Project
+  MODULES = app.views, app.tasks
+  DB_URL = sqlite:///db/db.sqlite
   [APP]
-  DEBUG: True
-  TESTING: True
+  # any valid Flask configuration option can go here
+  # cf http://flask.pocoo.org/docs/config for the full list
+  DEBUG = True
+  TESTING = True
   [CELERY]
-  BROKER_URL: redis://
+  # any valid Celery configuration option can go here
+  # cf http://docs.celeryproject.org/en/latest/configuration.html
+  BROKER_URL = redis://
 
 When it starts, the ``flasker`` command line tool imports all the modules
 declared in the ``MODULES`` key of the configuration file (in the ``PROJECT``
