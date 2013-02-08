@@ -27,9 +27,9 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
 
 Flasker also comes with two optional extensions:
 
-- A ReSTful API_ extension
+- `ReSTful API extension`_
 
-- An Authentication_ extension using Flask-Login_ and `Google OAuth 2`_
+- `Authentication extension`_
 
 
 Quickstart
@@ -123,13 +123,10 @@ There are two pregenerated configurations available through the ``flasker new`` 
 Extensions
 ----------
 
-API
-***
+ReSTful API extension
+*********************
 
-This extension is meant to expose URL endpoints for your models.
-
-Preface
-^^^^^^^
+This extension is meant to very simply expose URL endpoints for your models.
 
 There exist other great ReSTful extensions for Flask_. Here are the 
 main differences with two popular ones:
@@ -159,15 +156,17 @@ main differences with two popular ones:
   features offered by Flask-Restless (such as arbitrary queries and function
   evaluation).
 
-Example
-^^^^^^^
-
-The following file::
+Here is a very simple sample file::
 
   from flasker import current_project
   from flasker.ext.api import APIManager
   from flasker.util import Model
   from sqlalchemy import Column, ForeignKey, Integer, Unicode
+
+  # Create the APIManager
+
+  api_manager = APIManager(add_all_models=True)
+  current_project.register_manager(api_manager)
 
   # Define the models
 
@@ -182,131 +181,49 @@ The following file::
     house_id = Column(ForeignKey('houses.id'))
     house = relationship('House', backref='cats')
 
-  # Create the APIManager
-
-  api_manager = APIManager()
-  api_manager.add_all_models()
-  current_project.register_manager(api_manager)
-
-Will create the following endpoints:
+Which will create the following endpoints:
 
 * ``/api/houses/ (GET, POST)``
 * ``/api/houses/<id> (GET, PUT, DELETE)``
 * ``/api/houses/<id>/cats/ (GET, PUT)``
 * ``/api/houses/<id>/cats/<position> (GET)``
+* ``/api/cats/ (GET, POST)``
+* ``/api/cats/<name> (GET, PUT, DELETE)``
 
-Documentation
-^^^^^^^^^^^^^
-
-Cf. the wiki.
-
-This will add URL endpoints for all registered models and allow GET requests for each.
-Models are defined as subclasses of the ``flasker.util.Model`` class. They can have
-arbitrary keys and columns. For POST and PUT requests to work, the constructor must
-accept kwargs arguments (similar to the default implementation).  You can also of
-course add models individually::
-
-  api_manager.add_model(YourModel, methods=['GET', 'POST'])
-
-Options specified anew for a given model will override previous ones. ``add_model``
-and ``add_all_models`` accept the same arguments:
-
-* ``Model``, the model class
-* ``relationships``, whether or not to create endpoints for one-to-many
-  relationships on the model. Can be a list of keys, ``True`` (default) to
-  create all or ``False`` to create none.
-* ``allow_put_many``, allow PUT method for collections (defaults to ``True``).
-* ``methods``, list of allowed methods (defaults to ``['GET', 'POST', 'PUT',
-  'DELETE']``).
-
-URLs are generated from the model's tablename and relationship keys. For example,
-assume we have defined the following models::
+Cf. the Wiki_ for the complete list of available options.
 
 
-Calling ``api_manager.add(House)`` will create the following endpoints:
+Authentication extension
+************************
 
-For convenience, the root url ``api/`` yields a list of all endpoints, columns
-and relationships available through the API.  Note that relationship endpoints
-for now only allow GET and PUT requests.
+This extension uses Flask-Login_ to handle sessions and `Google OAuth 2`_ to handle
+authentication.
 
-Authentication
-**************
-
-Adding the following code to any one of your modules will allow you to restrict access
-to your application::
+Adding the following code to any one of your modules will allow you to restrict
+access to your application::
 
   from flasker import current_project
   from flasker.ext.auth import GoogleAuthManager
 
   auth_manager = GoogleAuthManager(
-    CLIENT_ID='your_google_client_id',
-    AUTHORIZED_EMAILS=['hers@email.com', 'his@email.com', ...]
+    client_id='your_google_client_id',
+    authorized_emails=['hers@email.com', 'his@email.com', ...]
   )
-
   current_project.register_manager(auth_manager)
 
-Here is the full list of options available to the ``GoogleAuthManager``:
-
-* ``CLIENT_ID``, your Google client ID (which can be found in the `Google API console`_)
-* ``AUTHORIZED_EMAILS``, a list or comma separated string of emails that can login
-  (defaults to the empty string)
-* ``PROTECT_ALL_VIEWS``, if ``True`` (default), all the views (not including
-  statically served files) will have their access restricted to logged in users.
-  If set to ``False``, you should use the ``login_required`` decorator from
-  Flask-Login_ to individually protect views
-* ``URL_PREFIX``, the blueprint url prefix (defaults to ``/auth``)
-* ``CALBACK_URL``, the callback URL for Google OAuth (defaults to ``/oauth2callback``). 
-  Note that this ``CALLBACK_URL`` is concatenated with the ``URL_PREFIX`` so
-  that the full callback URL you should allow in the `Google API console`_ would by
-  default be ``/auth/oauth2callback``.
-
-If you would like to include the parameters in the global configuration file
-(instead of passing them directly to the constructor as we did here), you can
-do that too by passing the corresponding section to the ``register_manager``
-method (options specified here will override the ones from the previous
-method)::
-
-  from flasker import current_project
-  from flasker.ext.auth import GoogleAuthManager
-
-  current_project.register_manager(GoogleAuthManager(), config_section='AUTH')
-
-Where your config file looks something like this::
-
-  [PROJECT]
-  ...
-  [APP]
-  ...
-  [AUTH]
-  CLIENT_ID = your_google_client_id
-  AUTHORIZED_EMAILS = hers@email.com, his@email.com
+Cf. the Wiki_ for the complete list of available options.
 
 
 Utilities
 ---------
 
+Available utilities include:
+
 * Caching
-
-  * ``cached_property``
-  * ``Cacheable``
-
 * Jsonifying
-
-  * ``jsonify``
-  * ``Jsonifiable``
-
 * Logging
 
-  * ``Loggable``
-
-* Misc
-
-  * ``Dict``, dictionary with depth, width methods and ``flatten`` and
-    ``unflatten`` classmethods. Also comes with the ``table`` method to transform
-    nested dictionaries easily into HTML table headers.
-  * ``SmartDictReader``, like ``DictReader`` from ``csv`` but automatically converts
-    fields from strings to other types (either by smart guessing or by passing the
-    mapping as constructor argument)
+Cf. the Wiki_.
 
 
 Other stuff
@@ -405,3 +322,4 @@ Sources
 .. _jQuery UI: http://jqueryui.com/
 .. _Backbone-Relational: https://github.com/PaulUithol/Backbone-relational
 .. _FlaskRESTful: http://flask-restful.readthedocs.org/en/latest/index.html
+.. _Wiki: https://github.com/mtth/flasker/wiki
