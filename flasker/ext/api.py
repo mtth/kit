@@ -131,7 +131,14 @@ class APIManager(object):
   def _create_model_views(self, Model, relationships, methods):
     """Creates the views associated with the model.
 
-    Sane defaults are chosen.
+    Sane defaults are chosen:
+
+    * PUT and DELETE requests are only allowed for endpoints that correspond
+      to a single model
+    * POST requests are only allowed for endpoints that correspond to
+      collections
+    * endpoints corresponding to relationships only allow the GET method
+      (this choice was made to avoid duplicating features accross endpoints)
 
     """
     views = []
@@ -168,7 +175,6 @@ class APIManager(object):
     )
 
   def _after_register(self, project):
-    """Give access to defaults and authorizer to views."""
     APIView._manager = self
 
 
@@ -196,7 +202,7 @@ class APIView(object):
     self.__all__.append(self)
 
   def __call__(self, **kwargs):
-    """Redirects to corresponding request handler."""
+    """Redirects to corresponding request handler and catch APIErrors."""
     try:
       if not self.is_authorized():
         raise APIError(403, 'Not authorized')
@@ -457,15 +463,21 @@ class ModelView(APIView):
 
   def put(self, params, **kwargs):
     model = self.Model.query.get(kwargs.values())
-    if self.is_validated(request.json):
-      for k, v in request.json.items():
-        setattr(model, k, v)
-      return jsonify(model.jsonify(depth=params['depth']))
+    if model:
+      if self.is_validated(request.json):
+        for k, v in request.json.items():
+          setattr(model, k, v)
+        return jsonify(model.jsonify(depth=params['depth']))
+      else:
+        raise APIError(400, 'Failed validation')
     else:
-      raise APIError(400, 'Failed validation')
+      raise APIError(404, 'No resource found for this ID')
 
   def delete(self, params, **kwargs):
     model = self.Model.query.get(kwargs.values())
-    db.session.delete(model)
-    return jsonify({'status': '200 Success', 'content': 'Resource deleted'})
+    if model:
+      db.session.delete(model)
+      return jsonify({'status': '200 Success', 'content': 'Resource deleted'})
+    else:
+      raise APIError(404, 'No resource found for this ID')
 
