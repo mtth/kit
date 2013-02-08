@@ -9,7 +9,7 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
   
     - A transparent integration of Flask, SQLAlchemy and Celery which lets you
       configure these individually according to your project needs via a single
-      ``.cfg`` file (cf. `Sample config file`_).
+      ``.cfg`` file (cf. `Config file API`_).
     
     - A simple pattern to organize your project via the ``current_project`` proxy.
       No more complicated import schemes!
@@ -149,9 +149,56 @@ How to use::
   from flasker.ext.api import APIManager
 
   api_manager = APIManager()
-  api_manager.add_all_models()
+  api_manager.add_all_models(methods=['GET'])
   current_project.register_manager(api_manager)
 
+This will add URL endpoints for all registered models and allow GET requests for each.
+Models are defined as subclasses of the ``flasker.util.Model`` class. They can have
+arbitrary keys and columns. For POST and PUT requests to work, the constructor must
+accept kwargs arguments (similar to the default implementation).  You can also of
+course add models individually::
+
+  api_manager.add_model(YourModel, methods=['GET', 'POST'])
+
+Options specified anew for a given model will override previous ones. ``add_model``
+and ``add_all_models`` accept the same arguments:
+
+* ``Model``, the model class
+* ``relationships``, whether or not to create endpoints for one-to-many
+  relationships on the model. Can be a list of keys, ``True`` (default) to
+  create all or ``False`` to create none.
+* ``allow_put_many``, allow PUT method for collections (defaults to ``True``).
+* ``methods``, list of allowed methods (defaults to ``['GET', 'POST', 'PUT',
+  'DELETE']``).
+
+URLs are generated from the model's tablename and relationship keys. For example,
+assume we have defined the following models::
+
+  from flasker.util import Model
+  from sqlalchemy import Column, ForeignKey, Integer, Unicode
+
+  class House(Model):
+
+    id = Column(Integer, primary_key=True)
+    address = Column(Unicode(128))
+
+  class Cat(Model):
+
+    name = Column(Unicode(64), primary_key=True)
+    house_id = Column(ForeignKey('houses.id'))
+
+    house = relationship('House', backref='cats')
+
+Calling ``api_manager.add(House)`` will create the following endpoints:
+
+* ``/api/houses/``
+* ``/api/houses/<id>``
+* ``/api/houses/<id>/cats/``
+* ``/api/houses/<id>/cats/<position>``
+
+For convenience, the root url ``api/`` yields a list of all endpoints, columns
+and relationships available through the API.  Note that relationship endpoints
+for now only allow GET and PUT requests.
 
 Authentication
 **************

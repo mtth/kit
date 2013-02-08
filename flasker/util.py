@@ -789,6 +789,17 @@ class ExpandedBase(Cacheable, Loggable):
   json_include = None
   query = None
 
+  def __init__(self, **kwargs):
+    for k, v in kwargs.items():
+      setattr(self, k, v)
+
+  def __repr__(self):
+    primary_keys = ', '.join(
+      '%s=%r' % (k, getattr(self, k))
+      for k in self.__class__.get_primary_key_names()
+    )
+    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
+
   @declared_attr
   def __tablename__(cls):
     """Automatically create the table name.
@@ -858,17 +869,6 @@ class ExpandedBase(Cacheable, Loggable):
       except ValueError as e:
         rv[varname] = e.message
     return rv
-
-  def __init__(self, **kwargs):
-    for k, v in kwargs.items():
-      setattr(self, k, v)
-
-  def __repr__(self):
-    primary_keys = ', '.join(
-      '%s=%r' % (k, getattr(self, k))
-      for k in self.__class__.get_primary_key_names()
-    )
-    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
 
   def get_primary_keys(self):
     return dict(
