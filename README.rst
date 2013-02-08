@@ -27,9 +27,9 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
 
 Flasker also comes with two optional extensions:
 
-- `ReSTful API extension`_
+- `ReSTful API`_
 
-- `Authentication extension`_
+- `Authentication`_
 
 
 Quickstart
@@ -46,43 +46,29 @@ Quickstart
   This will create a project configuration file ``default.cfg`` in the
   current directory (cf `Config file API`_ for more info on the available
   configurations through the ``new`` command) and a basic Bootstrap_ themed
-  app in an ``app`` folder (this can be turned off with the ``-a`` flag).
-
-  Already, you should be able to run your app by running ``flasker server``.
-
-- Editing your project:
-
-  The ``flasker`` module exposes a ``current_project`` proxy which grants 
-  access to the Flask app, the Celery application and the SQLAlchemy database
-  object respectively through its attributes ``app``, ``celery``, and ``db``.
-  Inside each project module (as defined by the ``MODULES`` option of the
-  configuration file) you can then do, for example::
-
-    from flasker import current_project
-
-    app = current_project.app
-    # do stuff
+  app (this can be turned off with the ``-a`` flag).
 
 - Next steps::
 
     $ flasker -h
 
-  This will list all available commands for that project:
+  This will list all commands now available for that project:
 
-  - Running the app server
-  - Starting a worker for the Celery backend
-  - Running the flower worker management app
-  - Starting a shell in the current project context (useful for debugging)
+  - ``server``, to run the app server
+  - ``worker``, to start a worker for the Celery backend
+  - ``flower``, to run the flower worker management app
+  - ``shell``, to start a shell in the current project context (useful for
+    debugging)
 
   Extra help is available for each command by typing::
 
-    $ flasker <insert_command> -h
+    $ flasker <command> -h
 
 
-Config file API
----------------
+Structuring your project
+------------------------
 
-Here is what a minimalistic project configuration file looks like::
+Here is a sample minimalistic project configuration file::
 
   [PROJECT]
   NAME: My Project
@@ -93,54 +79,56 @@ Here is what a minimalistic project configuration file looks like::
   TESTING: True
   [CELERY]
   BROKER_URL: redis://
-  CELERYD_CONCURRENCY: 2
    
-The following keys are valid in the ``PROJECT`` section:
 
-* ``NAME``, name of the project
-* ``MODULES``, modules to import on project load (comma separated list)
-* ``DB_URL``, URL of database (defaults to the in memory ``sqlite://``)
-* ``APP_FOLDER``, path to Flask application root folder, relative to the
-  configuration file (defaults to ``app/``)
-* ``APP_STATIC_FOLDER``, path to folder where the Flask static files lie,
-  relative to the Flask root folder (defaults to ``static/``)
-* ``APP_TEMPLATE_FOLDER``, path to folder where the Flask template files lie,
-  relative to the Flask root folder (defaults to ``templates/``)
-* ``STATIC_URL``, optional URL to serve static files
+When it starts, the ``flasker`` command line tool imports all the modules
+declared in the ``MODULES`` key of the configuration file (in the ``PROJECT``
+section). Inside each of these you can use the ``current_project`` proxy to get
+access to the Flask application object, the Celery application object and the
+SQLAlchemy database sessions. Therefore a very simple pattern inside each module
+is to do::
 
-The ``APP`` section can contain any Flask_ configuration options (as defined here: 
-http://flask.pocoo.org/docs/config/) and the ``CELERY`` section can contain any
-Celery_ configuration options (as defined here: http://docs.celeryproject.org/en/latest/configuration.html). Any options defined in either section will be passed along
-to the corresponding object.
+  from flask import render_template
+  from flasker import current_project
 
-There are two pregenerated configurations available through the ``flasker new`` command:
+  # normally you probably woudln't need all three in a single file
+  # but you get the idea
 
-* ``basic``, minimal configuration
-* ``celery``, includes default celery configuration with automatic
-  worker hostname generation and task routing
+  app = current_project.app
+  celery = current_project.celery
+  db = current_project.db
+
+  @app.route('/')
+  def index():
+    return render_template('index.html')
+
+  @celery.task
+  def task():
+    # do something
+    pass
+
+Once Flasker has finished importing all your project module files and configuring the applications, it handles startup.
+
+Cf. the Wiki_ for all the available configuration options.
 
 
 Extensions
 ----------
 
-ReSTful API extension
-*********************
+ReSTful API
+***********
 
 This extension is meant to very simply expose URL endpoints for your models.
 
 There exist other great ReSTful extensions for Flask_. Here are the 
 main differences with two popular ones:
 
-* FlaskRESTful_
-
-  FlaskRESTful works at a sligthly lower level. It provides great tools but it
+* FlaskRESTful_ works at a sligthly lower level. It provides great tools but it
   would still require work to tie them with each model. Here, the extension uses
   the Flasker model structure to do most of the work.
 
-* Flask-Restless_
-
-  Flask-Restless is closer to the purpose of this extension at first glance.
-  In comparison, the API manager is intended to provide:
+* Flask-Restless_ is similar in that it also intends to bridge the gap between
+  views and SQLAlchemy models. However this extension is built to provide:
 
     * *Faster queries*: the 'jsonification' of model entities is heavily optimized
       for large queries.
@@ -193,8 +181,8 @@ Which will create the following endpoints:
 Cf. the Wiki_ for the complete list of available options.
 
 
-Authentication extension
-************************
+Authentication
+**************
 
 This extension uses Flask-Login_ to handle sessions and `Google OAuth 2`_ to handle
 authentication.
