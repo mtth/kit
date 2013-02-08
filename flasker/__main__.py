@@ -102,7 +102,7 @@ def new_handler(parsed_args):
       'Please enter a different name with the -n option.'
     )
   else:
-    copy(join(src, 'configs', '%s.cfg' % parsed_args.config), conf_name)
+    copy(join(src, 'data', 'configs', '%s.cfg' % parsed_args.config), conf_name)
     print 'Project configuration file created!'
   if parsed_args.app:
     if exists('app'):
@@ -111,7 +111,8 @@ def new_handler(parsed_args):
         'App creation skipped.'
       )
     else:
-      copy_tree(join(src, 'data'), '.')
+      mkdir('app')
+      copy_tree(join(src, 'data', 'app'), 'app')
       print 'Bootstrap app folder created!'
 
 new_parser.set_defaults(handler=new_handler)

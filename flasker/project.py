@@ -136,7 +136,7 @@ class Project(object):
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
-    for manager, config_section in self._managers:
+    for manager, config_section in self._managers or []:
       if config_section:
         for k, v in self.config[config_section].items():
           manager.config[k] = v
