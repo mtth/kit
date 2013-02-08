@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='flasker',
-    version='0.1.20',
+    version='0.1.21',
     description='Flask, SQLAlchemy and Celery integration tool.',
     long_description=open('README.rst').read(),
     author='Matthieu Monsch',
@@ -28,7 +28,7 @@ setup(
       'flower'
     ],
     package_data={'flasker': [
-      'ext/templates/*',
+      'ext/templates/**/*',
       'data/**/**/*',
     ]},
     include_package_data=True,

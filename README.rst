@@ -29,7 +29,7 @@ Flasker also comes with two optional extensions:
 
 - A ReSTful API_ extension
 
-- An Authentication_ extension using Flask-Login_ and `Google OAuth 2`_.
+- An Authentication_ extension using Flask-Login_ and `Google OAuth 2`_
 
 
 Quickstart
@@ -136,7 +136,7 @@ purpose at first glance. However this extension was built with the goal to provi
   * *Convenient access to nested models*: queries can go arbitrarily deep
     within nested models (the extension takes care of not repeating information).
     This is especially useful with a client-side library such as Backbone-Relational_.
-  * *More endpoints*: each one-to-many relation has its own model specific endpoint.
+  * *More endpoints*: each one-to-many relation can have its own model specific endpoint.
   * *Support for models with composite primary keys*
 
 Nevertheless this extension is much younger and currently lacks several great
