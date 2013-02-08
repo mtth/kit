@@ -1,7 +1,8 @@
 Flasker
 =======
 
-Under development. Visit https://github.com/mtth/flasker for the latest version.
+Under development.
+Visit https://github.com/mtth/flasker for the latest version.
 
 A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ and Celery_ backend support.
 
@@ -36,11 +37,15 @@ Flasker also comes with two optional extensions:
 Quickstart
 ----------
 
-- Installation::
+- Installation:
+
+  .. code:: bash
 
     $ pip install flasker
 
-- To create a new project::
+- To create a new project:
+
+  .. code:: bash
 
     $ flasker new basic
 
@@ -48,7 +53,9 @@ Quickstart
   current directory and a basic Bootstrap_ themed app (this can be turned off
   with the ``-a`` flag).
 
-- Next steps::
+- Next steps:
+
+  .. code:: bash
 
     $ flasker -h
 
@@ -59,8 +66,11 @@ Quickstart
   - ``flower`` to run the flower worker management app
   - ``shell`` to start a shell in the current project context (useful for
     debugging)
+  - ``new`` to create a new default configuration file
 
-  Extra help is available for each command by typing::
+  Extra help is available for each command by typing:
+
+  .. code:: bash
 
     $ flasker <command> -h
 
@@ -68,7 +78,9 @@ Quickstart
 Structuring your project
 ------------------------
 
-Here is a sample minimalistic project configuration file::
+Here is a sample minimalistic project configuration file:
+
+.. code:: cfg
 
   [PROJECT]
   NAME = My Project
@@ -89,7 +101,9 @@ declared in the ``MODULES`` key of the configuration file (in the ``PROJECT``
 section). Inside each of these you can use the ``current_project`` proxy to get
 access to the Flask application object, the Celery application object and the
 SQLAlchemy database sessions. Therefore a very simple pattern inside each module
-is to do::
+is to do:
+
+.. code:: python
 
   from flask import render_template
   from flasker import current_project
@@ -155,7 +169,9 @@ main differences with two popular ones:
   features offered by Flask-Restless (such as arbitrary queries and function
   evaluation).
 
-Here is a very simple sample file::
+Here is a very simple sample file:
+
+.. code:: python
 
   from flasker import current_project
   from flasker.ext.api import APIManager
@@ -199,7 +215,9 @@ This extension uses Flask-Login_ to handle sessions and `Google OAuth 2`_ to han
 authentication.
 
 Adding the following code to any one of your modules will allow you to restrict
-access to your application::
+access to your application:
+
+.. code:: python
 
   from flasker import current_project
   from flasker.ext.auth import GoogleAuthManager
