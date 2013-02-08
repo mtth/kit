@@ -21,9 +21,9 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
 
 - What Flasker isn't?
 
-    - A simplified version of Flask, SQLAlchemy and Celery. Flasker handles the
+    - A simplified version of Flask, Celery, and SQLAlchemy. Flasker handles the
       setup but intentionally leaves you free to interact with the raw Flask,
-      Celery and database objects. Some knowledge of these frameworks is
+      Celery and SQLAlchemy session objects. Some knowledge of these frameworks is
       therefore required. 
 
 Flasker also comes with two optional extensions:
