@@ -66,9 +66,9 @@ class APIManager(object):
   config = {
     'URL_PREFIX': '/api',
     'ADD_ALL_MODELS': False,
-    'DEFAULT_METHODS': frozenset(['GET', 'POST', 'PUT', 'DELETE']),
-    'DEFAULT_ALLOW_PUT_MANY': False,
-    'DEFAULT_RELATIONSHIPS': True,
+    'METHODS': frozenset(['GET', 'POST', 'PUT', 'DELETE']),
+    'ALLOW_PUT_MANY': False,
+    'RELATIONSHIPS': True,
     'DEFAULT_COLLECTION_DEPTH': 0,
     'DEFAULT_MODEL_DEPTH': 1,
     'DEFAULT_LIMIT': 20,
@@ -100,12 +100,9 @@ class APIManager(object):
     * all endpoints leading to the same Model yield the same columns
 
     """
-    self.Models[Model.__name__] = {
-      'Model': Model,
-      'methods': methods,
-      'relationships': relationships,
-      'allow_put_many': allow_put_many,
-    }
+    self.Models[Model.__name__] = (
+      Model, methods, relationships, allow_put_many
+    )
 
   def authorize(self, func):
     """Decorator to set the authorizer function.
@@ -162,15 +159,16 @@ class APIManager(object):
     if collection_methods:
       views.append(CollectionView(Model=Model, methods=collection_methods))
     if allow_put_many:
-      rel_methods = set(['GET', 'PUT']) & methods
+      col_methods = set(['GET', 'PUT']) & methods
     else:
-      rel_methods = set(['GET']) & methods
+      col_methods = set(['GET']) & methods
+    rel_methods = set(['GET']) & methods
     if rel_methods:
       for rel in Model.get_relationships().values():
         if rel.key in relationships and rel.uselist:
           views.extend([
             ModelView(Model=Model, relationship=rel, methods=rel_methods),
-            CollectionView(Model=Model, relationship=rel, methods=rel_methods)
+            CollectionView(Model=Model, relationship=rel, methods=col_methods)
           ])
     for view in views:
       self.blueprint.add_url_rule(view.url, view.endpoint, view)
@@ -185,19 +183,18 @@ class APIManager(object):
     if self.config['ADD_ALL_MODELS']:
       Models = [k.class_ for k in mapperlib._mapper_registry]
       for Model in Models:
-        self.add_model(Model)
-    for data in self.Models.values():
-      if data['relationships'] is None:
-        data['relationships'] = self.config['DEFAULT_RELATIONSHIPS']
-      if data['relationships'] is True:
-        data['relationships'] = set(Model.get_relationships().keys())
-      elif data['relationships'] is False:
-        data['relationships'] = set()
-      if data['allow_put_many'] is None:
-        data['allow_put_many'] = self.config['DEFAULT_ALLOW_PUT_MANY']
-      if data['methods'] is None:
-        data['methods'] = self.config['DEFAULT_METHODS']
-      self._create_model_views(**data)
+        if not Model.__name__ in self.Models:
+          self.add_model(Model)
+    for Model, methods, rels, batch in self.Models.values():
+      if methods is None: methods = self.config['METHODS']
+      if batch is None: batch = self.config['ALLOW_PUT_MANY']
+      if rels is None: rels = self.config['RELATIONSHIPS']
+      if rels is True:
+        rels = set(Model.get_relationships().keys())
+      elif rels is False:
+        rels = set()
+      self.Models[Model.__name__] = (Model, methods, rels, batch)
+      self._create_model_views(Model, rels, batch, methods)
     index_view = IndexView()
     self.blueprint.add_url_rule(
       index_view.url, index_view.endpoint, index_view
@@ -260,7 +257,7 @@ class APIView(object):
     return [
       r for r in self.Model.get_relationships()
       if r.uselist
-      if r.key in self._manager.Models[self.Model.__name__]['relationships']
+      if r.key in self._manager.Models[self.Model.__name__][2]
     ]
 
   @property
@@ -389,11 +386,18 @@ class CollectionView(APIView):
       raise APIError(400, 'Failed validation')
 
   def put(self, params, **kwargs):
-    if self.is_validated(request.json):
-      #TODO
-      pass
+    parent = self.Model.query.get(kwargs.values())
+    if parent:
+      models = getattr(model, self.relationship.key)
+      if self.is_validated(request.json):
+        for model in models:
+          for k, v in request.json.items():
+            setattr(model, k, v)
+        return jsonify(parent.jsonify(depth=params['depth']))
+      else:
+        raise APIError(400, 'Failed validation')
     else:
-      raise APIError(400, 'Failed validation')
+      raise APIError(404, 'No resource found for this ID')
 
   def _process_list(self, lst, params):
     return {
