@@ -99,17 +99,19 @@ is to do::
   db = current_project.db
 
   # normally you probably wouldn't need all three in a single file
-  # but you get the idea :)
-  # and now you can do stuff with each...
+  # but you get the idea :). and now you can do stuff with each...
 
   @app.route('/')
   def index():
+    """A random view."""
     return render_template('index.html')
 
   @celery.task
   def task():
-    # do something
+    """And a great task."""
     pass
+
+  # and so on...
 
 Once Flasker has finished importing all your project module files and configuring the applications, it handles startup.
 
