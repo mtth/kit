@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""To load templates."""
+"""Flasker command line tool."""
 
 from argparse import ArgumentParser, REMAINDER
 from code import interact

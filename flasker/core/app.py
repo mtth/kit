@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+"""Creating the Flask application."""
+
 from __future__ import absolute_import
 
 from flask import Flask

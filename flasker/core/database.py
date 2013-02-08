@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""The engine behind it all."""
+"""Setting up the SQLAlchemy sessions."""
 
 from __future__ import absolute_import
 

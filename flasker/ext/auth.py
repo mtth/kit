@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""This is where the auth magic happens."""
+"""Auth Manager."""
 
 from flask import (Blueprint, current_app, flash, request, redirect,
   render_template, url_for)

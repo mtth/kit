@@ -9,10 +9,11 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
   
     - A transparent integration of Flask, SQLAlchemy and Celery which lets you
       configure these individually according to your project needs via a single
-      ``.cfg`` file (cf. `Structuring your project`_).
+      ``.cfg`` file.
     
-    - A simple pattern to organize your project via the ``current_project`` proxy.
-      No more complicated import schemes!
+    - A simple pattern to organize your project via the ``current_project``
+      proxy (cf. `Structuring your project`_ for an example). No more
+      complicated import schemes!
 
     - A command line tool from where you can create new projects, launch the
       Flask buit in Werkzeug server, start Celery workers and the Flower_ tool,

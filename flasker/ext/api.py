@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
-"""API blueprint.
-
-Inspired by Flask-restless.
-
-"""
+"""API Manager."""
 
 from flask import Blueprint, jsonify, request
 from os.path import abspath, dirname, join
@@ -37,6 +33,9 @@ class APIManager(object):
 
   * URL_PREFIX
   * ADD_ALL_MODELS
+  * DEFAULT_METHODS
+  * DEFAULT_ALLOW_PUT_MANY
+  * DEFAULT_RELATIONSHIPS
   * DEFAULT_COLLECTION_DEPTH
   * DEFAULT_MODEL_DEPTH
   * DEFAULT_LIMIT

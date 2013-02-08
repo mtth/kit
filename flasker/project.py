@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+"""Project module.
+
+The ``Project`` class and ``current_project`` proxy are defined here.
+
+"""
+
 from ConfigParser import SafeConfigParser
 from logging import getLogger
 from os.path import abspath, dirname, join, sep, split, splitext

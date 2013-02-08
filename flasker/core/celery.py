@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+"""Creating the Celery application."""
+
 from __future__ import absolute_import
 
 from celery import Celery
