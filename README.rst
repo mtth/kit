@@ -126,22 +126,35 @@ Extensions
 API
 ***
 
-**Preface** There exists a Flask_ API extension (Flask-Restless_) that shares a similar
-purpose at first glance. However this extension was built with the goal to provide:
+This extension is meant to expose URL endpoints for your models.
 
-  * *Faster queries*: the 'jsonification' of model entities is heavily optimized
-    for large queries.
-  * *More flexibility*: API responses are not restricted to returning model columns but
-    also return properties.
-  * *Convenient access to nested models*: queries can go arbitrarily deep
-    within nested models (the extension takes care of not repeating information).
-    This is especially useful with a client-side library such as Backbone-Relational_.
-  * *More endpoints*: each one-to-many relation can have its own model specific endpoint.
-  * *Support for models with composite primary keys*
+**Preface** There exist other great ReSTful extensions for Flask_. Here are the 
+main differences with two popular ones:
 
-Nevertheless this extension is much younger and currently lacks several great
-features offered by Flask-Restless_ (such as arbitrary queries and function
-evaluation).
+* FlaskRESTful_
+
+  FlaskRESTful works at a sligthly lower level. It provides great tools but it
+  would still require work to tie them with each model. Here, the extension uses
+  the Flasker model structure to do most of the work.
+
+* Flask-Restless_
+
+  Flask-Restless is closer to the purpose of this extension at first glance.
+  In comparison, the API manager is intended to provide:
+
+    * *Faster queries*: the 'jsonification' of model entities is heavily optimized
+      for large queries.
+    * *More flexibility*: API responses are not restricted to returning model columns but
+      also return properties.
+    * *Convenient access to nested models*: queries can go arbitrarily deep
+      within nested models (the extension takes care of not repeating information).
+      This is especially useful with a client-side library such as Backbone-Relational_.
+    * *More endpoints*: each one-to-many relation can have its own model specific endpoint.
+    * *Support for models with composite primary keys*
+
+  Nevertheless this extension is much younger and currently lacks several great
+  features offered by Flask-Restless (such as arbitrary queries and function
+  evaluation).
 
 How to use::
 
@@ -375,4 +388,4 @@ Sources
 .. _jQuery: http://jquery.com/
 .. _jQuery UI: http://jqueryui.com/
 .. _Backbone-Relational: https://github.com/PaulUithol/Backbone-relational
-
+.. _FlaskRESTful: http://flask-restful.readthedocs.org/en/latest/index.html
