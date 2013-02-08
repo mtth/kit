@@ -27,9 +27,9 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
 
 Flasker also comes with two optional extensions:
 
-  - An Authentication_ extension using Flask-Login_ and `Google OAuth2`_.
+- An Authentication_ extension using Flask-Login_ and `Google OAuth2`_.
 
-  - An API_ extension that automatically generates endpoints for database models.
+- An API_ extension that automatically generates endpoints for database models.
 
 
 Quickstart
@@ -100,16 +100,13 @@ The following keys are valid in the ``PROJECT`` section:
 * ``NAME``, name of the project
 * ``MODULES``, modules to import on project load (comma separated list)
 * ``DB_URL``, URL of database (defaults to the in memory ``sqlite://``)
-* ``APP_FOLDER``, path to Flask application root folder (defaults to ``APP``)
+* ``APP_FOLDER``, path to Flask application root folder, relative to the
+  configuration file (defaults to ``app/``)
 * ``APP_STATIC_FOLDER``, path to folder where the Flask static files lie,
-  relative to the Flask root folder (defaults to ``static``)
+  relative to the Flask root folder (defaults to ``static/``)
 * ``APP_TEMPLATE_FOLDER``, path to folder where the Flask template files lie,
-  relative to the Flask root folder (defaults to ``templates``)
+  relative to the Flask root folder (defaults to ``templates/``)
 * ``STATIC_URL``, optional URL to serve static files
-* ``DOMAIN``, cf. `Using Celery`_ (defaults to the project name, 'sluggified')
-* ``SUBDOMAIN``, cf. `Using Celery`_ (defaults to the configuration filename)
-
-Note that all paths are relative to the configuration file.
 
 The ``APP`` section can contain any Flask_ configuration options (as defined here: 
 http://flask.pocoo.org/docs/config/) and the ``CELERY`` section can contain any
@@ -119,7 +116,7 @@ to the corresponding object.
 There are two pregenerated configurations available through the ``flasker new`` command:
 
 * ``basic``, minimal configuration
-* ``celery``, includes default celery configuration (cf. `Using Celery`_) with automatic
+* ``celery``, includes default celery configuration with automatic
   worker hostname generation and task routing
 
 
@@ -135,12 +132,20 @@ TODO
 Authentication
 **************
 
-Currently, only authentication using Google OAuth is supported. Session management is 
-handled by Flask-Login_.
+Adding the following code to any one of your modules will allow you to restrict access
+to your application::
 
-To restrict access to your webapp to some users, import the ``GoogleAuthManager`` 
-and register it on your project through the ``register_manager`` method. The 
-``GoogleAuthManager`` accepts the following parameters:
+  from flasker import current_project
+  from flasker.ext.auth import GoogleAuthManager
+
+  auth_manager = GoogleAuthManager(
+    CLIENT_ID='your_google_client_id',
+    AUTHORIZED_EMAILS=['hers@email.com', 'his@email.com', ...]
+  )
+
+  current_project.register_manager(auth_manager)
+
+Here is the full list of options available to the ``GoogleAuthManager``:
 
 * ``CLIENT_ID``, your Google client ID (which can be found in the `Google API console`_)
 * ``AUTHORIZED_EMAILS``, a list or comma separated string of emails that can login
@@ -150,26 +155,16 @@ and register it on your project through the ``register_manager`` method. The
   should use the ``login_required`` decorator from Flask-Login_ to protect individual
   views
 * ``URL_PREFIX``, the blueprint url prefix (defaults to ``/auth``)
-* ``CALBACK_URL``, the callback URL for Google OAuth (defaults to ``/oauth2callback``).
+* ``CALBACK_URL``, the callback URL for Google OAuth (defaults to ``/oauth2callback``). 
+  Note that this ``CALLBACK_URL`` is concatenated with the ``URL_PREFIX`` so
+  that the full callback URL you should allow in the `Google API console`_ would by
+  default be ``/auth/oauth2callback``.
 
-Note that the ``CALLBACK_URL`` is concatenated with the ``URL_PREFIX`` so that the callback URL
-you should allow in the `Google API console`_ would by default be ``/auth/oauth2callback``.
-
-Parameters can be passed in two ways. Either directly to the constructor::
-
-  from flasker import current_project
-  from flasker.ext.auth import GoogleAuthManager
-
-  manager = GoogleAuthManager(
-    CLIENT_ID='your_google_client_id',
-    AUTHORIZED_EMAILS=['hers@email.com', 'his@email.com']
-  )
-
-  current_project.register_manager(manager)
-
-Or, if you would like to include the parameters in the global configuration file, you can
-do that too by passing the corresponding section to the ``register_manager`` method (options
-specified here will override the ones from the previous method)::
+If you would like to include the parameters in the global configuration file
+(instead of passing them directly to the constructor as we did here), you can
+do that too by passing the corresponding section to the ``register_manager``
+method (options specified here will override the ones from the previous
+method)::
 
   from flasker import current_project
   from flasker.ext.auth import GoogleAuthManager
