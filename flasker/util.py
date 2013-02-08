@@ -830,7 +830,7 @@ class ExpandedBase(Cacheable, Loggable):
       rv = rv | set(cls.json_include)
     if cls.json_exclude:
       rv = rv - set(cls.json_exclude)
-    return rv
+    return list(rv)
 
   def jsonify(self, depth=0):
     """Special implementation of jsonify for Model objects.

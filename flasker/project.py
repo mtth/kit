@@ -32,6 +32,8 @@ class Project(object):
 
   __current__ = None
 
+  _managers = None
+
   config = {
     'PROJECT': {
       'NAME': '',
@@ -134,15 +136,18 @@ class Project(object):
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
+    for manager, config_section in self._managers:
+      if config_section:
+        for k, v in self.config[config_section].items():
+          manager.config[k] = v
+      manager._before_register(self)
+      self.app.register_blueprint(manager.blueprint)
+      manager._after_register(self)
 
   def register_manager(self, manager, config_section=None):
     """Register a manager."""
-    if config_section:
-      for k, v in self.config[config_section].items():
-        manager.config[k] = v
-    manager._before_register(self)
-    self.app.register_blueprint(manager.blueprint)
-    manager._after_register(self)
+    self._managers = self._managers or []
+    self._managers.append((manager, config_section))
 
   @classmethod
   def get_current_project(cls):

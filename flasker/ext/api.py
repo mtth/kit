@@ -9,10 +9,13 @@ Inspired by Flask-restless.
 from flask import abort, Blueprint, jsonify, request
 from os.path import abspath, dirname, join
 from sqlalchemy.orm.collections import InstrumentedList
+from sqlalchemy.orm import mapperlib
 from time import time
+from sys import modules
 from werkzeug.exceptions import HTTPException
 
 from ..project import current_project
+from ..util import Model as BaseModel
 
 db = current_project.db
 
@@ -25,12 +28,13 @@ class APIError(HTTPException):
 
   """
 
-  def __init__(self, code, message):
+  def __init__(self, code, content):
     self.code = code
-    super(APIError, self).__init__(message)
+    self.content = content
+    super(APIError, self).__init__(content)
 
   def __repr__(self):
-    return '<APIError %r: %r>' % (self.code, self.message)
+    return '<APIError %r: %r>' % (self.message, self.content)
 
 
 class APIManager(object):
@@ -54,17 +58,42 @@ class APIManager(object):
   def add_model(self, Model, relationships=True,
                 methods=frozenset(['GET', 'POST', 'PUT', 'DELETE'])):
     """Flag a Model to be added.
+    
+    Will override any options previously set for that Model.
 
-    relationships can either be ``True`` or a list of relationship keys. In the
+    Relationships can either be ``True`` or a list of relationship keys. In the
     first case, all one to many relationships will have a hook created,
     otherwise only those mentioned in the list.
 
+    It might seem strange that this method doesn't have a columns filter, this
+    is for speed and consistency. Columns are defined at the Model level (via
+    the json_include and json_exclude attributes), this way:
+    
+    * jsonify calls do not have to dynamically check which columns to include
+    * all endpoints leading to the same Model yield the same columns
+
     """
+    if relationships is True:
+      relationships = set(Model.get_relationships().keys())
+    elif relationships is False:
+      relationships = set()
     self.Models[Model.__name__] = {
       'Model': Model,
       'methods': methods,
       'relationships': relationships,
     }
+
+  def add_all_models(self, relationships=True,
+                     methods=frozenset(['GET', 'POST', 'PUT', 'DELETE'])):
+    """Convenience method for adding all registered models.
+
+    Note that most of the time in this function, only the values ``True`` and 
+    ``False`` will make sense for the relationships parameter.
+    
+    """
+    Models = [k.class_ for k in mapperlib._mapper_registry]
+    for Model in Models:
+      self.add_model(Model, relationships, methods)
 
   def authorize(self, func):
     """Decorator to set the authorizer function.
@@ -113,11 +142,10 @@ class APIManager(object):
     collection_methods = methods & set(['GET', 'POST'])
     if collection_methods:
       views.append(CollectionView(Model=Model, methods=collection_methods))
-    rels = relationships or []
     rel_methods = set(['GET']) & methods
     if rel_methods:
       for rel in Model.get_relationships().values():
-        if (rels is True or rel.key in rels) and rel.uselist:
+        if rel.key in relationships and rel.uselist:
           views.extend([
             ModelView(Model=Model, relationship=rel, methods=rel_methods),
             CollectionView(Model=Model, relationship=rel, methods=rel_methods)
@@ -171,7 +199,7 @@ class APIView(object):
     """Redirects to corresponding request handler."""
     try:
       if not self.is_authorized():
-        raise APIError(403, 'Forbidden')
+        raise APIError(403, 'Not authorized')
       if request.method in self.methods:
         params = self._parse_params()
         return getattr(self, request.method.lower())(params, **kwargs)
@@ -179,14 +207,26 @@ class APIView(object):
         raise APIError(405, 'Method Not Allowed')
     except APIError as e:
       return jsonify({
-        'status': 'Error',
+        'status': e.message,
         'request': {
           'base_url': request.base_url,
           'method': request.method,
           'values': request.values
         },
-        'content': e.message
+        'content': e.content
       }), e.code
+
+  @property
+  def available_columns(self):
+    return self.Model._json_attributes
+
+  @property
+  def available_relationships(self):
+    return [
+      r for r in self.Model.get_relationships()
+      if r.uselist
+      if r.key in self._manager.Models[self.Model.__name__]['relationships']
+    ]
 
   @property
   def authorized_methods(self):
@@ -229,12 +269,25 @@ class IndexView(APIView):
 
   def get(self, params, **kwargs):
     return jsonify({
-      'status': 'Welcome',
+      'status': '200 Welcome',
       'available_endpoints': [
         '%s (%s)' % (v.url, ', '.join(v.authorized_methods))
         for v in self.__all__
         if v.authorized_methods
-      ]
+      ],
+      'available_models': dict(
+        (
+          v.Model.__name__,
+          {
+            'available_columns': v.available_columns,
+            'available_relationships': [
+              r.key for r in v.available_relationships
+            ]
+          }
+        ) for v in self.__all__
+        if v.Model
+        if not v.relationship
+      )
     })
 
 
@@ -266,14 +319,14 @@ class CollectionView(APIView):
     else:
       model = self.Model.query.get(kwargs.values())
       if not model:
-        raise APIError(404, 'Not Found')
+        raise APIError(404, 'No resource found for this ID')
       query = getattr(model, self.relationship.key)
     if isinstance(query, InstrumentedList):
       results = self._process_list(query, params)
     else:
       results = self._process_query(query, params)
     return jsonify({
-      'status': 'Success',
+      'status': '200 Success',
       'processing_time': results['processing_times'],
       'matches': {
         'total': results['total_matches'],
@@ -291,8 +344,10 @@ class CollectionView(APIView):
     if self.is_validated(request.json):
       model = Model(**request.json)
       db.session.add(model)
+      db.session.commit() # generate an ID
+      return jsonify(model.jsonify(depth=params['depth']))
     else:
-      raise APIError(400, 'Bad Request')
+      raise APIError(400, 'Failed validation')
 
   def _process_list(self, lst, params):
     return {
@@ -325,7 +380,7 @@ class CollectionView(APIView):
       loaded = [int(e) for e in request.args.get('loaded', '').split(',') if e]
       sort = request.args.get('sort', '')
     except ValueError as e:
-      raise APIError(400, 'Bad Request')
+      raise APIError(400, 'Invalid parameters')
     processing_times.append(('request', time() - timer))
     timer = time()
     for k, v in filters.items():
@@ -338,7 +393,7 @@ class CollectionView(APIView):
     if sort:
       attr = sort.strip('-')
       if not attr in column_names:
-        raise APIError(400, 'Bad Request')
+        raise APIError(400, 'Invalid sort parameter')
       if sort[0] == '-':
         query = query.order_by(-getattr(Model, attr))
       else:
@@ -383,18 +438,21 @@ class ModelView(APIView):
       try:
         pos = int(position) - 1
       except ValueError:
-        raise APIError(400, 'Bad Request')
+        raise APIError(400, 'Invalid position index')
       else:
         if pos >= 0:
           query_or_list = getattr(model, self.relationship.key)
           if isinstance(query_or_list, InstrumentedList):
-            model = query_or_list[pos]
+            try:
+              model = query_or_list[pos]
+            except IndexError:
+              model = None
           else:
             model = query_or_list.offset(pos).first()
         else:
-          raise APIError(400, 'Bad Request')
+          raise APIError(400, 'Invalid position index')
     if not model:
-      raise APIError(404, 'Not Found')
+      raise APIError(404, 'No resource at this position')
     return jsonify(model.jsonify(depth=depth))
 
   def put(self, params, **kwargs):
@@ -402,10 +460,12 @@ class ModelView(APIView):
     if self.is_validated(request.json):
       for k, v in request.json.items():
         setattr(model, k, v)
+      return jsonify(model.jsonify(depth=params['depth']))
     else:
-      raise APIError(400, 'Bad Request')
+      raise APIError(400, 'Failed validation')
 
   def delete(self, params, **kwargs):
     model = self.Model.query.get(kwargs.values())
     db.session.delete(model)
+    return jsonify({'status': '200 Success', 'content': 'Resource deleted'})
 
