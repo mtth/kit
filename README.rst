@@ -27,9 +27,9 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
 
 Flasker also comes with two optional extensions:
 
-- An Authentication_ extension using Flask-Login_ and `Google OAuth 2`_.
+- A ReSTful API_ extension
 
-- An API_ extension that automatically generates endpoints for database models.
+- An Authentication_ extension using Flask-Login_ and `Google OAuth 2`_.
 
 
 Quickstart
@@ -129,15 +129,19 @@ API
 **Preface** There exists a Flask_ API extension (Flask-Restless_) that shares a similar
 purpose at first glance. However this extension was built with the goal to provide:
 
-  * *faster queries*: the 'jsonification' of model entities is heavily optimized
-    for large queries
-  * *more flexibility*: API responses are not restricted to returning model columns but
-    also return properties
-  * *convenient access to nested models*: queries can go arbitrarily deep
-    within nested models (the extension takes care of not repeating information)
-    this is especially useful with a client-side library such as Backbone-Relational_.
-  * *more endpoints*: each one-to-many relation has its own model specific endpoint
-  * *support for models with composite primary keys*
+  * *Faster queries*: the 'jsonification' of model entities is heavily optimized
+    for large queries.
+  * *More flexibility*: API responses are not restricted to returning model columns but
+    also return properties.
+  * *Convenient access to nested models*: queries can go arbitrarily deep
+    within nested models (the extension takes care of not repeating information).
+    This is especially useful with a client-side library such as Backbone-Relational_.
+  * *More endpoints*: each one-to-many relation has its own model specific endpoint.
+  * *Support for models with composite primary keys*
+
+Nevertheless this extension is much younger and currently lacks several great
+features offered by Flask-Restless_ (such as arbitrary queries and function
+evaluation).
 
 How to use::
 
