@@ -27,7 +27,7 @@ A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ 
 
 Flasker also comes with two optional extensions:
 
-- An Authentication_ extension using Flask-Login_ and `Google OAuth2`_.
+- An Authentication_ extension using Flask-Login_ and `Google OAuth 2`_.
 
 - An API_ extension that automatically generates endpoints for database models.
 
@@ -126,7 +126,27 @@ Extensions
 API
 ***
 
-TODO
+**Preface** There exists a Flask_ API extension (Flask-Restless_) that shares a similar
+purpose at first glance. However this extension was built with the goal to provide:
+
+  * *faster queries*: the 'jsonification' of model entities is heavily optimized
+    for large queries
+  * *more flexibility*: API responses are not restricted to returning model columns but
+    also return properties
+  * *convenient access to nested models*: queries can go arbitrarily deep
+    within nested models (the extension takes care of not repeating information)
+    this is especially useful with a client-side library such as Backbone-Relational_.
+  * *more endpoints*: each one-to-many relation has its own model specific endpoint
+  * *support for models with composite primary keys*
+
+How to use::
+
+  from flasker import current_project
+  from flasker.ext.api import APIManager
+
+  api_manager = APIManager()
+  api_manager.add_all_models()
+  current_project.register_manager(api_manager)
 
 
 Authentication
@@ -150,10 +170,10 @@ Here is the full list of options available to the ``GoogleAuthManager``:
 * ``CLIENT_ID``, your Google client ID (which can be found in the `Google API console`_)
 * ``AUTHORIZED_EMAILS``, a list or comma separated string of emails that can login
   (defaults to the empty string)
-* ``PROTECT_ALL_VIEWS``, if ``True`` (default), all the views (not including statically served
-  files) will have their access restricted to logged in users. If set to ``False``, you
-  should use the ``login_required`` decorator from Flask-Login_ to protect individual
-  views
+* ``PROTECT_ALL_VIEWS``, if ``True`` (default), all the views (not including
+  statically served files) will have their access restricted to logged in users.
+  If set to ``False``, you should use the ``login_required`` decorator from
+  Flask-Login_ to individually protect views
 * ``URL_PREFIX``, the blueprint url prefix (defaults to ``/auth``)
 * ``CALBACK_URL``, the callback URL for Google OAuth (defaults to ``/oauth2callback``). 
   Note that this ``CALLBACK_URL`` is concatenated with the ``URL_PREFIX`` so
@@ -292,6 +312,7 @@ Sources
 .. _Flask: http://flask.pocoo.org/docs/api/
 .. _Flask-Script: http://flask-script.readthedocs.org/en/latest/
 .. _Flask-Login: http://packages.python.org/Flask-Login/
+.. _Flask-Restless: https://flask-restless.readthedocs.org/en/latest/
 .. _Jinja: http://jinja.pocoo.org/docs/
 .. _Celery: http://docs.celeryproject.org/en/latest/index.html
 .. _Flower: https://github.com/mher/flower
@@ -302,3 +323,5 @@ Sources
 .. _Google API console: https://code.google.com/apis/console
 .. _jQuery: http://jquery.com/
 .. _jQuery UI: http://jqueryui.com/
+.. _Backbone-Relational: https://github.com/PaulUithol/Backbone-relational
+
