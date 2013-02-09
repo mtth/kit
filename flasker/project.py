@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
-"""Project module.
-
-The ``Project`` class and ``current_project`` proxy are defined here.
-
-"""
+"""Project module."""
 
 from celery.signals import task_postrun
 from ConfigParser import SafeConfigParser
@@ -247,8 +243,6 @@ class Project(object):
 
   __current__ = None
 
-  _managers = None
-
   config = {
     'PROJECT': {
       'NAME': '',
@@ -295,7 +289,7 @@ class Project(object):
 
     self.app = None
     self.celery = None
-    self.db = None
+    self._managers = None
 
   def __repr__(self):
     return '<Project %r, %r>' % (self.config['PROJECT']['NAME'], self.root_dir)
@@ -311,11 +305,14 @@ class Project(object):
     Note that the database connection isn't created here.
     
     """
+    # core
     for mod in  ['app', 'celery']:
       __import__('flasker.core.%s' % mod)
+    # project modules
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
+    # managers
     for manager, config_section in self._managers or []:
       if config_section:
         for k, v in self.config[config_section].items():
@@ -336,13 +333,13 @@ class Project(object):
     if app:
       @self.app.teardown_request
       def teardown_request_handler(exception=None):
-        self.dismantle_database_connections()
+        self._dismantle_database_connections()
     if celery:
       @task_postrun.connect
       def task_postrun_handler(*args, **kwargs):
-        self.dismantle_database_connections()
+        self._dismantle_database_connections()
 
-  def dismantle_database_connections(self, **kwrds):
+  def _dismantle_database_connections(self, **kwrds):
     """Remove database connection.
 
     Has to be called after app request/job terminates or connections

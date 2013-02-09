@@ -5,7 +5,6 @@
 from collections import defaultdict
 from csv import DictReader
 from datetime import datetime
-from flask import abort, jsonify as f_jsonify, request
 from json import dumps, loads
 from functools import partial, wraps
 from re import sub
@@ -13,11 +12,8 @@ from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
 
-# General helpers
-# ===============
 
 # Utility functions
-# -----------------
 
 def prod(iterable, key=None):
   """Helper function for cumulative products.
@@ -78,8 +74,8 @@ def convert(value, return_type=None):
         else:
           return value
 
+
 # Utility Classes
-# ---------------
 
 class Dict(dict):
 
@@ -261,6 +257,7 @@ class SmartDictReader(DictReader):
       self.rows_imported += 1
       return processed_row
 
+
 # Caching
 
 def cached_property(func):
@@ -335,6 +332,7 @@ class _CachedProperty(property):
   def __repr__(self):
     return '<CachedProperty %r>' % self.func
 
+
 # Jsonifification
 
 def jsonify(value, depth=0):
@@ -400,6 +398,7 @@ class Jsonifiable(object):
         rv[varname] = e.message
     return rv
 
+
 # Logging
 
 class Loggable(object):
@@ -433,6 +432,7 @@ class Loggable(object):
 
   def error(self, message):
     return self._logger(message, 'error')
+
 
 # SQLAlchemy Mutables
 
@@ -502,11 +502,10 @@ class _MutableDict(Mutable, dict):
     dict.__delitem__(self, key)
     self.changed()
     
-# Attach the mutation listeners to the JSONEncodedDict class globally
 _MutableDict.associate_with(JSONEncodedDict)
 
+
 # Computations
-# ============
 
 class RunningStatistic(object):
 
