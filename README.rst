@@ -1,10 +1,9 @@
 Flasker
 =======
 
-Under development.
-Visit https://github.com/mtth/flasker for the latest version.
+Under development. Visit https://github.com/mtth/flasker for the latest version.
 
-A Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ and Celery_ backend support.
+A lightweight Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ and Celery_ backend support.
 
 - What Flasker is!
   
@@ -239,9 +238,6 @@ Available utilities include:
 
 Cf. the Wiki_ for a more detailed explanation on some of the available utilities.
 
-
-Sources
--------
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
 .. _Flask: http://flask.pocoo.org/docs/api/
