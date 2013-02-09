@@ -9,18 +9,9 @@ from flask import abort, jsonify as f_jsonify, request
 from json import dumps, loads
 from functools import partial, wraps
 from re import sub
-from sqlalchemy import Column
-from sqlalchemy.ext.declarative import declarative_base, declared_attr, DeclarativeMeta
 from sqlalchemy.ext.mutable import Mutable
-from sqlalchemy.orm import class_mapper, Query
-from sqlalchemy.orm.attributes import InstrumentedAttribute
-from sqlalchemy.orm.collections import InstrumentedList
-from sqlalchemy.orm.properties import RelationshipProperty
-from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
-from traceback import format_exc
-from werkzeug.exceptions import HTTPException
 
 # General helpers
 # ===============
@@ -271,7 +262,6 @@ class SmartDictReader(DictReader):
       return processed_row
 
 # Caching
-# =======
 
 def cached_property(func):
   return _CachedProperty(func)
@@ -346,7 +336,6 @@ class _CachedProperty(property):
     return '<CachedProperty %r>' % self.func
 
 # Jsonifification
-# ===============
 
 def jsonify(value, depth=0):
   if hasattr(value, 'jsonify'):
@@ -412,7 +401,6 @@ class Jsonifiable(object):
     return rv
 
 # Logging
-# =======
 
 class Loggable(object):
 
@@ -446,12 +434,7 @@ class Loggable(object):
   def error(self, message):
     return self._logger(message, 'error')
 
-
-# Database stuff
-# ==============
-
-# Mutables
-# ========
+# SQLAlchemy Mutables
 
 class JSONEncodedDict(TypeDecorator):
 
@@ -476,7 +459,7 @@ class JSONEncodedDict(TypeDecorator):
   def process_result_value(self, value, dialect):
     return loads(value) if value else {}
 
-class MutableDict(Mutable, dict):
+class _MutableDict(Mutable, dict):
 
   """Used with JSONEncoded dict to be able to track updates.
 
@@ -520,292 +503,7 @@ class MutableDict(Mutable, dict):
     self.changed()
     
 # Attach the mutation listeners to the JSONEncodedDict class globally
-MutableDict.associate_with(JSONEncodedDict)
-
-# SQLAlchemy
-# ==========
-
-# Inspired by Flask-SQLAlchemy
-
-class Pagination(object):
-
-  """Internal helper class returned by :meth:`BaseQuery.paginate`.  You
-  can also construct it from any other SQLAlchemy query object if you are
-  working with other libraries.  Additionally it is possible to pass `None`
-  as query object in which case the :meth:`prev` and :meth:`next` will
-  no longer work.
-  """
-
-  def __init__(self, query, page, per_page, total, items):
-    #: the unlimited query object that was used to create this
-    #: pagination object.
-    self.query = query
-    #: the current page number (1 indexed)
-    self.page = page
-    #: the number of items to be displayed on a page.
-    self.per_page = per_page
-    #: the total number of items matching the query
-    self.total = total
-    #: the items for the current page
-    self.items = items
-
-  @property
-  def pages(self):
-    """The total number of pages"""
-    return int(ceil(self.total / float(self.per_page)))
-
-  def prev(self, error_out=False):
-    """Returns a :class:`Pagination` object for the previous page."""
-    assert self.query is not None, 'a query object is required ' \
-                     'for this method to work'
-    return self.query.paginate(self.page - 1, self.per_page, error_out)
-
-  @property
-  def prev_num(self):
-    """Number of the previous page."""
-    return self.page - 1
-
-  @property
-  def has_prev(self):
-    """True if a previous page exists"""
-    return self.page > 1
-
-  def next(self, error_out=False):
-    """Returns a :class:`Pagination` object for the next page."""
-    assert self.query is not None, 'a query object is required ' \
-                     'for this method to work'
-    return self.query.paginate(self.page + 1, self.per_page, error_out)
-
-  @property
-  def has_next(self):
-    """True if a next page exists."""
-    return self.page < self.pages
-
-  @property
-  def next_num(self):
-    """Number of the next page"""
-    return self.page + 1
-
-  def iter_pages(self, left_edge=2, left_current=2,
-           right_current=5, right_edge=2):
-    """Iterates over the page numbers in the pagination.  The four
-    parameters control the thresholds how many numbers should be produced
-    from the sides.  Skipped page numbers are represented as `None`.
-
-    """
-    last = 0
-    for num in xrange(1, self.pages + 1):
-      if num <= left_edge or \
-         (num > self.page - left_current - 1 and \
-        num < self.page + right_current) or \
-         num > self.pages - right_edge:
-        if last + 1 != num:
-          yield None
-        yield num
-        last = num
-
-class BaseQuery(Query):
-
-  """The default query object used for models, and exposed as
-  :attr:`~SQLAlchemy.Query`. This can be subclassed and
-  replaced for individual models by setting the :attr:`~Model.query_class`
-  attribute.  This is a subclass of a standard SQLAlchemy
-  :class:`~sqlalchemy.orm.query.Query` class and has all the methods of a
-  standard query as well.
-
-  """
-
-  def get_or_404(self, ident):
-    """Like :meth:`get` but aborts with 404 if not found instead of
-    returning `None`.
-    """
-    rv = self.get(ident)
-    if rv is None:
-      abort(404)
-    return rv
-
-  def first_or_404(self):
-    """Like :meth:`first` but aborts with 404 if not found instead of
-    returning `None`.
-    """
-    rv = self.first()
-    if rv is None:
-      abort(404)
-    return rv
-
-  def paginate(self, page, per_page=20, error_out=True):
-    """Returns `per_page` items from page `page`.  By default it will
-    abort with 404 if no items were found and the page was larger than
-    1.  This behavor can be disabled by setting `error_out` to `False`.
-
-    Returns an :class:`Pagination` object.
-    """
-    if error_out and page < 1:
-      abort(404)
-    items = self.limit(per_page).offset((page - 1) * per_page).all()
-    if not items and page != 1 and error_out:
-      abort(404)
-    return Pagination(self, page, per_page, self.count(), items)
-
-class _QueryProperty(object):
-
-  def __init__(self, db):
-    self.db = db
-
-  def __get__(self, obj, cls):
-    try:
-      mapper = class_mapper(cls)
-      if mapper:
-        return BaseQuery(mapper, session=self.db.session())
-    except UnmappedClassError:
-      return None
-
-class ExpandedBase(Cacheable, Loggable):
-
-  """Adding a few features to the declarative base.
-
-  Currently:
-
-  * Automatic table naming
-  * Caching
-  * Jsonifying
-  * Logging
-
-  The `_cache` column enables the use of cached properties (declared with the
-  `cached_property` decorator. These allow offline computations of properties
-  which are then saved and can later quickly be read.
-
-  In the future, I would like to only generate the ``_cache`` column when
-  the table has a cached property (perhaps using metaclasses for example).
-
-  """
-
-  _cache = Column(JSONEncodedDict)
-  _json_depth = -1
-
-  json_exclude = None
-  json_include = None
-  query = None
-
-  def __init__(self, **kwargs):
-    for k, v in kwargs.items():
-      setattr(self, k, v)
-
-  def __repr__(self):
-    primary_keys = ', '.join(
-      '%s=%r' % (k, getattr(self, k))
-      for k in self.__class__.get_primary_key_names()
-    )
-    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
-
-  @declared_attr
-  def __tablename__(cls):
-    """Automatically create the table name.
-
-    Override this to choose your own tablename (e.g. for single table
-    inheritance).
-
-    """
-    return '%ss' % uncamelcase(cls.__name__)
-
-  @declared_attr
-  def _json_attributes(cls):
-    """Create the dictionary of attributes that will be JSONified.
-
-    This is only run once, on class initialization, which makes jsonify calls
-    much faster.
-
-    By default, includes all public (don't start with _):
-
-    * properties
-    * columns that aren't foreignkeys.
-    * joined relationships (where lazy is False)
-
-    """
-    rv = set(
-        varname for varname in dir(cls)
-        if not varname.startswith('_')  # don't show private properties
-        if (
-          isinstance(getattr(cls, varname), property) 
-        ) or (
-          isinstance(getattr(cls, varname), Column) and
-          not getattr(cls, varname).foreign_keys
-        ) or (
-          isinstance(getattr(cls, varname), RelationshipProperty) and
-          not getattr(cls, varname).lazy == 'dynamic'
-        )
-      )
-    if cls.json_include:
-      rv = rv | set(cls.json_include)
-    if cls.json_exclude:
-      rv = rv - set(cls.json_exclude)
-    return list(rv)
-
-  def jsonify(self, depth=0):
-    """Special implementation of jsonify for Model objects.
-    
-    Overrides the basic jsonify method to specialize it for models.
-
-    This function minimizes the number of lookups it does (no dynamic
-    type checking on the properties for example) to maximize speed.
-
-    :param depth:
-    :type depth: int
-    :rtype: dict
-
-    """
-    if depth <= self._json_depth:
-      # this instance has already been jsonified at a greater or
-      # equal depth, so we simply return its key
-      return self.get_primary_keys()
-    rv = {}
-    self._json_depth = depth
-    for varname in self._json_attributes:
-      try:
-        # direct call to Jsonifiable for speed
-        rv[varname] = jsonify(getattr(self, varname), depth)
-      except ValueError as e:
-        rv[varname] = e.message
-    return rv
-
-  def get_primary_keys(self):
-    return dict(
-      (k, getattr(self, k))
-      for k in self.__class__.get_primary_key_names()
-    )
-
-  @classmethod
-  def find_or_create(cls, **kwargs):
-    instance = self.filter_by(**kwargs).first()
-    if instance:
-      return instance, False
-    instance = cls(**kwargs)
-    session = cls.query.db.session
-    session.add(instance)
-    session.flush()
-    return instance, True
-
-  @classmethod
-  def get_columns(cls, show_private=False):
-    columns = class_mapper(cls).columns
-    if not show_private:
-      columns = [c for c in columns if not c.key.startswith('_')]
-    return columns
-
-  @classmethod
-  def get_relationships(cls):
-    return class_mapper(cls).relationships
-
-  @classmethod
-  def get_related_models(cls):
-    return [(k, v.mapper.class_) for k, v in cls.get_relationships().items()]
-
-  @classmethod
-  def get_primary_key_names(cls):
-    return [key.name for key in class_mapper(cls).primary_key]
-
-# Creating the base used by all models
-Model = declarative_base(cls=ExpandedBase)
+_MutableDict.associate_with(JSONEncodedDict)
 
 # Computations
 # ============
@@ -853,15 +551,8 @@ def exponential_smoothing(data, alpha=0.5):
         / sum(alpha ** (x - _x) for (_x, _y) in sorted_data[:i+1]))
       for i, (x, y) in enumerate(sorted_data)]
 
-def histogram(
-    data,
-    key=lambda a: a,
-    bins=50,
-    restrict=None,
-    categories=None,
-    order=0,
-    expand=False
-):
+def histogram(data, key=lambda a: a, bins=50, restrict=None, categories=None,
+              order=0, expand=False):
   """Returns a histogram of counts for the data.
 
     :param restrict: if provided, only data elements which return `True`

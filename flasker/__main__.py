@@ -140,7 +140,7 @@ def server_handler(parsed_args):
   """Start a Werkzeug server for the Flask application."""
   pj = current_project
   host = '127.0.0.1' if parsed_args.restrict else '0.0.0.0'
-  pj.db.create_connection(app=pj.app)
+  pj.setup_database_connection(app=True)
   pj.app.run(host=host, port=parsed_args.port, debug=parsed_args.debug)
 
 server_parser.set_defaults(handler=server_handler)
@@ -153,10 +153,9 @@ shell_parser = subparsers.add_parser('shell', help='start shell')
 def shell_handler(parsed_args):
   """Start a shell in the context of the project."""
   pj = current_project
-  pj.db.create_connection(app=pj.app)
+  pj.setup_database_connection()
   context = {
     'pj': pj,
-    'db': pj.db,
     'app': pj.app,
     'cel': pj.celery
   }
@@ -207,7 +206,7 @@ def worker_handler(parsed_args):
 
   """
   pj = current_project
-  pj.db.create_connection(celery=pj.celery)
+  pj.setup_database_connection(celery=True)
   pj_worker_names = [d.keys()[0] for d in pj.celery.control.ping()]
   worker_pattern = r'w(\d+)\.%s.%s' % (pj.subdomain, pj.domain)
   worker_numbers = [

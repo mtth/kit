@@ -88,12 +88,10 @@ Here is a sample minimalistic project configuration file:
   DB_URL = sqlite:///db/db.sqlite
   [APP]
   # any valid Flask configuration option can go here
-  # cf http://flask.pocoo.org/docs/config for the full list
   DEBUG = True
   TESTING = True
   [CELERY]
   # any valid Celery configuration option can go here
-  # cf http://docs.celeryproject.org/en/latest/configuration.html
   BROKER_URL = redis://
 
 When it starts, the ``flasker`` command line tool imports all the modules
@@ -245,13 +243,6 @@ Cf. the Wiki_ for a more detailed explanation on some of the available utilities
 
 Sources
 -------
-
-- http://redis.io/topics/quickstart
-- http://naleid.com/blog/2011/03/05/running-redis-as-a-user-daemon-on-osx-with-launchd/
-- http://infinitemonkeycorps.net/docs/pph/
-- https://google-developers.appspot.com/chart/interactive/docs/index
-- http://codemirror.net/
-- http://networkx.lanl.gov/index.html
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
 .. _Flask: http://flask.pocoo.org/docs/api/
