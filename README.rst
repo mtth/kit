@@ -1,8 +1,6 @@
 Flasker
 =======
 
-Under development. Visit https://github.com/mtth/flasker for the latest version.
-
 A lightweight Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ and Celery_ backend support.
 
 - What Flasker is!
@@ -28,9 +26,9 @@ A lightweight Flask_ webapp project manager with built in ORM'ed database using 
 
 Flasker also comes with two optional extensions:
 
-- `ReSTful API`_
-
 - `Authentication`_
+
+- `ReSTful API`_ *under development*
 
 
 Quickstart

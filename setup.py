@@ -4,8 +4,8 @@ from setuptools import find_packages, setup
 
 setup(
     name='flasker',
-    version='0.1.24',
-    description='Flask, SQLAlchemy and Celery integration tool.',
+    version='0.1.25',
+    description='Flask, SQLAlchemy, and Celery integration',
     long_description=open('README.rst').read(),
     author='Matthieu Monsch',
     author_email='monsch@mit.edu',
