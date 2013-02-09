@@ -112,8 +112,8 @@ is to do:
   # the Celery application
   celery = current_project.celery
 
-  # the SQLAlchemy scoped session maker is available on db.session
-  db = current_project.db
+  # the SQLAlchemy scoped session maker 
+  session = current_project.session
 
   # normally you probably wouldn't need all three in a single file
   # but you get the idea :). and now you can do stuff with each...
@@ -171,9 +171,8 @@ Here is a very simple sample file:
 
 .. code:: python
 
-  from flasker import current_project
+  from flasker import current_project, Model
   from flasker.ext.api import APIManager
-  from flasker.util import Model
   from sqlalchemy import Column, ForeignKey, Integer, Unicode
 
   # Create the APIManager

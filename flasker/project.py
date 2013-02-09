@@ -159,7 +159,6 @@ class ExpandedBase(Cacheable, Loggable):
     self._json_depth = depth
     for varname in self._json_attributes:
       try:
-        # direct call to Jsonifiable for speed
         rv[varname] = jsonify(getattr(self, varname), depth)
       except ValueError as e:
         rv[varname] = e.message
