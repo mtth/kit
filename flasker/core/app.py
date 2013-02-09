@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 from flask import Flask
 
-from ..project import current_project, Project
+from ..project import current_project
 
 pj = current_project
 conf = pj.config['PROJECT']

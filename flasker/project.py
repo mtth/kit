@@ -4,6 +4,7 @@
 
 from celery.signals import task_postrun
 from ConfigParser import SafeConfigParser
+from flask import abort
 from os.path import abspath, dirname, join, sep, split, splitext
 from re import match, sub
 from sqlalchemy import Column, create_engine  
@@ -14,7 +15,7 @@ from sqlalchemy.orm.properties import RelationshipProperty
 from weakref import proxy
 from werkzeug.local import LocalProxy
 
-from .util import Cacheable, convert, JSONEncodedDict, Loggable, uncamelcase
+from .util import Cacheable, convert, JSONEncodedDict, jsonify, Loggable, uncamelcase
 
 class ProjectImportError(Exception):
 
@@ -30,46 +31,25 @@ class ProjectImportError(Exception):
 
 class _BaseQuery(Query):
 
-  """The default query object used for models, and exposed as
-  :attr:`~SQLAlchemy.Query`. This can be subclassed and
-  replaced for individual models by setting the :attr:`~Model.query_class`
-  attribute.  This is a subclass of a standard SQLAlchemy
-  :class:`~sqlalchemy.orm.query.Query` class and has all the methods of a
-  standard query as well.
+  """Base query class.
+
+  From Flask-SQLAlchemy.
 
   """
 
-  def get_or_404(self, ident):
-    """Like :meth:`get` but aborts with 404 if not found instead of
-    returning `None`.
-    """
-    rv = self.get(ident)
+  def get_or_404(self, model_id):
+    """Like get but aborts with 404 if not found."""
+    rv = self.get(model_id)
     if rv is None:
       abort(404)
     return rv
 
   def first_or_404(self):
-    """Like :meth:`first` but aborts with 404 if not found instead of
-    returning `None`.
-    """
+    """Like first but aborts with 404 if not found."""
     rv = self.first()
     if rv is None:
       abort(404)
     return rv
-
-  def paginate(self, page, per_page=20, error_out=True):
-    """Returns `per_page` items from page `page`.  By default it will
-    abort with 404 if no items were found and the page was larger than
-    1.  This behavor can be disabled by setting `error_out` to `False`.
-
-    Returns an :class:`Pagination` object.
-    """
-    if error_out and page < 1:
-      abort(404)
-    items = self.limit(per_page).offset((page - 1) * per_page).all()
-    if not items and page != 1 and error_out:
-      abort(404)
-    return Pagination(self, page, per_page, self.count(), items)
 
 class _QueryProperty(object):
 
@@ -94,13 +74,6 @@ class ExpandedBase(Cacheable, Loggable):
   * Caching
   * Jsonifying
   * Logging
-
-  The `_cache` column enables the use of cached properties (declared with the
-  `cached_property` decorator. These allow offline computations of properties
-  which are then saved and can later quickly be read.
-
-  In the future, I would like to only generate the ``_cache`` column when
-  the table has a cached property (perhaps using metaclasses for example).
 
   """
 
@@ -289,14 +262,13 @@ class Project(object):
 
     self.app = None
     self.celery = None
-    self._managers = None
+    self._managers = []
 
   def __repr__(self):
     return '<Project %r, %r>' % (self.config['PROJECT']['NAME'], self.root_dir)
 
   def register_manager(self, manager, config_section=None):
     """Register a manager."""
-    self._managers = self._managers or []
     self._managers.append((manager, config_section))
 
   def make(self):

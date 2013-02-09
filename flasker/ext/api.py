@@ -11,7 +11,6 @@ from werkzeug.exceptions import HTTPException
 
 from ..project import current_project as pj
 
-
 class APIError(HTTPException):
 
   """Thrown when an API call is invalid."""
@@ -23,7 +22,6 @@ class APIError(HTTPException):
 
   def __repr__(self):
     return '<APIError %r: %r>' % (self.message, self.content)
-
 
 class APIManager(object):
 
@@ -203,7 +201,6 @@ class APIManager(object):
   def _after_register(self, project):
     APIView._manager = self
 
-
 class APIView(object):
 
   """Base API view.
@@ -323,7 +320,6 @@ class IndexView(APIView):
         if not v.relationship
       )
     })
-
 
 class CollectionView(APIView):
 
