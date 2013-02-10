@@ -221,10 +221,15 @@ class Project(object):
       'DOMAIN': '',
       'SUBDOMAIN': '',
       'MODULES': '',
-      'DB_URL': 'sqlite://',
       'APP_FOLDER': 'app',
       'APP_STATIC_FOLDER': 'static',
       'APP_TEMPLATE_FOLDER': 'templates',
+    },
+    'ENGINE': {
+      'URL': 'sqlite://',
+      'POOL_RECYCLE': 3600,
+      'POOL_SIZE': 10,
+      'CONVERT_UNICODE': True,
     },
     'APP': {
       'SECRET_KEY': 'a_default_unsafe_key',
@@ -233,7 +238,7 @@ class Project(object):
       'BROKER_URL': 'redis://',
       'CELERY_RESULT_BACKEND': 'redis://',
       'CELERY_SEND_EVENTS': True
-    }
+    },
   }
 
   def __init__(self, config_path):
@@ -244,7 +249,6 @@ class Project(object):
         self.config[key].update(config[key])
       else:
         self.config[key] = config[key]
-    self._check_config()
 
     self.root_dir = dirname(abspath(config_path))
     self.domain = (
@@ -261,7 +265,11 @@ class Project(object):
 
     self.app = None
     self.celery = None
+    self.session = None
+    self._engine = None
     self._managers = []
+    self._before_import = None
+    self._before_startup = None
 
   def __repr__(self):
     return '<Project %r, %r>' % (self.config['PROJECT']['NAME'], self.root_dir)
@@ -270,16 +278,22 @@ class Project(object):
     """Register a manager."""
     self._managers.append((manager, config_section))
 
-  def make(self):
-    """Create all project components.
+  def before_import(self, func):
+    """Decorator, hook to run a function before module imports."""
+    self._before_import = func
 
-    Note that the database connection isn't created here.
-    
-    """
+  def before_startup(self, func):
+    """Decorator, hook to run a function before project starts."""
+    self._before_startup = func
+
+  def make(self, app=False, celery=False):
+    """Create all project components."""
     # core
     for mod in  ['app', 'celery']:
       __import__('flasker.core.%s' % mod)
     # project modules
+    if self._before_import:
+      self._before_import(self)
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
@@ -291,16 +305,12 @@ class Project(object):
       manager._before_register(self)
       self.app.register_blueprint(manager.blueprint)
       manager._after_register(self)
-
-  def setup_database_connection(self, app=False, celery=False):
-    """Initialize database connection."""
-    engine = create_engine(
-      self.config['PROJECT']['DB_URL'],
-      pool_recycle=3600
-    )
-    Model.metadata.create_all(engine, checkfirst=True)
-    self.session = scoped_session(sessionmaker(bind=engine))
+    # database
+    engine_ops = dict((k.lower(), v) for k,v in self.config['ENGINE'].items())
+    self._engine = create_engine(engine_ops.pop('url'), **engine_ops)
+    Model.metadata.create_all(self._engine, checkfirst=True)
     Model.query = _QueryProperty(self)
+    self.session = scoped_session(sessionmaker(bind=self._engine))
     if app:
       @self.app.teardown_request
       def teardown_request_handler(exception=None):
@@ -309,6 +319,9 @@ class Project(object):
       @task_postrun.connect
       def task_postrun_handler(*args, **kwargs):
         self._dismantle_database_connections()
+    # final hook
+    if self._before_startup:
+      self._before_startup(self)
 
   def _dismantle_database_connections(self, **kwrds):
     """Remove database connection.
@@ -341,21 +354,14 @@ class Project(object):
       raise ProjectImportError(
         'Unable to parse configuration file at %s.' % config_path
       )
-    return dict(
+    conf = dict(
       (s, dict((k, convert(v)) for (k, v) in parser.items(s)))
       for s in parser.sections()
     )
-
-  def _check_config(self):
-    """Make sure the configuration is valid.
-
-    Any a priori configuration checks will go here.
-    
-    """
-    conf = self.config
-    # check that the project has a name
+    # some conf checking
     if not conf['PROJECT']['NAME']:
       raise ProjectImportError('Missing project name.')
+    return conf
 
   @classmethod
   def get_current_project(cls):
