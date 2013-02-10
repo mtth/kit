@@ -1,7 +1,7 @@
 Flasker
 =======
 
-A configurable and lightweight framework that integrates Flask_, SQLAlchemy_ and Celery_.
+A configurable, lightweight framework that integrates Flask_, SQLAlchemy_ and Celery_.
 
 - What Flasker is!
   
