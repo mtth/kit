@@ -129,13 +129,13 @@ inside each module is to do:
 
   # and so on...
 
-Once Flasker has finished importing all your project module files and configuring the applications, it handles startup!
+Once Flasker has finished importing all your project module files and
+configuring the applications, it handles startup!
 
-
-More
-----
-
-All the configuration options and extensions are detailed in the `full documentation`_
+This is only the simplest way you can use Flasker but there are several other
+configuration options available. You can read about each of these in the `full
+documentation`_. There you will also find documentation about the extensions
+currently available.
 
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
@@ -156,3 +156,4 @@ All the configuration options and extensions are detailed in the `full documenta
 .. _Backbone-Relational: https://github.com/PaulUithol/Backbone-relational
 .. _FlaskRESTful: http://flask-restful.readthedocs.org/en/latest/index.html
 .. _Wiki: https://github.com/mtth/flasker/wiki
+.. _full documentation: http://mtth.github.com/flasker
