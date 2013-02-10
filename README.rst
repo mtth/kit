@@ -9,9 +9,9 @@ A lightweight Flask_ webapp project manager with built in ORM'ed database using 
       configure these individually according to your project needs via a single
       ``.cfg`` file.
     
-    - A simple pattern to organize your project via the ``current_project``
-      proxy (cf. `Structuring your project`_ for an example). No more
-      complicated import schemes!
+    - A simple pattern to organize your project via the
+      ``flasker.current_project`` proxy (cf. `Structuring your project`_ for an
+      example). No more complicated import schemes!
 
     - A command line tool from where you can create new projects, launch the
       Flask buit in Werkzeug server, start Celery workers and the Flower_ tool,
@@ -26,9 +26,9 @@ A lightweight Flask_ webapp project manager with built in ORM'ed database using 
 
 Flasker also comes with two optional extensions:
 
-- `Authentication`_
+- Authentication
 
-- `ReSTful API`_ *under development*
+- ReSTful API *under development*
 
 
 Quickstart
@@ -95,10 +95,10 @@ Here is a sample minimalistic project configuration file:
 
 When it starts, the ``flasker`` command line tool imports all the modules
 declared in the ``MODULES`` key of the configuration file (in the ``PROJECT``
-section). Inside each of these you can use the ``current_project`` proxy to get
-access to the Flask application object, the Celery application object and the
-SQLAlchemy database sessions. Therefore a very simple pattern inside each module
-is to do:
+section). Inside each of these you can use the ``flasker.current_project``
+proxy to get access to the Flask application object, the Celery application
+object and the SQLAlchemy database sessions. Therefore a very simple pattern
+inside each module is to do:
 
 .. code:: python
 
@@ -129,114 +129,13 @@ is to do:
 
   # and so on...
 
-Once Flasker has finished importing all your project module files and configuring the applications, it handles startup.
-
-To use
+Once Flasker has finished importing all your project module files and configuring the applications, it handles startup!
 
 
-Extensions
-----------
+More
+----
 
-Authentication
-**************
-
-This extension uses Flask-Login_ to handle sessions and `Google OAuth 2`_ to handle
-authentication.
-
-Adding the following code to any one of your modules will allow you to restrict
-access to your application:
-
-.. code:: python
-
-  from flasker import current_project
-  from flasker.ext.auth import GoogleAuthManager
-
-  auth_manager = GoogleAuthManager(
-    client_id='your_google_client_id',
-    authorized_emails=['hers@email.com', 'his@email.com', ...],
-    callback_url='/oauth2callback'
-  )
-  current_project.register_manager(auth_manager)
-
-By default the authentication manager will protect all your views. You can
-disable this behavior by passing the constructor option
-``protect_all_views=False`` and individually protect views with the
-``flask.ext.login.login_required`` decorator.
-
-
-ReSTful API
-***********
-
-This extension is meant to very simply expose URL endpoints for your models.
-
-There exist other great ReSTful extensions for Flask. Here are the 
-main differences with two popular ones:
-
-* FlaskRESTful_ works at a sligthly lower level. It provides great tools but it
-  would still require work to tie them with each model. Here, the extension uses
-  the Flasker model structure to do most of the work.
-
-* Flask-Restless_ is similar in that it also intends to bridge the gap between
-  views and SQLAlchemy models. However the Flasker API is built to provide:
-
-  * *Faster queries*: the 'jsonification' of model entities is heavily optimized
-    for large queries.
-  * *More flexibility*: API responses are not restricted to returning model columns but
-    also return properties.
-  * *Convenient access to nested models*: queries can go arbitrarily deep
-    within nested models (the extension takes care of not repeating information).
-    This is especially useful with a client-side library such as Backbone-Relational_.
-  * *More endpoints*: each one-to-many relation can have its own model specific endpoint.
-  * *Support for models with composite primary keys*
-
-  Nevertheless this extension is much younger and currently lacks several great
-  features offered by Flask-Restless (such as arbitrary queries and function
-  evaluation).
-
-Here is a very simple sample file:
-
-.. code:: python
-
-  from flasker import current_project
-  from flasker.ext.api import APIManager, Model
-  from sqlalchemy import Column, ForeignKey, Integer, String
-
-  # Create the APIManager
-
-  api_manager = APIManager(add_all_models=True)
-  current_project.register_manager(api_manager)
-
-  # Define the models
-
-  class House(Model):
-
-    id = Column(Integer, primary_key=True)
-    address = Column(String(128))
-
-  class Cat(Model):
-
-    name = Column(String(64), primary_key=True)
-    house_id = Column(ForeignKey('houses.id'))
-    house = relationship('House', backref='cats')
-
-Which will create the following endpoints:
-
-* ``/api/houses/ (GET, POST)``
-* ``/api/houses/<id> (GET, PUT, DELETE)``
-* ``/api/houses/<id>/cats/ (GET, PUT)``
-* ``/api/houses/<id>/cats/<position> (GET)``
-* ``/api/cats/ (GET, POST)``
-* ``/api/cats/<name> (GET, PUT, DELETE)``
-
-
-Utilities
----------
-
-Available utilities include:
-
-* Caching
-* Jsonifying
-* Logging
+All the configuration options and extensions are detailed in the `full documentation`_
 
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
