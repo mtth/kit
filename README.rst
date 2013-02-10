@@ -131,6 +131,8 @@ is to do:
 
 Once Flasker has finished importing all your project module files and configuring the applications, it handles startup.
 
+To use
+
 
 Extensions
 ----------
@@ -155,6 +157,11 @@ access to your application:
     callback_url='/oauth2callback'
   )
   current_project.register_manager(auth_manager)
+
+By default the authentication manager will protect all your views. You can
+disable this behavior by passing the constructor option
+``protect_all_views=False`` and individually protect views with the
+``flask.ext.login.login_required`` decorator.
 
 
 ReSTful API
@@ -190,8 +197,8 @@ Here is a very simple sample file:
 
 .. code:: python
 
-  from flasker import current_project, Model
-  from flasker.ext.api import APIManager
+  from flasker import current_project
+  from flasker.ext.api import APIManager, Model
   from sqlalchemy import Column, ForeignKey, Integer, String
 
   # Create the APIManager

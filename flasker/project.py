@@ -25,8 +25,6 @@ class ProjectImportError(Exception):
 
   pass
 
-# Main Project Class
-
 class Project(object):
 
   """Project class.
@@ -91,7 +89,6 @@ class Project(object):
     self.session = None
     self._engine = None
     self._managers = []
-    self._before_import = []
     self._before_startup = []
 
   def __repr__(self):
@@ -100,10 +97,6 @@ class Project(object):
   def register_manager(self, manager, config_section=None):
     """Register a manager."""
     self._managers.append((manager, config_section))
-
-  def before_import(self, func):
-    """Decorator, hook to run a function before module imports."""
-    self._before_import.append(func)
 
   def before_startup(self, func):
     """Decorator, hook to run a function right before project starts."""
@@ -115,19 +108,9 @@ class Project(object):
     for mod in  ['app', 'celery']:
       __import__('flasker.core.%s' % mod)
     # project modules
-    for func in self._before_import or []:
-      func(self)
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
-    # managers
-    for manager, config_section in self._managers or []:
-      if config_section:
-        for k, v in self.config[config_section].items():
-          manager.config[k] = v
-      manager._before_register(self)
-      self.app.register_blueprint(manager.blueprint)
-      manager._after_register(self)
     # database
     engine_ops = dict((k.lower(), v) for k,v in self.config['ENGINE'].items())
     self._engine = create_engine(engine_ops.pop('url'), **engine_ops)
@@ -140,6 +123,14 @@ class Project(object):
       @task_postrun.connect
       def task_postrun_handler(*args, **kwargs):
         self._dismantle_database_connections()
+    # managers
+    for manager, config_section in self._managers or []:
+      if config_section:
+        for k, v in self.config[config_section].items():
+          manager.config[k] = v
+      manager._before_register(self)
+      self.app.register_blueprint(manager.blueprint)
+      manager._after_register(self)
     # final hook
     for func in self._before_startup or []:
       func(self)

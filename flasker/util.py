@@ -335,7 +335,7 @@ class _CachedProperty(property):
 
 # Jsonifification
 
-def jsonify(value, depth=0):
+def _jsonify(value, depth=0):
   if hasattr(value, 'jsonify'):
     return value.jsonify(depth=depth - 1)
   if isinstance(value, dict):
@@ -393,7 +393,7 @@ class Jsonifiable(object):
     rv = {}
     for varname in self._json_attributes:
       try:
-        rv[varname] = jsonify(getattr(self, varname), depth)
+        rv[varname] = _jsonify(getattr(self, varname), depth)
       except ValueError as e:
         rv[varname] = e.message
     return rv
