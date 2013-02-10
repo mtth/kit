@@ -82,7 +82,9 @@ Here is a sample minimalistic project configuration file:
   [PROJECT]
   NAME = My Project
   MODULES = app.views, app.tasks
-  DB_URL = sqlite:///db/db.sqlite
+  [ENGINE]
+  # SQLAlchemy engine configuration
+  URL = sqlite:///db/db.sqlite
   [APP]
   # any valid Flask configuration option can go here
   DEBUG = True
@@ -170,7 +172,7 @@ Here is a very simple sample file:
 
   from flasker import current_project, Model
   from flasker.ext.api import APIManager
-  from sqlalchemy import Column, ForeignKey, Integer, Unicode
+  from sqlalchemy import Column, ForeignKey, Integer, String
 
   # Create the APIManager
 
@@ -182,11 +184,11 @@ Here is a very simple sample file:
   class House(Model):
 
     id = Column(Integer, primary_key=True)
-    address = Column(Unicode(128))
+    address = Column(String(128))
 
   class Cat(Model):
 
-    name = Column(Unicode(64), primary_key=True)
+    name = Column(String(64), primary_key=True)
     house_id = Column(ForeignKey('houses.id'))
     house = relationship('House', backref='cats')
 

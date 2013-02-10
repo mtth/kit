@@ -8,7 +8,7 @@ from sqlalchemy import Column, Integer, ForeignKey, String
 class House(Model):
 
   id = Column(Integer, primary_key=True)
-  address = Column(Unicode(128))
+  address = Column(String(128))
 
 
 class Cat(Model):
