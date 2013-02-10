@@ -1,34 +1,31 @@
 Flasker
 =======
 
-A lightweight Flask_ webapp project manager with built in ORM'ed database using SQLAlchemy_ and Celery_ backend support.
+A lightweight framework that integrates Flask_, SQLAlchemy_ and Celery_.
 
 - What Flasker is!
   
-    - A transparent integration of Flask, SQLAlchemy and Celery which lets you
-      configure these individually according to your project needs via a single
-      ``.cfg`` file.
+    - A one stop ``.cfg`` configuration file for Flask, Celery and the SQLAlchemy
+      engine.
     
     - A simple pattern to organize your project via the
-      ``flasker.current_project`` proxy (cf. `Structuring your project`_ for an
-      example). No more complicated import schemes!
+      ``flasker.current_project`` proxy (cf. `Structuring your project`_).
 
     - A command line tool from where you can create new projects, launch the
       Flask buit in Werkzeug server, start Celery workers and the Flower_ tool,
-      and run a shell in the current project context (inspired by Flask-Script_).
+      and run a shell in the current project context.
 
 - What Flasker isn't?
 
-    - A simplified version of Flask, Celery, and SQLAlchemy. Flasker handles the
-      setup but intentionally leaves you free to interact with the raw Flask,
-      Celery and SQLAlchemy session objects. Some knowledge of these frameworks is
-      therefore required. 
+    - A simplified version of Flask, Celery, and SQLAlchemy. Some knowledge of these
+      frameworks is therefore required. 
 
-Flasker also comes with two optional extensions:
+Flasker also comes with two extensions for commonly needed functionalities:
 
 - Authentication
+- ReSTful API *(under development)*
 
-- ReSTful API *under development*
+Check the `full documentation`_ for more information.
 
 
 Quickstart
@@ -46,9 +43,10 @@ Quickstart
 
     $ flasker new basic
 
-  This will create a project configuration file ``default.cfg`` in the
+  This will create a basic project configuration file ``default.cfg`` in the
   current directory and a basic Bootstrap_ themed app (this can be turned off
-  with the ``-a`` flag).
+  with the ``-a`` flag). Another sample configuration file is available
+  via ``flasker new celery`` that includes sane defaults for task routing.
 
 - Next steps:
 
@@ -133,9 +131,8 @@ Once Flasker has finished importing all your project module files and
 configuring the applications, it handles startup!
 
 This is only the simplest way you can use Flasker but there are several other
-configuration options available. You can read about each of these in the `full
-documentation`_. There you will also find documentation about the extensions
-currently available.
+configuration options detailed in the `full
+documentation`_.
 
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
