@@ -131,11 +131,31 @@ is to do:
 
 Once Flasker has finished importing all your project module files and configuring the applications, it handles startup.
 
-Cf. the Wiki_ for all the available configuration options.
-
 
 Extensions
 ----------
+
+Authentication
+**************
+
+This extension uses Flask-Login_ to handle sessions and `Google OAuth 2`_ to handle
+authentication.
+
+Adding the following code to any one of your modules will allow you to restrict
+access to your application:
+
+.. code:: python
+
+  from flasker import current_project
+  from flasker.ext.auth import GoogleAuthManager
+
+  auth_manager = GoogleAuthManager(
+    client_id='your_google_client_id',
+    authorized_emails=['hers@email.com', 'his@email.com', ...],
+    callback_url='/oauth2callback'
+  )
+  current_project.register_manager(auth_manager)
+
 
 ReSTful API
 ***********
@@ -201,31 +221,6 @@ Which will create the following endpoints:
 * ``/api/cats/ (GET, POST)``
 * ``/api/cats/<name> (GET, PUT, DELETE)``
 
-Cf. the Wiki_ for the complete list of available options.
-
-
-Authentication
-**************
-
-This extension uses Flask-Login_ to handle sessions and `Google OAuth 2`_ to handle
-authentication.
-
-Adding the following code to any one of your modules will allow you to restrict
-access to your application:
-
-.. code:: python
-
-  from flasker import current_project
-  from flasker.ext.auth import GoogleAuthManager
-
-  auth_manager = GoogleAuthManager(
-    client_id='your_google_client_id',
-    authorized_emails=['hers@email.com', 'his@email.com', ...]
-  )
-  current_project.register_manager(auth_manager)
-
-Cf. the Wiki_ for the complete list of available options.
-
 
 Utilities
 ---------
@@ -235,8 +230,6 @@ Available utilities include:
 * Caching
 * Jsonifying
 * Logging
-
-Cf. the Wiki_ for a more detailed explanation on some of the available utilities.
 
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
