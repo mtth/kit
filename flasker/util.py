@@ -339,9 +339,9 @@ def _jsonify(value, depth=0):
   if hasattr(value, 'jsonify'):
     return value.jsonify(depth=depth - 1)
   if isinstance(value, dict):
-    return dict((k, jsonify(v, depth)) for k, v in value.items())
+    return dict((k, _jsonify(v, depth)) for k, v in value.items())
   if isinstance(value, list):
-    return [jsonify(v, depth) for v in value]
+    return [_jsonify(v, depth) for v in value]
   if isinstance(value, (float, int, long, str, unicode, tuple)):
     return value
   if isinstance(value, datetime):

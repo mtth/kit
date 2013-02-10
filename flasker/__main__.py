@@ -54,7 +54,7 @@ def project_context(app=False, celery=False):
         print e
         return
       else:
-        pj.make(app, celery)
+        pj._make(app, celery)
         handler(*args, **kwargs)
     return wrapper
   return _wrapper

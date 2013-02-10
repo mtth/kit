@@ -102,7 +102,7 @@ class Project(object):
     """Decorator, hook to run a function right before project starts."""
     self._before_startup.append(func)
 
-  def make(self, app=False, celery=False):
+  def _make(self, app=False, celery=False):
     """Create all project components."""
     # core
     for mod in  ['app', 'celery']:
@@ -136,7 +136,7 @@ class Project(object):
       func(self)
 
   def _dismantle_database_connections(self, **kwrds):
-    """Remove database connection.
+    """Remove database connections.
 
     Has to be called after app request/job terminates or connections
     will leak.
@@ -176,9 +176,9 @@ class Project(object):
     return conf
 
   @classmethod
-  def get_current_project(cls):
+  def _get_current_project(cls):
     """Hook for ``current_project`` proxy."""
     return Project.__current__
 
-current_project = LocalProxy(lambda: Project.get_current_project())
+current_project = LocalProxy(lambda: Project._get_current_project())
 

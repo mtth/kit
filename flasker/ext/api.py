@@ -175,8 +175,11 @@ class ExpandedBase(Cacheable, Loggable):
     return columns
 
   @classmethod
-  def get_relationships(cls):
-    return class_mapper(cls).relationships
+  def get_relationships(cls, show_private=False):
+    rels =  class_mapper(cls).relationships.values()
+    if not show_private:
+      rels = [rel for rel in rels if not rel.key.startswith('_')]
+    return rels
 
   @classmethod
   def get_related_models(cls):
@@ -340,7 +343,7 @@ class APIManager(object):
       col_methods = set(['GET']) & methods
     rel_methods = set(['GET']) & methods
     if rel_methods:
-      for rel in Model.get_relationships().values():
+      for rel in Model.get_relationships():
         if rel.key in relationships and rel.uselist:
           views.extend([
             ModelView(Model=Model, relationship=rel, methods=rel_methods),
@@ -366,7 +369,7 @@ class APIManager(object):
       if batch is None: batch = self.config['ALLOW_PUT_MANY']
       if rels is None: rels = self.config['RELATIONSHIPS']
       if rels is True:
-        rels = set(Model.get_relationships().keys())
+        rels = set([r.key for r in Model.get_relationships()])
       elif rels is False:
         rels = set()
       self.Models[Model.__name__] = (Model, methods, rels, batch)
@@ -440,7 +443,7 @@ class APIView(object):
   def authorized_methods(self):
     return set(
       method for method in self.methods 
-      if self._manager._authorize(self.Model, self.relationship, method)
+      if self.is_authorized(method)
     )
 
   @property
@@ -453,12 +456,12 @@ class APIView(object):
       return True
     return self._mananager._validate(self.Model, json, request.method)
 
-  def is_authorized(self):
+  def is_authorized(self, method=None):
+    if method is None:
+      method = request.method
     if not self._manager._authorize:
       return True
-    return self._manager._authorize(
-      self.Model, self.relationship, request.method
-    )
+    return self._manager._authorize(self.Model, self.relationship, method)
 
   def _parse_params(self):
     return request.args
