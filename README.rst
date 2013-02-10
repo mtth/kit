@@ -1,7 +1,7 @@
 Flasker
 =======
 
-A lightweight framework that integrates Flask_, SQLAlchemy_ and Celery_.
+A configurable and lightweight framework that integrates Flask_, SQLAlchemy_ and Celery_.
 
 - What Flasker is!
   
@@ -24,8 +24,6 @@ Flasker also comes with two extensions for commonly needed functionalities:
 
 - Authentication
 - ReSTful API *(under development)*
-
-Check the `full documentation`_ for more information.
 
 
 Quickstart
@@ -113,7 +111,7 @@ inside each module is to do:
   session = current_project.session
 
   # normally you probably wouldn't need all three in a single file
-  # but you get the idea :). and now you can do stuff with each...
+  # but you get the idea - and now you can do stuff with each...
 
   @app.route('/')
   def index():
@@ -130,9 +128,8 @@ inside each module is to do:
 Once Flasker has finished importing all your project module files and
 configuring the applications, it handles startup!
 
-This is only the simplest way you can use Flasker but there are several other
-configuration options detailed in the `full
-documentation`_.
+This is the simplest way you can use Flasker and there are several other
+configuration options detailed in the `full documentation`_.
 
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
