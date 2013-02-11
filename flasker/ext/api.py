@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""API Manager."""
+"""API Extension."""
 
 from flask import Blueprint, jsonify, request
 from os.path import abspath, dirname, join
@@ -203,9 +203,9 @@ class APIError(HTTPException):
   def __repr__(self):
     return '<APIError %r: %r>' % (self.message, self.content)
 
-class APIManager(object):
+class API(object):
 
-  """Main API manager.
+  """Main API extension.
 
   Handles the creation and registration of all API views. Available options:
 
@@ -221,20 +221,20 @@ class APIManager(object):
 
   Models can be added in two ways. Either individually::
     
-    manager.add_model(Model)
+    api.add_model(Model)
 
   or globally::
 
-    manager.add_all_models()
+    api.add_all_models()
 
   Both functions accept the same additional options (cf. their respective doc).
 
   It also exposes the `authorize` and `validate` decorators.
 
   Once all the models have been added along with (optionally) the authorize and
-  validate functions, the manager should be registered with the project::
+  validate functions, the API extension should be registered with the project::
 
-    current_project.register_manager(manager)
+    current_project.register_extension(extension)
 
   """
 
@@ -257,7 +257,7 @@ class APIManager(object):
     for k, v in kwargs.items():
       self.config[k.upper()] = v
     self.Models = {}
-    APIView._manager = self
+    APIView._extension = self
 
   def add_model(self, Model, relationships=None, allow_put_many=None,
                 methods=None):
@@ -394,7 +394,7 @@ class APIView(object):
 
   __all__ = []
 
-  _manager = None
+  _extension = None
 
   Model = None
   relationship = None
@@ -436,7 +436,7 @@ class APIView(object):
     return [
       r for r in self.Model.get_relationships()
       if r.uselist
-      if r.key in self._manager.Models[self.Model.__name__][2]
+      if r.key in self._extension.Models[self.Model.__name__][2]
     ]
 
   @property
@@ -448,20 +448,20 @@ class APIView(object):
 
   @property
   def defaults(self):
-    return self._manager.config
+    return self._extension.config
 
   def is_validated(self, json):
     """Validate changes."""
-    if not self._manager._validate:
+    if not self._extension._validate:
       return True
     return self._mananager._validate(self.Model, json, request.method)
 
   def is_authorized(self, method=None):
     if method is None:
       method = request.method
-    if not self._manager._authorize:
+    if not self._extension._authorize:
       return True
-    return self._manager._authorize(self.Model, self.relationship, method)
+    return self._extension._authorize(self.Model, self.relationship, method)
 
   def _parse_params(self):
     return request.args

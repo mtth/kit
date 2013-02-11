@@ -88,15 +88,15 @@ class Project(object):
     self.celery = None
     self.session = None
     self._engine = None
-    self._managers = []
+    self._extensions = []
     self._before_startup = []
 
   def __repr__(self):
     return '<Project %r, %r>' % (self.config['PROJECT']['NAME'], self.root_dir)
 
-  def register_manager(self, manager, config_section=None):
-    """Register a manager."""
-    self._managers.append((manager, config_section))
+  def register_extension(self, extension, config_section=None):
+    """Register an extension."""
+    self._extensions.append((extension, config_section))
 
   def before_startup(self, func):
     """Decorator, hook to run a function right before project starts."""
@@ -123,14 +123,14 @@ class Project(object):
       @task_postrun.connect
       def task_postrun_handler(*args, **kwargs):
         self._dismantle_database_connections()
-    # managers
-    for manager, config_section in self._managers or []:
+    # extensions
+    for extension, config_section in self._extensions or []:
       if config_section:
         for k, v in self.config[config_section].items():
-          manager.config[k] = v
-      manager._before_register(self)
-      self.app.register_blueprint(manager.blueprint)
-      manager._after_register(self)
+          extension.config[k] = v
+      extension._before_register(self)
+      self.app.register_blueprint(extension.blueprint)
+      extension._after_register(self)
     # final hook
     for func in self._before_startup or []:
       func(self)

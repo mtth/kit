@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Auth Manager."""
+"""Auth Extension."""
 
 from flask import (Blueprint, current_app, flash, request, redirect,
   render_template, url_for)
@@ -41,7 +41,7 @@ class User(Loggable, UserMixin):
       rv = None
     return rv
 
-class AuthManager(object):
+class Auth(object):
 
   config = {
     'URL_PREFIX': '/auth',
@@ -100,7 +100,7 @@ class AuthManager(object):
           return self.login_manager.unauthorized()
         return None
 
-class GoogleAuthManager(AuthManager):
+class GoogleAuth(Auth):
 
   config = {
     'URL_PREFIX': '/auth',
@@ -125,7 +125,7 @@ class GoogleAuthManager(AuthManager):
 
   def _before_register(self, project):
 
-    super(GoogleAuthManager, self)._before_register(project)
+    super(GoogleAuth, self)._before_register(project)
 
     emails = self.config['AUTHORIZED_EMAILS']
     if isinstance(emails, list):
