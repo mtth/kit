@@ -49,7 +49,6 @@ class Project(object):
     'ENGINE': {
       'URL': 'sqlite://',
       'POOL_RECYCLE': 3600,
-      'POOL_SIZE': 10,
       'CONVERT_UNICODE': True,
     },
     'APP': {
