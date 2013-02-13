@@ -48,8 +48,6 @@ class Project(object):
     },
     'ENGINE': {
       'URL': 'sqlite://',
-      'POOL_RECYCLE': 3600,
-      'CONVERT_UNICODE': True,
     },
     'APP': {
       'SECRET_KEY': 'a_default_unsafe_key',

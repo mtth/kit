@@ -335,9 +335,15 @@ class _CachedProperty(property):
 
 # Jsonifification
 
+class JSONDepthExceededError(Exception):
+
+  pass
+
 def _jsonify(value, depth=0):
+  if depth < 0:
+    raise JSONDepthExceededError()
   if hasattr(value, 'jsonify'):
-    return value.jsonify(depth=depth - 1)
+    return value.jsonify(depth=depth)
   if isinstance(value, dict):
     return dict((k, _jsonify(v, depth)) for k, v in value.items())
   if isinstance(value, list):
@@ -393,9 +399,11 @@ class Jsonifiable(object):
     rv = {}
     for varname in self._json_attributes:
       try:
-        rv[varname] = _jsonify(getattr(self, varname), depth)
+        rv[varname] = _jsonify(getattr(self, varname), depth - 1)
       except ValueError as e:
         rv[varname] = e.message
+      except JSONDepthExceededError:
+        pass
     return rv
 
 

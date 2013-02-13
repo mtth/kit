@@ -5,16 +5,19 @@
 from flask import Blueprint, jsonify, request
 from flask.views import View
 from os.path import abspath, dirname, join
-from sqlalchemy import Column
+from sqlalchemy import Column, func
 from sqlalchemy.ext.declarative import declarative_base, declared_attr 
 from sqlalchemy.orm import class_mapper, mapperlib, Query
+from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.collections import InstrumentedList
-from sqlalchemy.orm.properties import RelationshipProperty
+from sqlalchemy.orm.dynamic import AppenderQuery
+from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 from time import time
 from werkzeug.exceptions import HTTPException
 
 from ..project import current_project as pj
-from ..util import Cacheable, JSONEncodedDict, _jsonify, Loggable, uncamelcase
+from ..util import (Cacheable, _jsonify, JSONDepthExceededError,
+  JSONEncodedDict, Loggable, uncamelcase)
 
 class API(object):
 
@@ -57,7 +60,6 @@ class API(object):
   config = {
     'URL_PREFIX': '/api',
     'ADD_ALL_MODELS': False,
-    'METHODS': frozenset(['GET', 'POST', 'PUT', 'DELETE']),
     'RELATIONSHIPS': True,
     'DEFAULT_DEPTH': 0,
     'DEFAULT_LIMIT': 20,
@@ -67,8 +69,8 @@ class API(object):
   def __init__(self, **kwargs):
     for k, v in kwargs.items():
       self.config[k.upper()] = v
+    APIView.__extension__ = self
     self.Models = {}
-    APIView.extension = self
 
   def add_model(self, Model, **kwargs):
     """Flag a Model to be added.
@@ -139,12 +141,15 @@ class API(object):
       (this choice was made to avoid duplicating features accross endpoints)
 
     """
-    CollectionView.attach_view(Model, None)
-    ModelView.attach_view(Model, None)
+    CollectionView.attach_view(Model)
+    ModelView.attach_view(Model)
     for rel in Model.get_relationships():
-      if rel.uselist:
-        CollectionView.attach_view(Model, rel)
-        ModelView.attach_view(Model, rel)
+      if rel.lazy == 'dynamic' and rel.uselist:
+        RelationshipModelView.attach_view(rel)
+        DynamicRelationshipView.attach_view(rel)
+      elif rel.lazy == True and rel.uselist:
+        RelationshipModelView.attach_view(rel)
+        LazyRelationshipView.attach_view(rel)
 
   def _before_register(self, project):
     self.blueprint = Blueprint(
@@ -154,13 +159,12 @@ class API(object):
       url_prefix=self.config['URL_PREFIX']
     )
     if self.config['ADD_ALL_MODELS']:
-      Models = [k.class_ for k in mapperlib._mapper_registry]
-      for Model in Models:
-        if not Model.__name__ in self.Models:
-          self.add_model(Model)
-    for Model, options in self.Models.values():
-      self._create_model_views(Model, options)
-    IndexView.attach_view(None, None)
+      for model_class in [k.class_ for k in mapperlib._mapper_registry]:
+        if not model_class.__name__ in self.Models:
+          self.add_model(model_class)
+    for model_class, options in self.Models.values():
+      self._create_model_views(model_class, options)
+    IndexView.attach_view()
 
   def _after_register(self, project):
     Model.metadata.create_all(project._engine, checkfirst=True)
@@ -190,6 +194,21 @@ class _BaseQuery(Query):
       abort(404)
     return rv
 
+  def fast_count(self):
+    """Counting without subqueries."""
+    Model = self.base_model_class
+    primary_keys = [
+      getattr(Model, key)
+      for key in Model.get_primary_key_names()
+    ]
+    return pj.session.query(func.count(*primary_keys)).one()[0]
+
+  def get_count_query(self):
+    Model = self.base_model_class
+    query = pj.session.query(func.count(Model)).select_from(Model)
+    query.base_model_class = Model
+    return query
+
 class _QueryProperty(object):
 
   def __init__(self, project):
@@ -199,7 +218,9 @@ class _QueryProperty(object):
     try:
       mapper = class_mapper(cls)
       if mapper:
-        return _BaseQuery(mapper, session=self.project.session())
+        query =  _BaseQuery(mapper, session=self.project.session())
+        query.base_model_class = cls
+        return query
     except UnmappedClassError:
       return None
 
@@ -217,10 +238,8 @@ class ExpandedBase(Cacheable, Loggable):
   """
 
   _cache = Column(JSONEncodedDict)
-  _json_depth = -1
+  _json_depth = 0
 
-  json_exclude = None
-  json_include = None
   query = None
 
   def __init__(self, **kwargs):
@@ -245,39 +264,25 @@ class ExpandedBase(Cacheable, Loggable):
     return '%ss' % uncamelcase(cls.__name__)
 
   @declared_attr
-  def _json_attributes(cls):
-    """Create the dictionary of attributes that will be JSONified.
-
-    This is only run once, on class initialization, which makes jsonify calls
-    much faster.
-
-    By default, includes all public (don't start with _):
-
-    * properties
-    * columns that aren't foreignkeys.
-    * joined relationships (where lazy is False)
-
-    """
-    rv = set(
-        varname for varname in dir(cls)
-        if not varname.startswith('_')  # don't show private properties
-        if (
-          isinstance(getattr(cls, varname), property) 
-        ) or (
-          isinstance(getattr(cls, varname), Column) and
-          not getattr(cls, varname).foreign_keys
-        ) or (
-          isinstance(getattr(cls, varname), RelationshipProperty) and
-          not getattr(cls, varname).lazy == 'dynamic'
-        )
+  def __json__(cls):
+    return dict(
+      (varname, 1)
+      for varname in dir(cls)
+      if not varname.startswith('_')  # don't show private properties
+      if (
+        isinstance(getattr(cls, varname), property) 
+      ) or (
+        isinstance(getattr(cls, varname), InstrumentedAttribute) and
+        isinstance(getattr(cls, varname).property, ColumnProperty) and
+        not getattr(cls, varname).foreign_keys
+      ) or (
+        isinstance(getattr(cls, varname), InstrumentedAttribute) and
+        isinstance(getattr(cls, varname).property, RelationshipProperty)
+        and getattr(cls, varname).property.lazy in [False, 'joined']
       )
-    if cls.json_include:
-      rv = rv | set(cls.json_include)
-    if cls.json_exclude:
-      rv = rv - set(cls.json_exclude)
-    return list(rv)
+    )
 
-  def jsonify(self, depth=0):
+  def jsonify(self, depth=1):
     """Special implementation of jsonify for Model objects.
     
     Overrides the basic jsonify method to specialize it for models.
@@ -296,11 +301,13 @@ class ExpandedBase(Cacheable, Loggable):
       return self.get_primary_keys()
     rv = {}
     self._json_depth = depth
-    for varname in self._json_attributes:
+    for varname, cost in self.__json__.iteritems():
       try:
-        rv[varname] = _jsonify(getattr(self, varname), depth)
+        rv[varname] = _jsonify(getattr(self, varname), depth - cost)
       except ValueError as e:
         rv[varname] = e.message
+      except JSONDepthExceededError:
+        pass
     return rv
 
   def get_primary_keys(self):
@@ -336,15 +343,16 @@ class ExpandedBase(Cacheable, Loggable):
 
   @classmethod
   def get_related_models(cls):
-    return [(k, v.mapper.class_) for k, v in cls.get_relationships().items()]
+    return [(r.key, r.mapper.class_) for r in cls.get_relationships()]
 
   @classmethod
   def get_primary_key_names(cls):
     return [key.name for key in class_mapper(cls).primary_key]
 
+
 Model = declarative_base(cls=ExpandedBase)
 
-# Views
+# Error
 
 class APIError(HTTPException):
 
@@ -357,6 +365,8 @@ class APIError(HTTPException):
 
   def __repr__(self):
     return '<APIError %r: %r>' % (self.message, self.content)
+
+# Views
 
 class APIView(View):
 
@@ -372,28 +382,26 @@ class APIView(View):
 
   """
 
+  __all__ = []
+  __extension__ = None
 
   # Flask stuff
   decorators = []
   methods = frozenset(['get', 'post', 'head', 'options',
                        'delete', 'put', 'trace', 'patch'])
 
-  extension = None
-  routes = []
+  allowed_request_keys = frozenset()
 
-  def __init__(self, Model, rel):
-    self.Model = Model
-    self.rel = rel
-
-  def dispatch_request(self, *args, **kwargs):
+  def __call__(self, *args, **kwargs):
     method = getattr(self, request.method.lower(), None)
     if method is None and request.method == 'HEAD':
       method = getattr(self, 'get', None)
     try:
-      if method:
-        return method(*args, **kwargs)
-      else:
+      if not method:
         raise APIError(405, 'Method Not Allowed')
+      else:
+        parser = Parser(self.allowed_request_keys)
+        return method(parser, *args, **kwargs)
     except APIError as e:
       return jsonify({
         'status': e.message,
@@ -405,221 +413,125 @@ class APIView(View):
         'content': e.content
       }), e.code
 
+  def get_endpoint(self):
+    return uncamelcase(self.__class__.__name__)
+
+  def get_rule(self):
+    return self.url
+
   @classmethod
-  def attach_view(cls, Model, rel):
-    route = cls.get_url(Model, rel)
-    cls.extension.blueprint.add_url_rule(
-      route,
-      view_func=cls.as_view(cls.get_endpoint(Model, rel), Model)
+  def attach_view(cls, *view_args, **view_kwargs):
+    view = cls(*view_args, **view_kwargs)
+    cls.__extension__.blueprint.add_url_rule(
+      rule=view.get_rule(),
+      endpoint=view.get_endpoint(),
+      view_func=view,
+      methods=cls.methods
     )
-    cls.routes.append(route)
+    cls.__all__.append(view)
 
   @classmethod
-  def get_endpoint(cls, Model, relationship):
-    return '%s%s%s' % (
-      uncamelcase(cls.__name__),
-      '_for_%s' % Model.__tablename__ if Model else '',
-      '.%s' % relationship.key if relationship else '',
-    )
-
-  @classmethod
-  def get_url(cls, Model, relationship):
-    url = getattr(cls, 'url', None)
-    if not url:
-      raise NotImplementedError
-    return url
-
-class IndexView(APIView):
-
-  """API 'splash' page with a few helpful keys."""
-
-  url = '/'
-
-  def get(self, **kwargs):
-    return jsonify({
-      'status': '200 Welcome',
-      'available_endpoints': self.routes
-    })
+  def get_available_methods(cls):
+    return set(dir(cls)) & cls.methods
 
 class CollectionView(APIView):
 
   """View for collection endpoints."""
 
-  def get(self, **kwargs):
-    params = self.get_params()
-    col = self._get_collection(**kwargs)
-    if isinstance(col, InstrumentedList):
-      results = self._process_list(query, params)
-    else:
-      results = self._process_query(query, params)
+  allowed_request_keys = frozenset(['depth', 'limit', 'offset', 'filter', 
+                                    'sort'])
+
+  def __init__(self, Model):
+    self.Model = Model
+
+  def get_endpoint(self):
+    return 'collection_view_for_%s' % self.Model.__tablename__
+
+  def get_rule(self):
+    return '/%s' % self.Model.__tablename__
+
+  def get(self, parser, **kwargs):
+    timers = {}
+    filtered_query = parser.filter_and_sort(self.Model.query)
+    now = time()
+    count = parser.filter_and_sort(
+      self.Model.query.get_count_query(), False
+    ).one()[0]
+    timers['count'] = time() - now
+    now = time()
+    content = [
+      e.jsonify(parser.get_depth())
+      for e in parser.offset_and_limit(filtered_query)
+    ]
+    timers['jsonification'] = time() - now
     return jsonify({
       'status': '200 Success',
-      'processing_time': results['processing_times'],
+      'processing_time': timers,
       'matches': {
-        'total': results['total_matches'],
-        'returned': len(results['content'])
+        'total': count,
+        'returned': len(content),
       },
       'request': {
         'base_url': request.base_url,
         'method': request.method,
         'values': request.values
       },
-      'content': results['content']
+      'content': content
     }), 200
 
-  def post(self, **kwargs):
+  def post(self, parser, **kwargs):
     if self.is_validated(request.json):
-      model = Model(**request.json)
+      if not self.rel:
+        model = self.Model(**request.json)
+      else:
+        parent = self.Model.query.get(kwargs.values())
+        if not parent:
+          raise APIError(404, 'No resource found for this ID')
+        Model = self.rel.mapper.class_
+        model = Model(**request.json)
+        # TODO automatically add parent_id to backref
       pj.session.add(model)
       pj.session.commit() # generate an ID
-      return jsonify(model.jsonify(depth=params['depth']))
+      return jsonify(model.jsonify(depth=allowed_request_keys['depth']))
     else:
       raise APIError(400, 'Failed validation')
-
-  def put(self, params, **kwargs):
-    parent = self.Model.query.get(kwargs.values())
-    if parent:
-      models = getattr(model, self.relationship.key)
-      if self.is_validated(request.json):
-        for model in models:
-          for k, v in request.json.items():
-            setattr(model, k, v)
-        return jsonify(parent.jsonify(depth=params['depth']))
-      else:
-        raise APIError(400, 'Failed validation')
-    else:
-      raise APIError(404, 'No resource found for this ID')
-
-  def _get_collection(self, **kwargs):
-    """Getting raw query/list."""
-    if not kwargs:
-      col = self.Model.query
-    else:
-      model = self.Model.query.get(kwargs.values())
-      if not model:
-        raise APIError(404, 'No resource found for this ID')
-      col = getattr(model, self.rel.key)
-    return col
-
-  def _process_list(self, lst, params):
-    return {
-      'processing_times': [],
-      'total_matches': len(lst),
-      'content': [e.jsonify(self.defaults['DEFAULT_COLLECTION_DEPTH']) for e in lst]
-    }
-
-  def _process_query(self, query, params):
-    Model = query.column_descriptions[0]['type']
-    column_names = [c.key for c in Model.get_columns()]
-    timer = time()
-    processing_times = []
-    filters = {}
-    for k, v in request.args.items():
-      if k in column_names:
-        filters[k] = v
-      elif not k in self.params:
-        raise APIError(400, 'Bad Request')
-    try:
-      offset = max(0, int(request.args.get('offset', 0)))
-      limit = max(0, int(
-        request.args.get('limit', self.defaults['DEFAULT_LIMIT'])
-      ))
-      if self.defaults['MAX_LIMIT']:
-        limit = min(limit, self.defaults['MAX_LIMIT'])
-      depth = max(0, int(
-        request.args.get('depth', self.defaults['DEFAULT_COLLECTION_DEPTH'])
-      ))
-      loaded = [int(e) for e in request.args.get('loaded', '').split(',') if e]
-      sort = request.args.get('sort', '')
-    except ValueError as e:
-      raise APIError(400, 'Invalid parameters')
-    processing_times.append(('request', time() - timer))
-    timer = time()
-    for k, v in filters.items():
-      query = query.filter(getattr(Model, k) == v)
-    total_matches = 10 # query.count()
-    processing_times.append(('query', time() - timer))
-    timer = time()
-    if loaded:
-      query = query.filter(~Model.id.in_(loaded))
-    if sort:
-      attr = sort.strip('-')
-      if not attr in column_names:
-        raise APIError(400, 'Invalid sort parameter')
-      if sort[0] == '-':
-        query = query.order_by(-getattr(Model, attr))
-      else:
-        query = query.order_by(getattr(Model, attr))
-    if limit:
-      query = query.limit(limit)
-    return {
-      'processing_times': processing_times,
-      'total_matches': total_matches,
-      'content': [
-        e.jsonify(depth=depth)
-        for e in query.offset(offset)
-      ]
-    }
-
-  @classmethod
-  def get_url(self, Model, relationship):
-    url = '/%s' % Model.__tablename__
-    if relationship:
-      url += ''.join('/<%s>' % n for n in Model.get_primary_key_names())
-      url += '/%s' % relationship.key
-    url += '/'
-    return url
 
 class ModelView(APIView):
 
   """View for individual model endpoints."""
 
-  @classmethod
-  def get_url(self, Model, relationship):
-    url = '/%s' % Model.__tablename__
-    url += ''.join('/<%s>' % n for n in Model.get_primary_key_names())
-    if relationship:
-      url += '/%s/<position>' % relationship.key
+  allowed_request_keys = frozenset(['depth'])
+
+  def __init__(self, Model):
+    self.Model = Model
+
+  def get_endpoint(self):
+    return 'model_view_for_%s' % self.Model.__tablename__
+
+  def get_rule(self):
+    url = '/%s' % self.Model.__tablename__
+    url += ''.join('/<%s>' % n for n in self.Model.get_primary_key_names())
     return url
 
-  def get(self, params, **kwargs):
-    position = kwargs.pop('position', None)
-    depth = int(request.args.get('depth', self.defaults['DEFAULT_MODEL_DEPTH']))
+  def get(self, parser, **kwargs):
     model = self.Model.query.get(kwargs.values())
-    if position is not None:
-      try:
-        pos = int(position) - 1
-      except ValueError:
-        raise APIError(400, 'Invalid position index')
-      else:
-        if pos >= 0:
-          query_or_list = getattr(model, self.relationship.key)
-          if isinstance(query_or_list, InstrumentedList):
-            try:
-              model = query_or_list[pos]
-            except IndexError:
-              model = None
-          else:
-            model = query_or_list.offset(pos).first()
-        else:
-          raise APIError(400, 'Invalid position index')
     if not model:
-      raise APIError(404, 'No resource at this position')
-    return jsonify(model.jsonify(depth=depth))
+      raise APIError(404, 'No resource found')
+    return jsonify(model.jsonify(depth=parser.get_depth()))
 
-  def put(self, params, **kwargs):
+  def put(self, parser, **kwargs):
     model = self.Model.query.get(kwargs.values())
     if model:
       if self.is_validated(request.json):
         for k, v in request.json.items():
           setattr(model, k, v)
-        return jsonify(model.jsonify(depth=params['depth']))
+        return jsonify(model.jsonify(depth=allowed_request_keys['depth']))
       else:
         raise APIError(400, 'Failed validation')
     else:
       raise APIError(404, 'No resource found for this ID')
 
-  def delete(self, params, **kwargs):
+  def delete(self, parser, **kwargs):
     model = self.Model.query.get(kwargs.values())
     if model:
       pj.session.delete(model)
@@ -627,35 +539,239 @@ class ModelView(APIView):
     else:
       raise APIError(404, 'No resource found for this ID')
 
+class RelationshipView(APIView):
+
+  def __init__(self, rel):
+    self.rel = rel
+
+  @property
+  def Model(self):
+    return self.rel.mapper.class_
+
+  @property
+  def parent_Model(self):
+    return self.rel.parent.class_
+
+  def get_endpoint(self):
+    return 'relationship_view_for_%s_%s' % (
+      self.parent_Model.__name__,
+      self.rel.key
+    )
+
+  def get_rule(self):
+    url = '/%s' % self.parent_Model.__tablename__
+    url += ''.join(
+      '/<%s>' % n for n in self.parent_Model.get_primary_key_names()
+    )
+    url += '/%s' % self.rel.key
+    return url
+
+  def get_collection(self, **kwargs):
+    parent_model = self.parent_Model.query.get(kwargs.values())
+    if not parent_model:
+      raise APIError(404, 'No resource found')
+    return getattr(parent_model, self.rel.key)
+
+class DynamicRelationshipView(RelationshipView):
+
+  allowed_request_keys = frozenset(['depth', 'limit', 'offset', 'filter',
+                                    'sort'])
+
+  def get(self, parser, **kwargs):
+    query = parser.filter_and_sort(self.get_collection(**kwargs))
+    timers = {}
+    now = time()
+    count = query.count()
+    timers['count'] = time() - now
+    now = time()
+    content = [
+      e.jsonify(parser.get_depth())
+      for e in parser.offset_and_limit(query)
+    ]
+    timers['jsonification'] = time() - now
+    return jsonify({
+      'status': '200 Success',
+      'processing_time': timers,
+      'matches': {
+        'total': count,
+        'returned': len(content),
+      },
+      'request': {
+        'base_url': request.base_url,
+        'method': request.method,
+        'values': request.values
+      },
+      'content': content
+    }), 200
+
+class LazyRelationshipView(RelationshipView):
+
+  allowed_request_keys = frozenset(['depth'])
+
+  def get(self, parser, **kwargs):
+    timers = {}
+    now = time()
+    content = [
+      e.jsonify(parser.get_depth())
+      for e in self.get_collection(**kwargs)
+    ]
+    count = len(content)
+    timers['jsonification'] = time() - now
+    return jsonify({
+      'status': '200 Success',
+      'processing_time': timers,
+      'matches': {
+        'total': count,
+        'returned': count,
+      },
+      'request': {
+        'base_url': request.base_url,
+        'method': request.method,
+        'values': request.values
+      },
+      'content': content
+    }), 200
+
+  def post(self, **kwargs):
+    pass
+
+class RelationshipModelView(RelationshipView):
+
+  allowed_request_keys = frozenset(['depth'])
+
+  def get_endpoint(self):
+    return 'relationship_model_view_for_%s_%s' % (
+      self.parent_Model.__name__,
+      self.rel.key
+    )
+
+  def get_rule(self):
+    url = '/%s' % self.parent_Model.__tablename__
+    url += ''.join(
+      '/<%s>' % n for n in self.parent_Model.get_primary_key_names()
+    )
+    url += '/%s/<key>' % self.rel.key
+    return url
+
+  def get(self, parser, **kwargs):
+    key = kwargs.pop('key')
+    collection = self.get_collection(**kwargs)
+    if isinstance(collection, (InstrumentedList, AppenderQuery)):
+      try:
+        pos = int(key) - 1
+      except ValueError:
+        raise APIError(400, 'Invalid key')
+      else:
+        if pos >= 0:
+          if isinstance(collection, InstrumentedList):
+            try:
+              model = collection[pos]
+            except IndexError:
+              model = None
+          else:
+            model = collection.offset(pos).first()
+        else:
+          raise APIError(400, 'Invalid position index')
+    # TODO: support attribute mapped collections
+    if not model:
+      raise APIError(404, 'No resource found')
+    return jsonify(model.jsonify(depth=parser.get_depth()))
+
+  def put(self, parser, **kwargs):
+    pass
+
+class IndexView(APIView):
+
+  """API 'splash' page with a few helpful keys."""
+
+  url = '/'
+
+  def get(self, params, **kwargs):
+    return jsonify({
+      'status': '200 Welcome',
+      'available_endpoints': [
+        '%s (%s)' % (
+          view.get_rule(),
+          ', '.join(m.upper() for m in view.get_available_methods()))
+        for view in self.__all__
+      ]
+    })
+
 # Helper
 
-class RequestParser(object):
+class Parser(object):
 
-  params = frozenset(['filter', 'depth', 'limit', 'sort'])
   sep = ';'
 
-  def __init__(self, allowed_params):
+  def __init__(self, allowed_keys):
     self.args = request.args
-    allowed_params = allowed_params or self.params
-    if not set(self.args.keys()) < allowed_params:
-      raise APIError(400, 'Invalid parameter found')
+    self.keys = set(self.args.keys())
+    if not self.keys <= set(allowed_keys):
+      raise APIError(400, 'Invalid parameters found: %s not in %s' % (
+        list(self.keys), list(allowed_keys)
+       ))
 
-  def depth(self):
-    return request.args.get('depth', 0, int)
+  def get_depth(self):
+    return self.args.get('depth', 1, int)
 
-  def offset(self):
-    return self.args.get('offset', 0, int)
-
-  def limit(self):
-    return self.args.get('limit', 20, int)
-
-  def filters(self):
+  def filter_and_sort(self, query, sort=True):
+    Model = self._get_Model(query)
+    # filter
     raws = self.args.getlist('filter')
     for raw in raws:
-      key, op, value = raw.split(self.sep, 3)
+      try:
+        key, op, value = raw.split(self.sep, 3)
+      except ValueError:
+        raise APIError(400, 'Invalid filter: %s' % raw)
+      column = getattr(Model, key, None)
+      if not column:
+        raise APIError(400, 'Invalid filter column: %s' % key)
+      if op == 'in':
+        filt = column.in_(value.split(','))
+      else:
+        try:
+          attr = filter(
+            lambda e: hasattr(column, e % op),
+            ['%s', '%s_', '__%s__']
+          )[0] % op
+        except IndexError:
+          raise APIError(400, 'Invalid filter operator: %s' % op)
+        if value == 'null':
+          value = None
+        filt = getattr(column, attr)(value)
+      query = query.filter(filt)
+    # sort
+    if sort:
+      raws = self.args.getlist('sort')
+      for raw in raws:
+        try:
+          key, order = raw.split(self.sep)
+        except ValueError:
+          raise APIError(400, 'Invalid sort: %s' % raw)
+        if not order in ['asc', 'desc']:
+          raise APIError(400, 'Invalid sort order: %s' % order)
+        column = getattr(Model, key, None)
+        if column:
+          query = query.order_by(getattr(column, order)())
+        else:
+          raise APIError(400, 'Invalid sort column: %s' % key)
+    return query
 
-  def sorts(self):
-    raws = self.args.getlist('sort')
-    for raw in raws:
-      key, order = raw.split(self.sep)
+  def offset_and_limit(self, query):
+    # offset
+    offset = self.args.get('offset', 0, int)
+    if offset:
+      query = query.offset(offset)
+    # limit
+    limit = self.args.get('limit', 20, int)
+    if limit:
+      query = query.limit(limit)
+    return query
 
+  def _get_Model(self, query):
+    if hasattr(query, 'base_model_class'):
+      # this is a global query
+      return query.base_model_class
+    else:
+      # this is a relationship appenderquery
+      return query.attr.target_mapper.class_
