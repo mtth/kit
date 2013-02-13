@@ -130,8 +130,6 @@ inside each module is to do:
 Once Flasker has finished importing all your project module files and
 configuring the applications, it handles startup!
 
-This is the simplest way you can use Flasker and there are several other
-configuration options detailed in the `full documentation`_.
 
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
