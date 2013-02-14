@@ -443,7 +443,8 @@ class RelationshipView(APIView):
 
   def __init__(self, rel):
     self.rel = rel
-@property
+
+  @property
   def Model(self):
     return self.rel.mapper.class_
 
