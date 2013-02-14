@@ -34,6 +34,7 @@ from sqlalchemy.orm import class_mapper, mapperlib, Query
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.orm.dynamic import AppenderQuery
+from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 from time import time
 from werkzeug.exceptions import HTTPException
@@ -603,6 +604,13 @@ class IndexView(APIView):
 
 # SQLAlchemy Model
 
+def get_models_from_query(query):
+  return [
+    d['expr'].class_
+    for d in query.column_descriptions
+    if isinstance(d['expr'], Mapper)
+  ]
+
 class _BaseQuery(Query):
 
   """Base query class.
@@ -625,15 +633,6 @@ class _BaseQuery(Query):
       abort(404)
     return rv
 
-  def fast_count(self):
-    """Counting without subqueries."""
-    Model = self.base_model_class
-    primary_keys = [
-      getattr(Model, key)
-      for key in Model.get_primary_key_names()
-    ]
-    return pj.session.query(func.count(*primary_keys)).one()[0]
-
   def get_count_query(self):
     """Get correspondint count query.
 
@@ -642,10 +641,19 @@ class _BaseQuery(Query):
     inefficient in MySQL).
     
     """
-    Model = self.base_model_class
-    query = pj.session.query(func.count(Model)).select_from(Model)
-    query.base_model_class = Model
-    return query
+    models = self.get_models()
+    if len(models) == 1:
+      Model = models[0]
+      query = pj.session.query(func.count(Model)).select_from(Model)
+      query._base_count_class = Model # hook to remember class
+      return query
+    raise Exception(
+      'Unable to generate count query: %s models found' % len(models)
+    )
+      
+
+  def get_models(self):
+    return get_models_from_query(self)
 
 class _QueryProperty(object):
 
@@ -656,9 +664,7 @@ class _QueryProperty(object):
     try:
       mapper = class_mapper(cls)
       if mapper:
-        query =  _BaseQuery(mapper, session=self.project.session())
-        query.base_model_class = cls
-        return query
+        return _BaseQuery(mapper, session=self.project.session())
     except UnmappedClassError:
       return None
 
@@ -816,8 +822,7 @@ class Parser(object):
   
   """
 
-  # the separator used for filters and sorts
-  sep = ';'
+  sep = ';' # the separator used for filters and sorts
 
   def __init__(self, allowed_keys):
     self.defaults = APIView.__extension__.config
@@ -892,10 +897,9 @@ class Parser(object):
     return query
 
   def _get_Model(self, query):
-    if hasattr(query, 'base_model_class'):
-      # this is a global query
-      return query.base_model_class
-    else:
-      # this is a relationship appenderquery
-      return query.attr.target_mapper.class_
+    if hasattr(query, '_base_count_class'): # this query is a count
+      return getattr(query, '_base_count_class')
+    models = get_models_from_query(query)
+    assert len(models) == 1, 'More than one model for this query'
+    return models[0]
 
