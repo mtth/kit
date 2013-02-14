@@ -22,7 +22,16 @@ from ..util import (Cacheable, _jsonify, JSONDepthExceededError,
 
 class APIError(HTTPException):
 
-  """Thrown when an API call is invalid."""
+  """Thrown when an API call is invalid.
+
+  The following error codes can occur:
+
+  * ``400 Bad Request`` if the request is badly formulated (wrong query
+    parameters, invalid form data, etc.)
+  * ``403 Forbidden`` if the request is not authorized by the server
+  * ``404 Not Found`` if the request refers to a non-existent resource
+  
+  """
 
   def __init__(self, code, content):
     self.code = code
@@ -36,9 +45,14 @@ class API(object):
 
   """Main API extension.
 
-  Handles the creation and registration of all API views. Available options:
+  Handles the creation and registration of all API views. The following
+  configuration options are available:
 
-  * URL_PREFIX
+  * ``URL_PREFIX``
+  * ``DEFAULT_DEPTH``
+  * ``DEFAULT_LIMIT``
+  * ``MAX_LIMIT``
+  * ``EXPAND``
 
   Models can be added in two ways. Either individually::
     
@@ -48,7 +62,7 @@ class API(object):
 
     api.add_all_models()
 
-  Both functions accept the same additional options (cf. their respective doc).
+  Both functions accept the same additional options (cf. ``add_all_models``)
 
   It also exposes the `authorize` and `validate` decorators.
 
@@ -77,18 +91,16 @@ class API(object):
     self.Models = {}
 
   def authorize(self, func):
-    """Decorator to set the authorizer function.
+    """Decorator to set the authorization function.
 
-    The authorizer is passed 2 argument:
+    :param func: an authorization function. It will be called everytime a new
+      request comes in and is passed 2 arguments:
     
-    * the endpoint
-    * the request method
+      * the endpoint
+      * the request method
 
-    The second argument is for convenience (the full request object can be 
-    accessed as usual).
-
-    If the function returns a truthful value, the request will proceed.
-    Otherwise a 403 exception is raised.
+      If the function returns a truthful value, the request will proceed.
+      Otherwise a 403 exception is raised.
     
     """
     self._authorize = func
@@ -111,22 +123,29 @@ class API(object):
   def add_model(self, Model, relationships=True, methods=True):
     """Flag a Model to be added.
 
-    TODO: kwargs (relationships, methods...)
+    :param Model: the ``Model`` subclass to be exposed.
+    :param relationships: whether or not to create subroutes for the model's
+      lazy and dynamic relationships. This parameter can take the following
+      values:
+
+      * ``True`` to create routes for all 
+      * ``False`` to create none
+      * a list of relationship keys to create routes for
+
+    :param methods: which request methods to allow. Can take the following
+      values:
+
+      * ``True`` to allow all
+      * a list of methods to allow
     
-    Will override any options previously set for that Model.
+    Calling this function multiple times will override any options previously 
+    set for the Model.
 
-    If any of the options is ``None``, the default value will be used.
-
-    Relationships can either be ``True`` or a list of relationship keys. In the
-    first case, all one to many relationships will have a hook created,
-    otherwise only those mentioned in the list.
-
-    It might seem strange that this method doesn't have a columns filter, this
-    is for speed and consistency. Columns are defined at the Model level (via
-    the json_include and json_exclude attributes), this way:
-    
-    * jsonify calls do not have to dynamically check which columns to include
-    * all endpoints leading to the same Model yield the same columns
+    ..note::
+      
+      Only relationships with ``lazy`` set to ``'dynamic'`` or ``'lazy'`` can
+      have subroutes. All eagerly loaded relationships are simply available
+      directly on the model.
 
     """
     self.Models[Model.__name__] = (Model, {
@@ -135,15 +154,21 @@ class API(object):
     })
 
   def add_all_models(self, **kwargs):
-    """Accepts same arguments as add_model."""
+    """Convenience method to add all registered models.
+    
+    This method accepts same arguments as ``add_model``, which will be passed
+    to all models.
+    
+    Remember that calling ``add_model`` overwrites previous options, so it
+    is possible to add all models and individually changing the options for
+    each by calling the ``add_model`` method for a few models afterwards.
+    
+    """
     for model_class in [k.class_ for k in mapperlib._mapper_registry]:
       if not model_class.__name__ in self.Models:
         self.add_model(model_class, **kwargs)
 
   def _create_model_views(self, Model, options):
-    """Creates the views associated with the model.
-
-    """
     view = Model.__view__
     relationships = options.pop('relationships')
     if 'collection' in view: view['collection'].attach_view(Model, **options)
@@ -188,17 +213,7 @@ class API(object):
 
 class APIView(View):
 
-  """Base API view.
-
-  Note that the methods class attribute seems to be passed to the add_url_rule
-  function somehow (!).
-
-  A collection can either be:
-
-  * a query (most cases)
-  * an instrumented list (in the case of relationships)
-
-  """
+  """Base API view."""
 
   __all__ = []
   __extension__ = None
@@ -629,8 +644,7 @@ class ExpandedBase(Cacheable, Loggable):
   def __json__(cls):
     """Varnames that get JSONified.
 
-    Could be slightly optimized by transforming the ``uselist == False``
-    properties. Right now it emits multiple queries.
+    Doesn't emit any additional queries!
 
     """
     return list(
@@ -675,13 +689,11 @@ class ExpandedBase(Cacheable, Loggable):
     :rtype: dict
 
     """
-    print 'JSONIFY', depth, expand
     if depth <= self._json_depth:
       # this instance has already been jsonified at a greater or
       # equal depth, so we simply return its key (only used if expand is False)
       return self.get_primary_keys()
     if not expand:
-      print 'setting'
       self._json_depth = depth
     rv = {}
     for varname in self.__json__:
@@ -718,6 +730,10 @@ class ExpandedBase(Cacheable, Loggable):
     return columns
 
   @classmethod
+  def get_primary_key_names(cls):
+    return [key.name for key in class_mapper(cls).primary_key]
+
+  @classmethod
   def get_relationships(cls, show_private=False):
     rels =  class_mapper(cls).relationships.values()
     if not show_private:
@@ -725,12 +741,11 @@ class ExpandedBase(Cacheable, Loggable):
     return rels
 
   @classmethod
-  def get_related_models(cls):
-    return [(r.key, r.mapper.class_) for r in cls.get_relationships()]
-
-  @classmethod
-  def get_primary_key_names(cls):
-    return [key.name for key in class_mapper(cls).primary_key]
+  def get_related_models(cls, show_private=False):
+    return [
+      (r.key, r.mapper.class_)
+      for r in cls.get_relationships(show_private)
+    ]
 
 Model = declarative_base(cls=ExpandedBase)
 
