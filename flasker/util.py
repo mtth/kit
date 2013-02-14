@@ -339,15 +339,15 @@ class JSONDepthExceededError(Exception):
 
   pass
 
-def _jsonify(value, depth=0):
+def _jsonify(value, depth, expand):
   if depth < 0:
     raise JSONDepthExceededError()
   if hasattr(value, 'jsonify'):
-    return value.jsonify(depth=depth)
+    return value.jsonify(depth, expand)
   if isinstance(value, dict):
-    return dict((k, _jsonify(v, depth)) for k, v in value.items())
+    return dict((k, _jsonify(v, depth, expand)) for k, v in value.items())
   if isinstance(value, list):
-    return [_jsonify(v, depth) for v in value]
+    return [_jsonify(v, depth, expand) for v in value]
   if isinstance(value, (float, int, long, str, unicode, tuple)):
     return value
   if isinstance(value, datetime):
@@ -370,7 +370,7 @@ class Jsonifiable(object):
   """
 
   @property
-  def _json_attributes(self):
+  def __json__(self):
     """Default implementation of the attributes to jsonify.
 
     This is relatively slow (because it is evaluated for each jsonify call).
@@ -397,7 +397,7 @@ class Jsonifiable(object):
 
     """
     rv = {}
-    for varname in self._json_attributes:
+    for varname in self.__json__:
       try:
         rv[varname] = _jsonify(getattr(self, varname), depth - 1)
       except ValueError as e:

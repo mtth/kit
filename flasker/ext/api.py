@@ -19,6 +19,19 @@ from ..project import current_project as pj
 from ..util import (Cacheable, _jsonify, JSONDepthExceededError,
   JSONEncodedDict, Loggable, uncamelcase)
 
+
+class APIError(HTTPException):
+
+  """Thrown when an API call is invalid."""
+
+  def __init__(self, code, content):
+    self.code = code
+    self.content = content
+    super(APIError, self).__init__(content)
+
+  def __repr__(self):
+    return '<APIError %r: %r>' % (self.message, self.content)
+
 class API(object):
 
   """Main API extension.
@@ -26,14 +39,6 @@ class API(object):
   Handles the creation and registration of all API views. Available options:
 
   * URL_PREFIX
-  * ADD_ALL_MODELS
-  * DEFAULT_METHODS
-  * DEFAULT_ALLOW_PUT_MANY
-  * DEFAULT_RELATIONSHIPS
-  * DEFAULT_COLLECTION_DEPTH
-  * DEFAULT_MODEL_DEPTH
-  * DEFAULT_LIMIT
-  * MAX_LIMIT
 
   Models can be added in two ways. Either individually::
     
@@ -59,11 +64,10 @@ class API(object):
 
   config = {
     'URL_PREFIX': '/api',
-    'ADD_ALL_MODELS': False,
-    'RELATIONSHIPS': True,
-    'DEFAULT_DEPTH': 0,
+    'DEFAULT_DEPTH': 1,
     'DEFAULT_LIMIT': 20,
-    'MAX_LIMIT': None,
+    'MAX_LIMIT': 0,
+    'EXPAND': True,
   }
 
   def __init__(self, **kwargs):
@@ -72,39 +76,15 @@ class API(object):
     APIView.__extension__ = self
     self.Models = {}
 
-  def add_model(self, Model, **kwargs):
-    """Flag a Model to be added.
-
-    TODO: kwargs (relationships, methods...)
-    
-    Will override any options previously set for that Model.
-
-    If any of the options is ``None``, the default value will be used.
-
-    Relationships can either be ``True`` or a list of relationship keys. In the
-    first case, all one to many relationships will have a hook created,
-    otherwise only those mentioned in the list.
-
-    It might seem strange that this method doesn't have a columns filter, this
-    is for speed and consistency. Columns are defined at the Model level (via
-    the json_include and json_exclude attributes), this way:
-    
-    * jsonify calls do not have to dynamically check which columns to include
-    * all endpoints leading to the same Model yield the same columns
-
-    """
-    self.Models[Model.__name__] = (Model, kwargs)
-
   def authorize(self, func):
     """Decorator to set the authorizer function.
 
-    The authorizer is passed three arguments:
+    The authorizer is passed 2 argument:
     
-    * the model class
-    * the relationship (or ``None``)
-    * the request method 
+    * the endpoint
+    * the request method
 
-    The third argument is for convenience (the full request object can be 
+    The second argument is for convenience (the full request object can be 
     accessed as usual).
 
     If the function returns a truthful value, the request will proceed.
@@ -128,28 +108,66 @@ class API(object):
     """
     self._validate = func
 
-  def _create_model_views(self, Model, options=None):
-    """Creates the views associated with the model.
+  def add_model(self, Model, relationships=True, methods=True):
+    """Flag a Model to be added.
 
-    Sane defaults are chosen:
+    TODO: kwargs (relationships, methods...)
+    
+    Will override any options previously set for that Model.
 
-    * PUT and DELETE requests are only allowed for endpoints that correspond
-      to a single model
-    * POST requests are only allowed for endpoints that correspond to
-      collections
-    * endpoints corresponding to relationships only allow the GET method
-      (this choice was made to avoid duplicating features accross endpoints)
+    If any of the options is ``None``, the default value will be used.
+
+    Relationships can either be ``True`` or a list of relationship keys. In the
+    first case, all one to many relationships will have a hook created,
+    otherwise only those mentioned in the list.
+
+    It might seem strange that this method doesn't have a columns filter, this
+    is for speed and consistency. Columns are defined at the Model level (via
+    the json_include and json_exclude attributes), this way:
+    
+    * jsonify calls do not have to dynamically check which columns to include
+    * all endpoints leading to the same Model yield the same columns
 
     """
-    CollectionView.attach_view(Model)
-    ModelView.attach_view(Model)
-    for rel in Model.get_relationships():
+    self.Models[Model.__name__] = (Model, {
+      'relationships': relationships,
+      'methods': methods
+    })
+
+  def add_all_models(self, **kwargs):
+    """Accepts same arguments as add_model."""
+    for model_class in [k.class_ for k in mapperlib._mapper_registry]:
+      if not model_class.__name__ in self.Models:
+        self.add_model(model_class, **kwargs)
+
+  def _create_model_views(self, Model, options):
+    """Creates the views associated with the model.
+
+    """
+    view = Model.__view__
+    relationships = options.pop('relationships')
+    if 'collection' in view: view['collection'].attach_view(Model, **options)
+    if 'model' in view: view['model'].attach_view(Model, **options)
+    if relationships == True:
+      rels = Model.get_relationships()
+    elif relationships == False:
+      rels = []
+    else:
+      rels = filter(
+        lambda r: r.key in relationships,
+        Model.get_relationships()
+      )
+    for rel in rels:
       if rel.lazy == 'dynamic' and rel.uselist:
-        RelationshipModelView.attach_view(rel)
-        DynamicRelationshipView.attach_view(rel)
+        if 'relationship_model' in view:
+          view['relationship_model'].attach_view(rel, **options)
+        if 'dynamic_relationship' in view:
+          view['dynamic_relationship'].attach_view(rel, **options)
       elif rel.lazy == True and rel.uselist:
-        RelationshipModelView.attach_view(rel)
-        LazyRelationshipView.attach_view(rel)
+        if 'relationship_model' in view:
+          view['relationship_model'].attach_view(rel, **options)
+        if 'lazy_relationship' in view:
+          view['lazy_relationship'].attach_view(rel, **options)
 
   def _before_register(self, project):
     self.blueprint = Blueprint(
@@ -158,10 +176,6 @@ class API(object):
       template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
       url_prefix=self.config['URL_PREFIX']
     )
-    if self.config['ADD_ALL_MODELS']:
-      for model_class in [k.class_ for k in mapperlib._mapper_registry]:
-        if not model_class.__name__ in self.Models:
-          self.add_model(model_class)
     for model_class, options in self.Models.values():
       self._create_model_views(model_class, options)
     IndexView.attach_view()
@@ -169,6 +183,356 @@ class API(object):
   def _after_register(self, project):
     Model.metadata.create_all(project._engine, checkfirst=True)
     Model.query = _QueryProperty(project)
+
+# Views
+
+class APIView(View):
+
+  """Base API view.
+
+  Note that the methods class attribute seems to be passed to the add_url_rule
+  function somehow (!).
+
+  A collection can either be:
+
+  * a query (most cases)
+  * an instrumented list (in the case of relationships)
+
+  """
+
+  __all__ = []
+  __extension__ = None
+
+  # Flask stuff
+  decorators = []
+  methods = frozenset(['GET', 'POST', 'HEAD', 'OPTIONS',
+                       'DELETE', 'PUT', 'TRACE', 'PATCH'])
+
+  allowed_methods = frozenset()
+  allowed_request_keys = frozenset()
+
+  def __call__(self, *args, **kwargs):
+    method = getattr(self, request.method.lower(), None)
+    if method is None and request.method == 'HEAD':
+      method = getattr(self, 'get', None)
+    try:
+      if not method or request.method not in self.allowed_methods:
+        raise APIError(405, 'Method Not Allowed')
+      elif not self.is_authorized():
+        raise APIError(403, 'Not authorized')
+      else:
+        parser = Parser(self.allowed_request_keys)
+        return method(parser, *args, **kwargs)
+    except APIError as e:
+      return jsonify({
+        'status': e.message,
+        'request': {
+          'base_url': request.base_url,
+          'method': request.method,
+          'values': request.values
+        },
+        'content': e.content
+      }), e.code
+
+  def get_endpoint(self):
+    return uncamelcase(self.__class__.__name__)
+
+  def get_rule(self):
+    return self.url
+
+  def get_available_methods(self):
+    endpoint = self.get_endpoint()
+    return [
+      m for m in set(m.upper() for m in dir(self)) & self.allowed_methods
+      if self.is_authorized(m.upper())
+    ]
+
+  def is_authorized(self, method=None):
+    method = method or request.method
+    authorize = self.__extension__._authorize
+    if not authorize or authorize(self.get_endpoint(), method):
+      return True
+    return False
+
+  @classmethod
+  def attach_view(cls, *view_args, **view_kwargs):
+    view = cls(*view_args)
+    methods = view_kwargs.get('methods', True)
+    if methods == True:
+      view.allowed_methods = cls.methods
+    else:
+      view.allowed_methods = frozenset(methods)
+    cls.__extension__.blueprint.add_url_rule(
+      rule=view.get_rule(),
+      endpoint=view.get_endpoint(),
+      view_func=view,
+      methods=cls.methods
+    )
+    cls.__all__.append(view)
+
+class CollectionView(APIView):
+
+  """View for collection endpoints."""
+
+  allowed_request_keys = frozenset(['depth', 'limit', 'offset', 'filter', 
+                                    'sort'])
+
+  def __init__(self, Model):
+    self.Model = Model
+
+  def get_endpoint(self):
+    return 'collection_view_for_%s' % self.Model.__tablename__
+
+  def get_rule(self):
+    return '/%s' % self.Model.__tablename__
+
+  def get(self, parser, **kwargs):
+    timers = {}
+    filtered_query = parser.filter_and_sort(self.Model.query)
+    now = time()
+    count = parser.filter_and_sort(
+      self.Model.query.get_count_query(), False
+    ).one()[0]
+    timers['count'] = time() - now
+    now = time()
+    content = [
+      e.jsonify(**parser.get_jsonify_kwargs())
+      for e in parser.offset_and_limit(filtered_query)
+    ]
+    timers['jsonification'] = time() - now
+    return jsonify({
+      'status': '200 Success',
+      'processing_time': timers,
+      'matches': {
+        'total': count,
+        'returned': len(content),
+      },
+      'request': {
+        'base_url': request.base_url,
+        'method': request.method,
+        'values': request.values
+      },
+      'content': content
+    }), 200
+
+  def post(self, parser, **kwargs):
+    if self.is_validated(request.json):
+      if not self.rel:
+        model = self.Model(**request.json)
+      else:
+        parent = self.Model.query.get(kwargs.values())
+        if not parent:
+          raise APIError(404, 'No resource found for this ID')
+        Model = self.rel.mapper.class_
+        model = Model(**request.json)
+        # TODO automatically add parent_id to backref
+      pj.session.add(model)
+      pj.session.commit() # generate an ID
+      return jsonify(model.jsonify(depth=allowed_request_keys['depth']))
+    else:
+      raise APIError(400, 'Failed validation')
+
+class ModelView(APIView):
+
+  """View for individual model endpoints."""
+
+  allowed_request_keys = frozenset(['depth', 'expand'])
+
+  def __init__(self, Model):
+    self.Model = Model
+
+  def get_endpoint(self):
+    return 'model_view_for_%s' % self.Model.__tablename__
+
+  def get_rule(self):
+    url = '/%s' % self.Model.__tablename__
+    url += ''.join('/<%s>' % n for n in self.Model.get_primary_key_names())
+    return url
+
+  def get(self, parser, **kwargs):
+    model = self.Model.query.get(kwargs.values())
+    if not model:
+      raise APIError(404, 'No resource found')
+    return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+
+  def put(self, parser, **kwargs):
+    model = self.Model.query.get(kwargs.values())
+    if model:
+      if self.is_validated(request.json):
+        for k, v in request.json.items():
+          setattr(model, k, v)
+        return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+      else:
+        raise APIError(400, 'Failed validation')
+    else:
+      raise APIError(404, 'No resource found for this ID')
+
+  def delete(self, parser, **kwargs):
+    model = self.Model.query.get(kwargs.values())
+    if model:
+      pj.session.delete(model)
+      return jsonify({'status': '200 Success', 'content': 'Resource deleted'})
+    else:
+      raise APIError(404, 'No resource found for this ID')
+
+class RelationshipView(APIView):
+
+  def __init__(self, rel):
+    self.rel = rel
+
+  @property
+  def Model(self):
+    return self.rel.mapper.class_
+
+  @property
+  def parent_Model(self):
+    return self.rel.parent.class_
+
+  def get_endpoint(self):
+    return 'relationship_view_for_%s_%s' % (
+      uncamelcase(self.parent_Model.__name__),
+      self.rel.key
+    )
+
+  def get_rule(self):
+    url = '/%s' % self.parent_Model.__tablename__
+    url += ''.join(
+      '/<%s>' % n for n in self.parent_Model.get_primary_key_names()
+    )
+    url += '/%s' % self.rel.key
+    return url
+
+  def get_collection(self, **kwargs):
+    parent_model = self.parent_Model.query.get(kwargs.values())
+    if not parent_model:
+      raise APIError(404, 'No resource found')
+    return getattr(parent_model, self.rel.key)
+
+class DynamicRelationshipView(RelationshipView):
+
+  allowed_request_keys = frozenset(['depth', 'limit', 'offset', 'filter',
+                                    'sort', 'expand'])
+
+  def get(self, parser, **kwargs):
+    query = parser.filter_and_sort(self.get_collection(**kwargs))
+    timers = {}
+    now = time()
+    count = query.count()
+    timers['count'] = time() - now
+    now = time()
+    content = [
+      e.jsonify(**parser.get_jsonify_kwargs())
+      for e in parser.offset_and_limit(query)
+    ]
+    timers['jsonification'] = time() - now
+    return jsonify({
+      'status': '200 Success',
+      'processing_time': timers,
+      'matches': {
+        'total': count,
+        'returned': len(content),
+      },
+      'request': {
+        'base_url': request.base_url,
+        'method': request.method,
+        'values': request.values
+      },
+      'content': content
+    }), 200
+
+class LazyRelationshipView(RelationshipView):
+
+  allowed_request_keys = frozenset(['depth', 'expand'])
+
+  def get(self, parser, **kwargs):
+    timers = {}
+    now = time()
+    content = [
+      e.jsonify(**parser.get_jsonify_kwargs())
+      for e in self.get_collection(**kwargs)
+    ]
+    count = len(content)
+    timers['jsonification'] = time() - now
+    return jsonify({
+      'status': '200 Success',
+      'processing_time': timers,
+      'matches': {
+        'total': count,
+        'returned': count,
+      },
+      'request': {
+        'base_url': request.base_url,
+        'method': request.method,
+        'values': request.values
+      },
+      'content': content
+    }), 200
+
+  def post(self, **kwargs):
+    pass
+
+class RelationshipModelView(RelationshipView):
+
+  allowed_request_keys = frozenset(['depth', 'expand'])
+
+  def get_endpoint(self):
+    return 'relationship_model_view_for_%s_%s' % (
+      self.parent_Model.__name__,
+      self.rel.key
+    )
+
+  def get_rule(self):
+    url = '/%s' % self.parent_Model.__tablename__
+    url += ''.join(
+      '/<%s>' % n for n in self.parent_Model.get_primary_key_names()
+    )
+    url += '/%s/<key>' % self.rel.key
+    return url
+
+  def get(self, parser, **kwargs):
+    key = kwargs.pop('key')
+    collection = self.get_collection(**kwargs)
+    if isinstance(collection, (InstrumentedList, AppenderQuery)):
+      try:
+        pos = int(key) - 1
+      except ValueError:
+        raise APIError(400, 'Invalid key')
+      else:
+        if pos >= 0:
+          if isinstance(collection, InstrumentedList):
+            try:
+              model = collection[pos]
+            except IndexError:
+              model = None
+          else:
+            model = collection.offset(pos).first()
+        else:
+          raise APIError(400, 'Invalid position index')
+    # TODO: support attribute mapped collections
+    if not model:
+      raise APIError(404, 'No resource found')
+    return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+
+  def put(self, parser, **kwargs):
+    pass
+
+class IndexView(APIView):
+
+  """API 'splash' page with a few helpful keys."""
+
+  url = '/'
+
+  def get(self, params, **kwargs):
+    return jsonify({
+      'status': '200 Welcome',
+      'available_endpoints': [
+        '%s (%s)' % (
+          view.get_rule(),
+          ', '.join(m.upper() for m in view.get_available_methods()))
+        for view in self.__all__
+        if view.get_available_methods()
+      ]
+    })
 
 # SQLAlchemy Model
 
@@ -237,6 +601,14 @@ class ExpandedBase(Cacheable, Loggable):
 
   """
 
+  __view__ = {
+    'model': ModelView,
+    'collection': CollectionView,
+    'dynamic_relationship': RelationshipView,
+    'lazy_relationship': LazyRelationshipView,
+    'relationship_model': RelationshipModelView
+  }
+
   _cache = Column(JSONEncodedDict)
   _json_depth = 0
 
@@ -254,19 +626,15 @@ class ExpandedBase(Cacheable, Loggable):
     return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
 
   @declared_attr
-  def __tablename__(cls):
-    """Automatically create the table name.
+  def __json__(cls):
+    """Varnames that get JSONified.
 
-    Override this to choose your own tablename (e.g. for single table
-    inheritance).
+    Could be slightly optimized by transforming the ``uselist == False``
+    properties. Right now it emits multiple queries.
 
     """
-    return '%ss' % uncamelcase(cls.__name__)
-
-  @declared_attr
-  def __json__(cls):
-    return dict(
-      (varname, 1)
+    return list(
+      varname
       for varname in dir(cls)
       if not varname.startswith('_')  # don't show private properties
       if (
@@ -278,11 +646,23 @@ class ExpandedBase(Cacheable, Loggable):
       ) or (
         isinstance(getattr(cls, varname), InstrumentedAttribute) and
         isinstance(getattr(cls, varname).property, RelationshipProperty)
-        and getattr(cls, varname).property.lazy in [False, 'joined']
+        and (
+          getattr(cls, varname).property.lazy in [False, 'joined', 'immediate']
+        )
       )
     )
 
-  def jsonify(self, depth=1):
+  @declared_attr
+  def __tablename__(cls):
+    """Automatically create the table name.
+
+    Override this to choose your own tablename (e.g. for single table
+    inheritance).
+
+    """
+    return '%ss' % uncamelcase(cls.__name__)
+
+  def jsonify(self, depth=1, expand=True):
     """Special implementation of jsonify for Model objects.
     
     Overrides the basic jsonify method to specialize it for models.
@@ -295,15 +675,18 @@ class ExpandedBase(Cacheable, Loggable):
     :rtype: dict
 
     """
+    print 'JSONIFY', depth, expand
     if depth <= self._json_depth:
       # this instance has already been jsonified at a greater or
-      # equal depth, so we simply return its key
+      # equal depth, so we simply return its key (only used if expand is False)
       return self.get_primary_keys()
+    if not expand:
+      print 'setting'
+      self._json_depth = depth
     rv = {}
-    self._json_depth = depth
-    for varname, cost in self.__json__.iteritems():
+    for varname in self.__json__:
       try:
-        rv[varname] = _jsonify(getattr(self, varname), depth - cost)
+        rv[varname] = _jsonify(getattr(self, varname), depth - 1, expand)
       except ValueError as e:
         rv[varname] = e.message
       except JSONDepthExceededError:
@@ -349,353 +732,7 @@ class ExpandedBase(Cacheable, Loggable):
   def get_primary_key_names(cls):
     return [key.name for key in class_mapper(cls).primary_key]
 
-
 Model = declarative_base(cls=ExpandedBase)
-
-# Error
-
-class APIError(HTTPException):
-
-  """Thrown when an API call is invalid."""
-
-  def __init__(self, code, content):
-    self.code = code
-    self.content = content
-    super(APIError, self).__init__(content)
-
-  def __repr__(self):
-    return '<APIError %r: %r>' % (self.message, self.content)
-
-# Views
-
-class APIView(View):
-
-  """Base API view.
-
-  Note that the methods class attribute seems to be passed to the add_url_rule
-  function somehow (!).
-
-  A collection can either be:
-
-  * a query (most cases)
-  * an instrumented list (in the case of relationships)
-
-  """
-
-  __all__ = []
-  __extension__ = None
-
-  # Flask stuff
-  decorators = []
-  methods = frozenset(['get', 'post', 'head', 'options',
-                       'delete', 'put', 'trace', 'patch'])
-
-  allowed_request_keys = frozenset()
-
-  def __call__(self, *args, **kwargs):
-    method = getattr(self, request.method.lower(), None)
-    if method is None and request.method == 'HEAD':
-      method = getattr(self, 'get', None)
-    try:
-      if not method:
-        raise APIError(405, 'Method Not Allowed')
-      else:
-        parser = Parser(self.allowed_request_keys)
-        return method(parser, *args, **kwargs)
-    except APIError as e:
-      return jsonify({
-        'status': e.message,
-        'request': {
-          'base_url': request.base_url,
-          'method': request.method,
-          'values': request.values
-        },
-        'content': e.content
-      }), e.code
-
-  def get_endpoint(self):
-    return uncamelcase(self.__class__.__name__)
-
-  def get_rule(self):
-    return self.url
-
-  @classmethod
-  def attach_view(cls, *view_args, **view_kwargs):
-    view = cls(*view_args, **view_kwargs)
-    cls.__extension__.blueprint.add_url_rule(
-      rule=view.get_rule(),
-      endpoint=view.get_endpoint(),
-      view_func=view,
-      methods=cls.methods
-    )
-    cls.__all__.append(view)
-
-  @classmethod
-  def get_available_methods(cls):
-    return set(dir(cls)) & cls.methods
-
-class CollectionView(APIView):
-
-  """View for collection endpoints."""
-
-  allowed_request_keys = frozenset(['depth', 'limit', 'offset', 'filter', 
-                                    'sort'])
-
-  def __init__(self, Model):
-    self.Model = Model
-
-  def get_endpoint(self):
-    return 'collection_view_for_%s' % self.Model.__tablename__
-
-  def get_rule(self):
-    return '/%s' % self.Model.__tablename__
-
-  def get(self, parser, **kwargs):
-    timers = {}
-    filtered_query = parser.filter_and_sort(self.Model.query)
-    now = time()
-    count = parser.filter_and_sort(
-      self.Model.query.get_count_query(), False
-    ).one()[0]
-    timers['count'] = time() - now
-    now = time()
-    content = [
-      e.jsonify(parser.get_depth())
-      for e in parser.offset_and_limit(filtered_query)
-    ]
-    timers['jsonification'] = time() - now
-    return jsonify({
-      'status': '200 Success',
-      'processing_time': timers,
-      'matches': {
-        'total': count,
-        'returned': len(content),
-      },
-      'request': {
-        'base_url': request.base_url,
-        'method': request.method,
-        'values': request.values
-      },
-      'content': content
-    }), 200
-
-  def post(self, parser, **kwargs):
-    if self.is_validated(request.json):
-      if not self.rel:
-        model = self.Model(**request.json)
-      else:
-        parent = self.Model.query.get(kwargs.values())
-        if not parent:
-          raise APIError(404, 'No resource found for this ID')
-        Model = self.rel.mapper.class_
-        model = Model(**request.json)
-        # TODO automatically add parent_id to backref
-      pj.session.add(model)
-      pj.session.commit() # generate an ID
-      return jsonify(model.jsonify(depth=allowed_request_keys['depth']))
-    else:
-      raise APIError(400, 'Failed validation')
-
-class ModelView(APIView):
-
-  """View for individual model endpoints."""
-
-  allowed_request_keys = frozenset(['depth'])
-
-  def __init__(self, Model):
-    self.Model = Model
-
-  def get_endpoint(self):
-    return 'model_view_for_%s' % self.Model.__tablename__
-
-  def get_rule(self):
-    url = '/%s' % self.Model.__tablename__
-    url += ''.join('/<%s>' % n for n in self.Model.get_primary_key_names())
-    return url
-
-  def get(self, parser, **kwargs):
-    model = self.Model.query.get(kwargs.values())
-    if not model:
-      raise APIError(404, 'No resource found')
-    return jsonify(model.jsonify(depth=parser.get_depth()))
-
-  def put(self, parser, **kwargs):
-    model = self.Model.query.get(kwargs.values())
-    if model:
-      if self.is_validated(request.json):
-        for k, v in request.json.items():
-          setattr(model, k, v)
-        return jsonify(model.jsonify(depth=allowed_request_keys['depth']))
-      else:
-        raise APIError(400, 'Failed validation')
-    else:
-      raise APIError(404, 'No resource found for this ID')
-
-  def delete(self, parser, **kwargs):
-    model = self.Model.query.get(kwargs.values())
-    if model:
-      pj.session.delete(model)
-      return jsonify({'status': '200 Success', 'content': 'Resource deleted'})
-    else:
-      raise APIError(404, 'No resource found for this ID')
-
-class RelationshipView(APIView):
-
-  def __init__(self, rel):
-    self.rel = rel
-
-  @property
-  def Model(self):
-    return self.rel.mapper.class_
-
-  @property
-  def parent_Model(self):
-    return self.rel.parent.class_
-
-  def get_endpoint(self):
-    return 'relationship_view_for_%s_%s' % (
-      self.parent_Model.__name__,
-      self.rel.key
-    )
-
-  def get_rule(self):
-    url = '/%s' % self.parent_Model.__tablename__
-    url += ''.join(
-      '/<%s>' % n for n in self.parent_Model.get_primary_key_names()
-    )
-    url += '/%s' % self.rel.key
-    return url
-
-  def get_collection(self, **kwargs):
-    parent_model = self.parent_Model.query.get(kwargs.values())
-    if not parent_model:
-      raise APIError(404, 'No resource found')
-    return getattr(parent_model, self.rel.key)
-
-class DynamicRelationshipView(RelationshipView):
-
-  allowed_request_keys = frozenset(['depth', 'limit', 'offset', 'filter',
-                                    'sort'])
-
-  def get(self, parser, **kwargs):
-    query = parser.filter_and_sort(self.get_collection(**kwargs))
-    timers = {}
-    now = time()
-    count = query.count()
-    timers['count'] = time() - now
-    now = time()
-    content = [
-      e.jsonify(parser.get_depth())
-      for e in parser.offset_and_limit(query)
-    ]
-    timers['jsonification'] = time() - now
-    return jsonify({
-      'status': '200 Success',
-      'processing_time': timers,
-      'matches': {
-        'total': count,
-        'returned': len(content),
-      },
-      'request': {
-        'base_url': request.base_url,
-        'method': request.method,
-        'values': request.values
-      },
-      'content': content
-    }), 200
-
-class LazyRelationshipView(RelationshipView):
-
-  allowed_request_keys = frozenset(['depth'])
-
-  def get(self, parser, **kwargs):
-    timers = {}
-    now = time()
-    content = [
-      e.jsonify(parser.get_depth())
-      for e in self.get_collection(**kwargs)
-    ]
-    count = len(content)
-    timers['jsonification'] = time() - now
-    return jsonify({
-      'status': '200 Success',
-      'processing_time': timers,
-      'matches': {
-        'total': count,
-        'returned': count,
-      },
-      'request': {
-        'base_url': request.base_url,
-        'method': request.method,
-        'values': request.values
-      },
-      'content': content
-    }), 200
-
-  def post(self, **kwargs):
-    pass
-
-class RelationshipModelView(RelationshipView):
-
-  allowed_request_keys = frozenset(['depth'])
-
-  def get_endpoint(self):
-    return 'relationship_model_view_for_%s_%s' % (
-      self.parent_Model.__name__,
-      self.rel.key
-    )
-
-  def get_rule(self):
-    url = '/%s' % self.parent_Model.__tablename__
-    url += ''.join(
-      '/<%s>' % n for n in self.parent_Model.get_primary_key_names()
-    )
-    url += '/%s/<key>' % self.rel.key
-    return url
-
-  def get(self, parser, **kwargs):
-    key = kwargs.pop('key')
-    collection = self.get_collection(**kwargs)
-    if isinstance(collection, (InstrumentedList, AppenderQuery)):
-      try:
-        pos = int(key) - 1
-      except ValueError:
-        raise APIError(400, 'Invalid key')
-      else:
-        if pos >= 0:
-          if isinstance(collection, InstrumentedList):
-            try:
-              model = collection[pos]
-            except IndexError:
-              model = None
-          else:
-            model = collection.offset(pos).first()
-        else:
-          raise APIError(400, 'Invalid position index')
-    # TODO: support attribute mapped collections
-    if not model:
-      raise APIError(404, 'No resource found')
-    return jsonify(model.jsonify(depth=parser.get_depth()))
-
-  def put(self, parser, **kwargs):
-    pass
-
-class IndexView(APIView):
-
-  """API 'splash' page with a few helpful keys."""
-
-  url = '/'
-
-  def get(self, params, **kwargs):
-    return jsonify({
-      'status': '200 Welcome',
-      'available_endpoints': [
-        '%s (%s)' % (
-          view.get_rule(),
-          ', '.join(m.upper() for m in view.get_available_methods()))
-        for view in self.__all__
-      ]
-    })
 
 # Helper
 
@@ -704,6 +741,7 @@ class Parser(object):
   sep = ';'
 
   def __init__(self, allowed_keys):
+    self.defaults = APIView.__extension__.config
     self.args = request.args
     self.keys = set(self.args.keys())
     if not self.keys <= set(allowed_keys):
@@ -711,8 +749,11 @@ class Parser(object):
         list(self.keys), list(allowed_keys)
        ))
 
-  def get_depth(self):
-    return self.args.get('depth', 1, int)
+  def get_jsonify_kwargs(self):
+    return {
+      'depth': self.args.get('depth', self.defaults['DEFAULT_DEPTH'], int),
+      'expand': self.args.get('expand', self.defaults['EXPAND'], int)
+    }
 
   def filter_and_sort(self, query, sort=True):
     Model = self._get_Model(query)
@@ -763,7 +804,10 @@ class Parser(object):
     if offset:
       query = query.offset(offset)
     # limit
-    limit = self.args.get('limit', 20, int)
+    max_limit = self.defaults['MAX_LIMIT']
+    limit = self.args.get('limit', self.defaults['DEFAULT_LIMIT'], int)
+    if max_limit:
+      limit = min(limit, max_limit) if limit else max_limit
     if limit:
       query = query.limit(limit)
     return query
@@ -775,3 +819,4 @@ class Parser(object):
     else:
       # this is a relationship appenderquery
       return query.attr.target_mapper.class_
+
