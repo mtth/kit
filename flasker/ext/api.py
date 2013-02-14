@@ -213,7 +213,11 @@ class API(object):
 
 class APIView(View):
 
-  """Base API view."""
+  """Base API view.
+
+  Subclass this to implement your own.
+  
+  """
 
   __all__ = []
   __extension__ = None
@@ -223,7 +227,12 @@ class APIView(View):
   methods = frozenset(['GET', 'POST', 'HEAD', 'OPTIONS',
                        'DELETE', 'PUT', 'TRACE', 'PATCH'])
 
+  # these control which requests are allowed:
+  # the default behavior is to allow all request methods that have a 
+  # corresponding method implemented but this can be further restricted
+  # with the ``methods`` kwarg of ``add_model``, reflected here
   allowed_methods = frozenset()
+  # which url query parameters are allowed by the parser
   allowed_request_keys = frozenset()
 
   def __call__(self, *args, **kwargs):
@@ -752,6 +761,8 @@ Model = declarative_base(cls=ExpandedBase)
 # Helper
 
 class Parser(object):
+
+  """The request parameter parser."""
 
   sep = ';'
 
