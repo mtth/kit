@@ -319,8 +319,11 @@ class _CachedProperty(property):
       obj._cache = {}
     if value:
       if isinstance(value, _CacheRefresh):
-        t = time() - obj._cache[self.func.__name__][1]
-        if t > value.expiration:
+        if self.func.__name__ in obj._cache:
+          t = time() - obj._cache[self.func.__name__][1]
+          if t > value.expiration:
+            obj._cache[self.func.__name__] = (self.func(obj), time())
+        else:
           obj._cache[self.func.__name__] = (self.func(obj), time())
       else:
         obj._cache[self.func.__name__] = (value, time())
