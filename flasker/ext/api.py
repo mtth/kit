@@ -604,7 +604,7 @@ class IndexView(APIView):
 
 # SQLAlchemy Model
 
-def get_models_from_query(query):
+def get_model_classes_from_query(query):
   return [
     d['expr'].class_
     for d in query.column_descriptions
@@ -642,18 +642,18 @@ class _BaseQuery(Query):
     
     """
     models = self.get_models()
-    if len(models) == 1:
-      Model = models[0]
-      query = pj.session.query(func.count(Model)).select_from(Model)
-      query._base_count_class = Model # hook to remember class
-      return query
-    raise Exception(
-      'Unable to generate count query: %s models found' % len(models)
-    )
+
+    # _BaseQuery objects should only ever have one model
+    assert len(models) == 1, '%s models found for %s' % (len(models), self)
+
+    Model = models[0]
+    query = pj.session.query(func.count(Model)).select_from(Model)
+    query._base_count_class = Model # hook to remember class
+    return query
       
 
   def get_models(self):
-    return get_models_from_query(self)
+    return get_model_classes_from_query(self)
 
 class _QueryProperty(object):
 
@@ -840,7 +840,7 @@ class Parser(object):
     }
 
   def filter_and_sort(self, query, sort=True):
-    Model = self._get_Model(query)
+    Model = self._get_model_class(query)
     # filter
     raws = self.args.getlist('filter')
     for raw in raws:
@@ -896,10 +896,14 @@ class Parser(object):
       query = query.limit(limit)
     return query
 
-  def _get_Model(self, query):
+  def _get_model_class(self, query):
     if hasattr(query, '_base_count_class'): # this query is a count
       return getattr(query, '_base_count_class')
-    models = get_models_from_query(query)
+    models = get_model_classes_from_query(query)
+
+    # only _BaseQueries and AppenderQueries should get here
+    # they both have a single model
     assert len(models) == 1, 'More than one model for this query'
+
     return models[0]
 

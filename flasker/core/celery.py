@@ -24,6 +24,6 @@ def create_worker_connection(*args, **kwargs):
   the connection will fail.
 
   """
-  pj.setup_database_connection(celery=True)
+  pj._setup_database_connection(app=False, celery=True)
 
 pj.celery = celery
