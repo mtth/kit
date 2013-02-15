@@ -2,13 +2,15 @@
 
 """General helpers."""
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from csv import DictReader
 from datetime import datetime
 from json import dumps, loads
 from functools import partial, wraps
+from math import ceil
 from re import sub
 from sqlalchemy.ext.mutable import Mutable
+from sqlalchemy.orm import Query
 from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
 
@@ -74,6 +76,30 @@ def convert(value, return_type=None):
         else:
           return value
 
+def partition(collection, batches=0, batch_size=0):
+  if (batches and batch_size) or (not batches and not batch_size):
+    raise ValueError('Exactly one of batches and batch_size '
+                     'must be specified.')
+  offset = 0
+  limit = batch_size
+  Partition = namedtuple('partition', ['offset', 'limit'])
+  if isinstance(collection, Query):
+    # collection is a SQLAlchemy query
+    # count won't be very efficient, but only run once so it's ok
+    total = collection.count()
+    if batches:
+      limit = int(ceil(float(total) / batches))
+    while offset < total:
+      yield collection.offset(offset).limit(limit), Partition(offset, limit)
+      offset += limit
+  else:
+    # collection is a list
+    total = len(collection)
+    if batches:
+      limit = int(ceil(float(total) / batches))
+    while offset < total:
+      yield collection[offset:offset + limit], Partition(offset, limit)
+      offset += limit
 
 # Utility Classes
 

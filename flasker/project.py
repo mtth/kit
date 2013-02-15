@@ -45,6 +45,7 @@ class Project(object):
       'APP_FOLDER': 'app',
       'APP_STATIC_FOLDER': 'static',
       'APP_TEMPLATE_FOLDER': 'templates',
+      'COMMIT_ON_TEARDOWN': True,
     },
     'ENGINE': {
       'URL': 'sqlite://',
@@ -109,7 +110,7 @@ class Project(object):
     for mod in project_modules:
       __import__(mod.strip())
     # database
-    self._setup_database_connection(app, celery)
+    self._setup_database_connection()
     # extensions
     for extension, config_section in self._extensions or []:
       if config_section:
@@ -122,20 +123,12 @@ class Project(object):
     for func in self._before_startup or []:
       func(self)
 
-  def _setup_database_connection(self, app, celery):
+  def _setup_database_connection(self):
     engine_ops = dict((k.lower(), v) for k,v in self.config['ENGINE'].items())
     self._engine = create_engine(engine_ops.pop('url'), **engine_ops)
     self.session = scoped_session(sessionmaker(bind=self._engine))
-    if app:
-      @self.app.teardown_request
-      def teardown_request_handler(exception=None):
-        self._dismantle_database_connections()
-    if celery:
-      @task_postrun.connect
-      def task_postrun_handler(*args, **kwargs):
-        self._dismantle_database_connections()
 
-  def _dismantle_database_connections(self, **kwrds):
+  def _dismantle_database_connections(self):
     """Remove database connections.
 
     Has to be called after app request/job terminates or connections
@@ -143,7 +136,8 @@ class Project(object):
 
     """
     try:
-      self.session.commit()
+      if self.config['PROJECT']['COMMIT_ON_TEARDOWN']:
+        self.session.commit()
     except InvalidRequestError as e:
       self.session.rollback()
       self.session.expunge_all()

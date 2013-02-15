@@ -29,4 +29,8 @@ def inject():
     'static_url': static_url,
   }
 
+@app.teardown_request
+def teardown_request_handler(exception=None):
+  pj._dismantle_database_connections()
+
 pj.app = app

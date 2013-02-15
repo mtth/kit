@@ -15,7 +15,7 @@ from sys import path
 from flasker import current_project
 from flasker.project import Project, ProjectImportError
 
-def project_context(app=False, celery=False):
+def project_context(handler):
   """Create the project context.
   
   If no configuration file was entered in the main parser through the -c
@@ -26,38 +26,36 @@ def project_context(app=False, celery=False):
   returning, this decorator handles this.
 
   """
-  def _wrapper(handler):
-    @wraps(handler)
-    def wrapper(*args, **kwargs):
-      parsed_args = args[0]
-      try:
-        conf_file = parsed_args.conf
-        if not conf_file:
-          conf_files = [fn for fn in listdir('.') if splitext(fn)[1] == '.cfg']
-          if len(conf_files) == 0:
-            print (
-              'No configuration file found in current directory. '
-              'Please enter a path to one with the -c option.'
-            )
-            return
-          elif len(conf_files) > 1:
-            print (
-              'Several configuration files found in current directory: %s. '
-              'Please disambiguate with the -c option.'
-            ) % ', '.join(conf_files)
-            return
-          else:
-            conf_file = conf_files[0]
-        path.append(abspath(dirname(conf_file))) # for reloader to work
-        pj = Project(conf_file)
-      except ProjectImportError as e:
-        print e
-        return
-      else:
-        pj._make(app, celery)
-        handler(*args, **kwargs)
-    return wrapper
-  return _wrapper
+  @wraps(handler)
+  def wrapper(*args, **kwargs):
+    parsed_args = args[0]
+    try:
+      conf_file = parsed_args.conf
+      if not conf_file:
+        conf_files = [fn for fn in listdir('.') if splitext(fn)[1] == '.cfg']
+        if len(conf_files) == 0:
+          print (
+            'No configuration file found in current directory. '
+            'Please enter a path to one with the -c option.'
+          )
+          return
+        elif len(conf_files) > 1:
+          print (
+            'Several configuration files found in current directory: %s. '
+            'Please disambiguate with the -c option.'
+          ) % ', '.join(conf_files)
+          return
+        else:
+          conf_file = conf_files[0]
+      path.append(abspath(dirname(conf_file))) # for reloader to work
+      pj = Project(conf_file)
+    except ProjectImportError as e:
+      print e
+      return
+    else:
+      pj._make()
+      handler(*args, **kwargs)
+  return wrapper
 
 # Parsers
 
@@ -137,7 +135,7 @@ server_parser.add_argument('-d', '--debug',
   help='run in debug mode (autoreload and debugging)'
 )
 
-@project_context(app=True)
+@project_context
 def server_handler(parsed_args):
   """Start a Werkzeug server for the Flask application."""
   pj = current_project
@@ -150,7 +148,7 @@ server_parser.set_defaults(handler=server_handler)
 
 shell_parser = subparsers.add_parser('shell', help='start shell')
 
-@project_context()
+@project_context
 def shell_handler(parsed_args):
   """Start a shell in the context of the project."""
   pj = current_project
@@ -189,7 +187,7 @@ worker_parser.add_argument('-r', '--raw',
   help='raw options to pass through',
 )
 
-@project_context(celery=True)
+@project_context
 def worker_handler(parsed_args):
   """Starts a celery worker.
 
@@ -247,7 +245,7 @@ flower_parser.add_argument('-r', '--raw',
   nargs=REMAINDER
 )
 
-@project_context()
+@project_context
 def flower_handler(parsed_args):
   """Start flower worker manager."""
   pj = current_project

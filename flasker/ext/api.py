@@ -648,9 +648,7 @@ class _BaseQuery(Query):
 
     Model = models[0]
     query = pj.session.query(func.count(Model)).select_from(Model)
-    query._base_count_class = Model # hook to remember class
     return query
-      
 
   def get_models(self):
     return get_model_classes_from_query(self)
@@ -720,8 +718,7 @@ class ExpandedBase(Cacheable, Loggable):
         isinstance(getattr(cls, varname), property) 
       ) or (
         isinstance(getattr(cls, varname), InstrumentedAttribute) and
-        isinstance(getattr(cls, varname).property, ColumnProperty) and
-        not getattr(cls, varname).foreign_keys
+        isinstance(getattr(cls, varname).property, ColumnProperty)
       ) or (
         isinstance(getattr(cls, varname), InstrumentedAttribute) and
         isinstance(getattr(cls, varname).property, RelationshipProperty)
@@ -897,13 +894,15 @@ class Parser(object):
     return query
 
   def _get_model_class(self, query):
-    if hasattr(query, '_base_count_class'): # this query is a count
-      return getattr(query, '_base_count_class')
-    models = get_model_classes_from_query(query)
 
-    # only _BaseQueries and AppenderQueries should get here
-    # they both have a single model
-    assert len(models) == 1, 'More than one model for this query'
+    # only tested for _BaseQueries and associated count queries
+    assert len(models) < 2, 'Invalid query'
 
+    if not len(models):
+      # this is a count query
+      return query._select_from_entity
+    # this is a _BaseQuery
     return models[0]
+
+
 

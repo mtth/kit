@@ -5,7 +5,7 @@
 from __future__ import absolute_import
 
 from celery import Celery
-from celery.signals import worker_process_init
+from celery.signals import task_postrun, worker_process_init
 from celery.task import periodic_task
 
 from ..project import current_project
@@ -24,6 +24,10 @@ def create_worker_connection(*args, **kwargs):
   the connection will fail.
 
   """
-  pj._setup_database_connection(app=False, celery=True)
+  pj._setup_database_connection()
+
+@task_postrun.connect
+def task_postrun_handler(*args, **kwargs):
+  pj._dismantle_database_connections()
 
 pj.celery = celery
