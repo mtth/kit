@@ -131,6 +131,30 @@ Once Flasker has finished importing all your project module files and
 configuring the applications, it handles startup!
 
 
+Project configuration
+---------------------
+
+A few options are available for the ``PROJECT`` section of the configuration
+file:
+
+* ``NAME``: the name of the project, used for debugging and to generate a
+  default domain name for the Celery workers.
+* ``MODULES``: comma separated list of the project's modules. They must be
+  importable from the configuration file's folder.
+* ``APP_FOLDER``: path to the Flask application's root folder relative to the 
+  configuration file (defaults to ``app``).
+* ``APP_STATIC_FOLDER``: the application's ``static_folder`` relative to the
+  application's root folder (defaults to ``static``).
+* ``APP_TEMPLATE_FOLDER``: the application's ``template_folder`` relative to
+  the application's root folder (defaults to ``templates``).
+* ``COMMIT_ON_TEARDOWN``: if ``True`` (default), all database transactions will
+  be committed after each Flask app request and Celery task completion. If 
+  ``False`` the session will simply be removed.
+* ``DOMAIN``: if specified, used to generate Celery worker hostnames (defaults
+  to the project name, sluggified).
+* ``SUBDOMAIN``: if specified, used to generate Celery worker hostnames 
+  (defaults to the configuration file's name).
+
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
 .. _Flask: http://flask.pocoo.org/docs/api/
