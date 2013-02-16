@@ -53,7 +53,7 @@
 <dl class="class">
 <dt id="flasker.util.Cacheable">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Cacheable</tt><a class="reference internal" href="_modules/flasker/util.html#Cacheable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Cacheable" title="Permalink to this definition">¶</a></dt>
-<dd><p>Class with cacheable properties.</p>
+<dd><p>Mixin to support cacheable properties.</p>
 <p>Implements a few cache maintenance utilities.</p>
 <dl class="method">
 <dt id="flasker.util.Cacheable.refresh_cache">
@@ -98,67 +98,94 @@ persistent caches)</li>
 <dl class="class">
 <dt id="flasker.util.Dict">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Dict</tt><a class="reference internal" href="_modules/flasker/util.html#Dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Dictionary class with a few helper methods.</p>
-<p>The goal of this class is to make multilevel dictionary actions
-simple.</p>
-<p>Usage:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">d</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
-<span class="n">d</span><span class="o">.</span><span class="n">flattened</span><span class="p">()</span>
-</pre></div>
-</div>
+<dd><p>Expands the dictionary class with a few helper methods.</p>
+<p>In particular, the goal of this class is to make multilevel dictionary
+actions simple.</p>
+<dl class="classmethod">
+<dt id="flasker.util.Dict.depth">
+<em class="property">classmethod </em><tt class="descname">depth</tt><big>(</big><em>dct</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.depth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.depth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Depth of a dictionary.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>cname</strong> (<em>string</em>) &#8211; key used when unflattening a dictionary and a key with a
-value also becomes a branch</li>
-<li><strong>sep</strong> (<em>string</em>) &#8211; the separator used to separate hierarchy levels</li>
-</ul>
-</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dct</strong> (<em>dict</em>) &#8211; dictionary</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">int</td>
 </tr>
 </tbody>
 </table>
-<dl class="method">
-<dt id="flasker.util.Dict.depth">
-<tt class="descname">depth</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.depth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.depth" title="Permalink to this definition">¶</a></dt>
-<dd><p>Depth of a dictionary.</p>
 </dd></dl>
 
 <dl class="classmethod">
 <dt id="flasker.util.Dict.flatten">
-<em class="property">classmethod </em><tt class="descname">flatten</tt><big>(</big><em>dic</em>, <em>sep=None</em>, <em>prefix=''</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.flatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.flatten" title="Permalink to this definition">¶</a></dt>
-<dd><p>Flatten. Classmethod for convenience.</p>
+<em class="property">classmethod </em><tt class="descname">flatten</tt><big>(</big><em>dct</em>, <em>sep='_'</em>, <em>prefix=''</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.flatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.flatten" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flatten a dictionary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dct</strong> (<em>dict</em>) &#8211; dictionary</li>
+<li><strong>sep</strong> (<em>str</em>) &#8211; the separator used when concatenating keys</li>
+<li><strong>prefix</strong> (<em>str</em>) &#8211; a prefix to add to all new keys</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict:</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
-<dl class="method">
-<dt id="flasker.util.Dict.flattened">
-<tt class="descname">flattened</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.flattened"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.flattened" title="Permalink to this definition">¶</a></dt>
-<dd><p>Flattened representation of the dictionary.</p>
-</dd></dl>
-
-<dl class="method">
+<dl class="classmethod">
 <dt id="flasker.util.Dict.table">
-<tt class="descname">table</tt><big>(</big><em>mode='horizontal'</em>, <em>left_columns=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.table" title="Permalink to this definition">¶</a></dt>
-<dd><p>For HTML headers mostly.</p>
+<em class="property">classmethod </em><tt class="descname">table</tt><big>(</big><em>mode='horizontal'</em>, <em>left_columns=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.table" title="Permalink to this definition">¶</a></dt>
+<dd><p>To create nested HTML table headers.</p>
+<p>Not functional anymore.</p>
 </dd></dl>
 
 <dl class="classmethod">
 <dt id="flasker.util.Dict.unflatten">
-<em class="property">classmethod </em><tt class="descname">unflatten</tt><big>(</big><em>dic</em>, <em>sep=None</em>, <em>cname=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.unflatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.unflatten" title="Permalink to this definition">¶</a></dt>
-<dd><p>Unflatten. Classmethod for convenience</p>
+<em class="property">classmethod </em><tt class="descname">unflatten</tt><big>(</big><em>dct</em>, <em>sep='_'</em>, <em>cname='all'</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.unflatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.unflatten" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unflatten a dictionary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dct</strong> (<em>dict</em>) &#8211; dictionary</li>
+<li><strong>sep</strong> (<em>str</em>) &#8211; the separator used to split keys</li>
+<li><strong>cname</strong> (<em>str</em>) &#8211; a key name used when a value would be added on an already
+expanded dictionary. A simple example is when trying to unflatten 
+<tt class="docutils literal"><span class="pre">{'a':</span> <span class="pre">1,</span> <span class="pre">'a_b':</span> <span class="pre">2}</span></tt>: there is ambiguity on where to store the value
+for key <tt class="docutils literal"><span class="pre">'a'</span></tt> because it already contains the dictionary <tt class="docutils literal"><span class="pre">{'b':</span> <span class="pre">2}</span></tt>.
+This is resolved creating a new key <tt class="docutils literal"><span class="pre">cname</span></tt> in this latter dictionary.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict:</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
-<dl class="method">
-<dt id="flasker.util.Dict.unflattened">
-<tt class="descname">unflattened</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.unflattened"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.unflattened" title="Permalink to this definition">¶</a></dt>
-<dd><p>Unflattened representation of the dictionary.</p>
-</dd></dl>
-
-<dl class="method">
+<dl class="classmethod">
 <dt id="flasker.util.Dict.width">
-<tt class="descname">width</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.width"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.width" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><tt class="descname">width</tt><big>(</big><em>dct</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.width"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.width" title="Permalink to this definition">¶</a></dt>
 <dd><p>Width of a dictionary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dct</strong> (<em>dict</em>) &#8211; dictionary</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
@@ -166,16 +193,20 @@ value also becomes a branch</li>
 <dl class="class">
 <dt id="flasker.util.JSONEncodedDict">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">JSONEncodedDict</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#JSONEncodedDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.JSONEncodedDict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Represents an immutable structure as a JSON encoded dict.</p>
+<dd><p>Implements dictionary column field type for SQLAlchemy.</p>
 <p>This can be used as a Column type during table creation:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">some_column_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedDict</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">There is a character limit in the UnicodeText field of the database
-so care is needed when storing very large dictionaries.</p>
-</div>
+<p>It also implements limited  mutability tracking to know when to update the
+database: set, del and update actions are tracked. If another method to
+update the dictionary is used, it will not automatically flag the
+dictionary for update (for example if a deeply nested key is updated).
+In such a case, the <tt class="docutils literal"><span class="pre">changed</span></tt> method needs the be called manually
+after the operation.</p>
+<p>The undelying immutable object is of kind <tt class="docutils literal"><span class="pre">sqlalchemy.types.UnicodeText</span></tt>.
+Note that it has a character limit so care is needed when storing very large
+dictionaries.</p>
 <dl class="attribute">
 <dt id="flasker.util.JSONEncodedDict.impl">
 <tt class="descname">impl</tt><a class="headerlink" href="#flasker.util.JSONEncodedDict.impl" title="Permalink to this definition">¶</a></dt>
@@ -187,12 +218,7 @@ so care is needed when storing very large dictionaries.</p>
 <dl class="class">
 <dt id="flasker.util.Jsonifiable">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Jsonifiable</tt><a class="reference internal" href="_modules/flasker/util.html#Jsonifiable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Jsonifiable" title="Permalink to this definition">¶</a></dt>
-<dd><p>For easy API calls.</p>
-<p>This is depth first (different from the one in the ExpandedBase class).</p>
-<p>We keep track of what has already been jsonified. There might still be
-some repetition given that we do not control the order of exploration.
-If a key is revisited at a lower depth, it will be reparsed to allow for
-more exploration.</p>
+<dd><p>JSONification mixin.</p>
 <dl class="method">
 <dt id="flasker.util.Jsonifiable.jsonify">
 <tt class="descname">jsonify</tt><big>(</big><em>depth=0</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Jsonifiable.jsonify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Jsonifiable.jsonify" title="Permalink to this definition">¶</a></dt>
@@ -217,14 +243,40 @@ type checking on the properties for example) to maximize speed.</p>
 <dl class="class">
 <dt id="flasker.util.Loggable">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Loggable</tt><a class="reference internal" href="_modules/flasker/util.html#Loggable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Loggable" title="Permalink to this definition">¶</a></dt>
-<dd><p>To easily log stuff.</p>
-<p>This implements the main logging methods (&#8216;debug&#8217;, &#8216;info&#8217;, &#8216;warn&#8217;, &#8216;error&#8217;)
-directly on the class instance. For example, this allows something like:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">instance</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&#39;Some message.&#39;</span><span class="p">)</span>
+<dd><p>Convenient logging mixin.</p>
+<p>This implements the main logging methods directly on the class instance. For
+example, this allows something like:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">instance</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Some message.&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Not using __getattr__ to preserve exception context. Otherwise the line where
-the inexistent attribute was accessed will be lost.</p>
+<p>The instance&#8217;s <tt class="docutils literal"><span class="pre">__str__</span></tt> is prepended to the message for easier debugging.</p>
+<p>Note that this class doesn&#8217;t override `` __getattr__`` to preserve exception
+context. Otherwise the line where the inexistent attribute was accessed will
+be lost.</p>
+<dl class="method">
+<dt id="flasker.util.Loggable.debug">
+<tt class="descname">debug</tt><big>(</big><em>message</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Loggable.debug"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Loggable.debug" title="Permalink to this definition">¶</a></dt>
+<dd><p>Debug level message.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.Loggable.error">
+<tt class="descname">error</tt><big>(</big><em>message</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Loggable.error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Loggable.error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Error level message.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.Loggable.info">
+<tt class="descname">info</tt><big>(</big><em>message</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Loggable.info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Loggable.info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Info level message.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.Loggable.warn">
+<tt class="descname">warn</tt><big>(</big><em>message</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Loggable.warn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Loggable.warn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Warn level message.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="class">
@@ -236,14 +288,19 @@ the inexistent attribute was accessed will be lost.</p>
 <dl class="class">
 <dt id="flasker.util.SmartDictReader">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">SmartDictReader</tt><big>(</big><em>csvfile</em>, <em>fields=None</em>, <em>silent=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#SmartDictReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.SmartDictReader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Helper for importing .csv files.</p>
+<dd><p><tt class="docutils literal"><span class="pre">DictReader</span></tt> with built-in value conversion.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>csvfile</strong> (<tt class="docutils literal"><span class="pre">file</span></tt>) &#8211; open file instance</li>
-<li><strong>fields</strong> &#8211; list of fieldnames or list of tuples (fieldname, fieldtype)</li>
+<li><strong>csvfile</strong> (<em>file</em>) &#8211; open file instance.</li>
+<li><strong>fields</strong> (<em>list</em>) &#8211; list of <tt class="docutils literal"><span class="pre">fieldnames</span></tt> or list of tuples
+<tt class="docutils literal"><span class="pre">(fieldname,</span> <span class="pre">fieldtype)</span></tt>. If specified, the <tt class="docutils literal"><span class="pre">fieldtype</span></tt> will be passed
+as second argument to the <tt class="docutils literal"><span class="pre">convert</span></tt> function.</li>
+<li><strong>silent</strong> (<em>bool</em>) &#8211; whether or not to silence errors while processing the file.</li>
+<li><strong>kwargs</strong> &#8211; keyword arguments to forward to the undelying
+<tt class="docutils literal"><span class="pre">csv.DictReader</span></tt> object.</li>
 </ul>
 </td>
 </tr>
@@ -252,9 +309,17 @@ the inexistent attribute was accessed will be lost.</p>
 </tr>
 </tbody>
 </table>
-<p>Interesting values for kwargs can be:
-* delimiter = &#8216;       &#8216;
-* quotechar = &#8216;&#8217;</p>
+<p>Interesting values for kwargs can be:</p>
+<ul class="simple">
+<li>delimiter = &#8216;       &#8216;</li>
+<li>quotechar = &#8216;&#8217;</li>
+</ul>
+<p>The following attributes are also available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">rows_imported</span></tt>, the total number of rows successfully imported</li>
+<li><tt class="docutils literal"><span class="pre">errors</span></tt>, a list of tuples <tt class="docutils literal"><span class="pre">(e,</span> <span class="pre">row)</span></tt> where <tt class="docutils literal"><span class="pre">e</span></tt> is error and <tt class="docutils literal"><span class="pre">row</span></tt>
+the full row for each error raised</li>
+</ul>
 </dd></dl>
 
 <dl class="function">

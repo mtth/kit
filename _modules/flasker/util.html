@@ -609,21 +609,21 @@
     <span class="n">action</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__logger__</span><span class="p">,</span> <span class="n">loglevel</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">action</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> :: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
 
-  <span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+<div class="viewcode-block" id="Loggable.debug"><a class="viewcode-back" href="../../util.html#flasker.util.Loggable.debug">[docs]</a>  <span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;debug&#39;</span><span class="p">)</span>
-
-  <span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="Loggable.info"><a class="viewcode-back" href="../../util.html#flasker.util.Loggable.info">[docs]</a>  <span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;info&#39;</span><span class="p">)</span>
-
-  <span class="k">def</span> <span class="nf">warn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="Loggable.warn"><a class="viewcode-back" href="../../util.html#flasker.util.Loggable.warn">[docs]</a>  <span class="k">def</span> <span class="nf">warn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;warn&#39;</span><span class="p">)</span>
-
-  <span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="Loggable.error"><a class="viewcode-back" href="../../util.html#flasker.util.Loggable.error">[docs]</a>  <span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;error&#39;</span><span class="p">)</span>
 
 
 <span class="c"># SQLAlchemy Mutables</span>
-</div>
+</div></div>
 <div class="viewcode-block" id="JSONEncodedDict"><a class="viewcode-back" href="../../util.html#flasker.util.JSONEncodedDict">[docs]</a><span class="k">class</span> <span class="nc">JSONEncodedDict</span><span class="p">(</span><span class="n">TypeDecorator</span><span class="p">):</span>
 
   <span class="sd">&quot;&quot;&quot;Represents an immutable structure as a JSON encoded dict.</span>
