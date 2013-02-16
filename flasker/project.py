@@ -17,12 +17,6 @@ from .util import convert
 
 class ProjectImportError(Exception):
 
-  """Generic project import error.
-  
-  This will be raised for missing or invalid configuration files.
-  
-  """
-
   pass
 
 class Project(object):
