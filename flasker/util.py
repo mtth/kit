@@ -18,18 +18,16 @@ from time import time
 # Utility functions
 
 def prod(iterable, key=None):
-  """Helper function for cumulative products.
+  """Cumulative product function (the equivalent of ``sum``).
 
   :param key: function called on each element of the iterable, if none then
     identity is assumed
   :type key: callable
-  :param restrict: if provided, elements where restrict(element) is True
-    will not be included
-  :type restrict: callable
+  :rtype: int, float
 
   """
   rv = 1
-  for index, elem in enumerate(iterable):
+  for elem in iterable:
     if key is None:
       rv *= elem
     else:
@@ -37,31 +35,53 @@ def prod(iterable, key=None):
   return rv
 
 def uncamelcase(name):
-  """Transform CamelCase to underscore_case."""
+  """Transforms CamelCase to underscore_case.
+
+  :param name: string input
+  :type name: str
+  :rtype: str
+  
+  """
   s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
   return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
-def convert(value, return_type=None):
-  """Converts a string to a boolean, int or float."""
+def convert(value, rtype=None):
+  """Converts a string to another value.
+
+  :param value: the value to be converted
+  :type value: str
+  :param rtype: string representation of the type the value should be
+    converted to
+  :type rtype: str
+  :rtype: int, float, bool, str, unicode
+
+  If ``rtype`` isn't specified, the following conversions are attempted in
+  order: ``int``, ``float``, ``bool``. If all fail, the method returns the
+  string ``value`` unchanged.
+
+  Boolean conversions convert ``'true', '1'`` to ``True``, and ``'false', '0'``
+  to ``False`` (case insensitive) and otherwise raises an error.
+
+  """
   value = value.strip()
-  if return_type:
-    if return_type == 'int':
+  if rtype:
+    if rtype == 'int':
       return int(value)
-    elif return_type == 'float':
+    elif rtype == 'float':
       return float(value)
-    elif return_type == 'bool':
+    elif rtype == 'bool':
       if value.lower() == 'true' or value == '1':
         return True
       elif not value or value.lower() == 'false' or value == '0':
         return False
       else:
         raise ValueError('Can\'t convert %s to boolean.' % value)
-    elif return_type == 'unicode':
+    elif rtype == 'unicode':
       return unicode(value, encoding='utf-8', errors='replace')
-    elif return_type == 'str':
+    elif rtype == 'str':
       return value
     # if we get here, something has gone wrong
-    raise ValueError('Invalid conversion type: %s' % return_type)
+    raise ValueError('Invalid conversion type: %s' % rtype)
   else:
     try:
       return int(value)
@@ -77,6 +97,29 @@ def convert(value, return_type=None):
           return value
 
 def partition(collection, batches=0, batch_size=0):
+  """Split an iterable into several pieces.
+
+  :param collection: the iterable that will be partitioned. Note that
+    ``partition`` needs to be able to compute the total length of the iterable
+    so generators won't work.
+  :type collection: list or query
+  :param batches: number of batches to split the collection into
+  :type batches: int
+  :param batch_size: number of items per batch
+  :type batch_size: int
+  :rtype: generator
+
+  Only one of ``batches`` and ``batch_size`` can be specified at a time.
+
+  ``partition`` returns a generator that yields a tuple ``(batch, partition)``
+  on each iteration. ``batch`` is of the same type as ``collection``, filtered
+  to the corresponding partition and ``partition`` is a named tuple with two 
+  properties:
+
+  * ``offset``, the first index of the partition
+  * ``limit``, the max-length of the partition (the last one might be shorter)
+
+  """
   if (batches and batch_size) or (not batches and not batch_size):
     raise ValueError('Exactly one of batches and batch_size '
                      'must be specified.')
@@ -287,11 +330,28 @@ class SmartDictReader(DictReader):
 # Caching
 
 def cached_property(func):
+  """Decorator that turns a class method into a cached property.
+
+  :param func: bound method to be turned in to a property
+  :type func: func
+
+  A cached property acts similarly to a property but is only computed once and
+  then stored in the instance's ``_cache`` attribute along with the time it was
+  last computed. Subsequent calls will read directly from the cached value.  To
+  refresh several or all cached properties, use the ``refresh_cache`` method.
+
+  Should only be used with methods of classes that inherit from ``Cacheable``.
+  
+  """
   return _CachedProperty(func)
 
 class Cacheable(object):
 
-  """Adds a few cache maintenance utilities."""
+  """Class with cacheable properties.
+  
+  Implements a few cache maintenance utilities.
+  
+  """
 
   _cache = None
 
@@ -303,10 +363,18 @@ class Cacheable(object):
     ]
 
   def refresh_cache(self, names=None, expiration=0, remove_deleted=True):
-    """Refresh all cached properties.
+    """Refresh cached properties.
 
-    Can also remove  keys of properties that do not exist anymore (useful for
-    persistent caches).
+    :param names: list of cached property names to refresh. If specified, only
+      these will be refreshed.
+    :type names: iterable
+    :param expiration: if specified, only properties of age greater than this
+      value will be refreshed.
+    :type expiration: int
+    :param remove_deleted: if ``True``, cached properties that aren't defined
+      but are still present in the cache will be removed (useful especially for
+      persistent caches)
+    :type remove_deleted: bool
 
     """
     if names:
@@ -328,7 +396,13 @@ class Cacheable(object):
       pass
 
   def view_cache(self):
-    """Not yet cached properties will appear as None."""
+    """Get the age of cached values.
+
+    :rtype: dict
+    
+    Properties not yet cached will appear as ``None``.
+    
+    """
     rv = dict.fromkeys(self._get_cached_properties(), None)
     if self._cache:
       now = time()
@@ -339,6 +413,8 @@ class Cacheable(object):
     return rv
 
 class _CacheRefresh(object):
+
+  """Special class used to trigger cache refreshes."""
 
   def __init__(self, expiration):
     self.expiration = expiration
@@ -357,7 +433,6 @@ class _CachedProperty(property):
     self.__doc__ = func.__doc__
 
   def __get__(self, obj, objtype=None):
-    """Gets the value from cache (creating and refreshing as necessary)."""
     if obj is None:
       return self
     else:
@@ -369,13 +444,7 @@ class _CachedProperty(property):
         return value
 
   def __set__(self, obj, value):
-    """Sets the value in the cache.
-
-    If the _cache is a JSONEncodedDict, this will also mark the dictionary
-    as changed.
-    
-    """
-    if not hasattr(obj, '_cache') or not obj._cache:
+    if not obj._cache:
       obj._cache = {}
     if value:
       if isinstance(value, _CacheRefresh):
@@ -394,15 +463,6 @@ class _CachedProperty(property):
 
   def __repr__(self):
     return '<CachedProperty %r>' % self.func
-
-class Foo(Cacheable):
-
-  def __init__(self):
-    self.a = 1
-
-  @cached_property
-  def bar(self):
-    return 48
 
 
 # Jsonifification
@@ -615,7 +675,7 @@ class RunningStatistic(object):
       return 0
 
 def exponential_smoothing(data, alpha=0.5):
-  """Helper function for smoothing data.
+  """Smoothing data.
 
   :param data: list of tuples. The smoothing will be done on
     the first item of each tuple.
@@ -630,10 +690,12 @@ def exponential_smoothing(data, alpha=0.5):
         / sum(alpha ** (x - _x) for (_x, _y) in sorted_data[:i+1]))
       for i, (x, y) in enumerate(sorted_data)]
 
-def histogram(data, key=lambda a: a, bins=50, restrict=None, categories=None,
+def histogram(data, key=None, bins=50, restrict=None, categories=None,
               order=0, expand=False):
   """Returns a histogram of counts for the data.
 
+    :param data: the data to be binned
+    :type data: iterable of tuples
     :param restrict: if provided, only data elements which return `True`
       will be included in the histogram. Default is `None` (all elements
       are included).
@@ -654,6 +716,7 @@ def histogram(data, key=lambda a: a, bins=50, restrict=None, categories=None,
   allow elements to be included in several counts.
 
   """
+  key = key or (lambda e: e)
   if isinstance(bins, int):
     n_bins = bins
     if not n_bins > 0: raise Exception("Number of bins must be > 0.")
@@ -698,11 +761,16 @@ def histogram(data, key=lambda a: a, bins=50, restrict=None, categories=None,
     for e in data:
       if restrict is None or restrict(e):
         data_histogram[find_bin(key(e))][categories(e)] += 1
-    data_histogram = dict((k, dict(v)) for (k, v) in data_histogram.iteritems())
+    data_histogram = dict(
+      (k, dict(v)) for (k, v) in data_histogram.iteritems()
+    )
     if expand:
       keys = set(key for v in data_histogram.values() for key in v.keys())
       data_histogram = dict(
-          (key, dict((k, v.get(key, 0)) for (k, v) in data_histogram.iteritems()))
+          (
+            key,
+            dict((k, v.get(key, 0)) for (k, v) in data_histogram.iteritems())
+          )
           for key in keys
       )
     return data_histogram
