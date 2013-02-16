@@ -1,6 +1,16 @@
 #!/usr/bin/env python
 
-"""Flasker command line tool."""
+"""Flasker command line tool.
+
+There are currently 5 commands available via the flasker command tool, all
+detailed below.
+
+All commands, aside from ``new``, accept an optional argument ``-c, --conf``
+to indicate the path of the configuration file to use. If none is specified
+flasker will search in the current directory for possible matches. If a single
+file ``.cfg`` file is found it will use it.
+
+"""
 
 from argparse import ArgumentParser, REMAINDER
 from code import interact
@@ -15,12 +25,8 @@ from sys import path
 from flasker import current_project
 from flasker.project import Project, ProjectImportError
 
-def project_context(handler):
+def _project_context(handler):
   """Create the project context.
-  
-  If no configuration file was entered in the main parser through the -c
-  option, this function will look in the current directory for possible
-  matches. If a single file is found it will use it.
 
   Some (most) subparser handlers require the project to be created before
   returning, this decorator handles this.
@@ -94,6 +100,17 @@ new_parser.add_argument('config',
 )
 
 def new_handler(parsed_args):
+  """Create a new project::
+
+    flasker new ...
+
+  The following options are available:
+
+  * ``-a, --app`` to toggle the creation of a bootstrap starter app
+  * ``-n, --name`` to set the name of the configuration file to be created
+    (defaults to ``default``)
+
+  """
   src = dirname(__file__)
   conf_name = '%s.cfg' % parsed_args.name
   if exists(conf_name):
@@ -135,9 +152,21 @@ server_parser.add_argument('-d', '--debug',
   help='run in debug mode (autoreload and debugging)'
 )
 
-@project_context
+@_project_context
 def server_handler(parsed_args):
-  """Start a Werkzeug server for the Flask application."""
+  """Start a Werkzeug server for the Flask application::
+  
+    flasker server ...
+
+  The following options are available:
+
+  * ``-r, --restrict`` to disallow remove server connections.
+  * ``-p, --port`` to set the port on which to run the server (default to 
+    ``5000``).
+  * ``-d, --debug`` to run in debug mode (enables autoreloading and in-browser
+    debugging).
+  
+  """
   pj = current_project
   host = '127.0.0.1' if parsed_args.restrict else '0.0.0.0'
   pj.app.run(host=host, port=parsed_args.port, debug=parsed_args.debug)
@@ -148,9 +177,19 @@ server_parser.set_defaults(handler=server_handler)
 
 shell_parser = subparsers.add_parser('shell', help='start shell')
 
-@project_context
+@_project_context
 def shell_handler(parsed_args):
-  """Start a shell in the context of the project."""
+  """Start a shell in the context of the project::
+
+    flasker shell ...
+
+  The following global variables will be available:
+
+  * ``pj``, an alias for the ``current_project``
+  * ``app``, an alias for ``current_project.app``
+  * ``cel``, an alias for ``current_project.celery``
+  
+  """
   pj = current_project
   context = {
     'pj': pj,
@@ -187,9 +226,19 @@ worker_parser.add_argument('-r', '--raw',
   help='raw options to pass through',
 )
 
-@project_context
+@_project_context
 def worker_handler(parsed_args):
-  """Starts a celery worker.
+  """Starts a celery worker::
+
+    flasker worker ...
+
+  The following options are available:
+
+  * ``-o, --only-direct`` to have the worker only listen to its direct queue
+    (this option requires the CELERY_WORKER_DIRECT to be set to ``True``).
+  * ``-v, --verbose-help` to show the worker help.
+  * ``-r, --raw`` to pass arguments to the worker (any arguments after this
+    option will be passed through).
 
   If no hostname is provided, one will be generated automatically using the
   project domain and subdomain and current worker count. For example, the first
@@ -198,9 +247,6 @@ def worker_handler(parsed_args):
 
   * w1.default.my_project
   * w2.default.my_project
-
-  The ``-o`` flag can be used to have the worker only listen to its direct
-  queue (this option requires the CELERY_WORKER_DIRECT to be set to ``True``).
 
   """
   pj = current_project
@@ -245,9 +291,20 @@ flower_parser.add_argument('-r', '--raw',
   nargs=REMAINDER
 )
 
-@project_context
+@_project_context
 def flower_handler(parsed_args):
-  """Start flower worker manager."""
+  """Start flower worker manager::
+    
+    flasker flower ...
+
+  The following arguments are available:
+
+  * ``-p, --port`` to set the port to run flower on (defaults to ``5555``).
+  * ``-v, --verbose-help` to show the flower help.
+  * ``-r, --raw`` to pass arguments to flower (any arguments after this option
+    will be passed through).
+  
+  """
   pj = current_project
   if parsed_args.verbose_help:
     pj.celery.start(['celery', 'flower', '--help'])
