@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Project &mdash; Flasker 0.1 documentation</title>
+    <title>Overview &mdash; Flasker 0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -34,7 +34,7 @@
   <body>
       <div class="header"><h1 class="heading"><a href="index.html">
           <span>Flasker 0.1 documentation</span></a></h1>
-        <h2 class="heading"><span>Project</span></h2>
+        <h2 class="heading"><span>Overview</span></h2>
       </div>
       <div class="topnav">
       
@@ -50,8 +50,59 @@
       <div class="content">
         
         
-  <div class="section" id="module-flasker.project">
-<span id="project"></span><h1>Project<a class="headerlink" href="#module-flasker.project" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-flasker.__main__">
+<span id="console-tool"></span><h2>Console tool<a class="headerlink" href="#module-flasker.__main__" title="Permalink to this headline">¶</a></h2>
+<p>Flasker command line tool.</p>
+<dl class="function">
+<dt id="flasker.__main__.flower_handler">
+<tt class="descclassname">flasker.__main__.</tt><tt class="descname">flower_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#flower_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.flower_handler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start flower worker manager.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.__main__.project_context">
+<tt class="descclassname">flasker.__main__.</tt><tt class="descname">project_context</tt><big>(</big><em>handler</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#project_context"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.project_context" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the project context.</p>
+<p>If no configuration file was entered in the main parser through the -c
+option, this function will look in the current directory for possible
+matches. If a single file is found it will use it.</p>
+<p>Some (most) subparser handlers require the project to be created before
+returning, this decorator handles this.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.__main__.server_handler">
+<tt class="descclassname">flasker.__main__.</tt><tt class="descname">server_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#server_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.server_handler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start a Werkzeug server for the Flask application.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.__main__.shell_handler">
+<tt class="descclassname">flasker.__main__.</tt><tt class="descname">shell_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#shell_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.shell_handler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start a shell in the context of the project.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.__main__.worker_handler">
+<tt class="descclassname">flasker.__main__.</tt><tt class="descname">worker_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#worker_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.worker_handler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starts a celery worker.</p>
+<p>If no hostname is provided, one will be generated automatically using the
+project domain and subdomain and current worker count. For example, the first
+two workers started for project <tt class="docutils literal"><span class="pre">my_project</span></tt> and configuration <tt class="docutils literal"><span class="pre">default</span></tt>
+will have respective hostnames:</p>
+<ul class="simple">
+<li>w1.default.my_project</li>
+<li>w2.default.my_project</li>
+</ul>
+<p>The <tt class="docutils literal"><span class="pre">-o</span></tt> flag can be used to have the worker only listen to its direct
+queue (this option requires the CELERY_WORKER_DIRECT to be set to <tt class="docutils literal"><span class="pre">True</span></tt>).</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-flasker.project">
+<span id="configuration"></span><h2>Configuration<a class="headerlink" href="#module-flasker.project" title="Permalink to this headline">¶</a></h2>
 <p>Project module.</p>
 <dl class="class">
 <dt id="flasker.project.Project">
@@ -80,6 +131,7 @@ object.</p>
 <p>This will be raised for missing or invalid configuration files.</p>
 </dd></dl>
 
+</div>
 </div>
 
 
