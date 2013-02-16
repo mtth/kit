@@ -25,7 +25,8 @@ Flasker also comes with two extensions for commonly needed functionalities:
 - Authentication
 - ReSTful API *(still alpha)*
 
-Flasker is under development. You can find the latest version in the `Flasker Git repository`_.
+Flasker is under development. You can find the latest version in the `Flasker
+Git repository`_ and read the documentation on `Git pages`_.
 
 
 Quickstart
@@ -174,5 +175,5 @@ file:
 .. _Backbone-Relational: https://github.com/PaulUithol/Backbone-relational
 .. _FlaskRESTful: http://flask-restful.readthedocs.org/en/latest/index.html
 .. _Wiki: https://github.com/mtth/flasker/wiki
-.. _full documentation: http://mtth.github.com/flasker
+.. _Git pages: http://mtth.github.com/flasker
 .. _Flasker Git repository: http://github.com/mtth/flasker
