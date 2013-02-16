@@ -1,6 +1,5 @@
 dist
 venv
-wiki
 *.egg-info/
 *.sch
 *.sqlite
