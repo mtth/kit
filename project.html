@@ -56,12 +56,6 @@
 <span id="console-tool"></span><h2>Console tool<a class="headerlink" href="#module-flasker.__main__" title="Permalink to this headline">¶</a></h2>
 <p>Flasker command line tool.</p>
 <dl class="function">
-<dt id="flasker.__main__.flower_handler">
-<tt class="descclassname">flasker.__main__.</tt><tt class="descname">flower_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#flower_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.flower_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Start flower worker manager.</p>
-</dd></dl>
-
-<dl class="function">
 <dt id="flasker.__main__.project_context">
 <tt class="descclassname">flasker.__main__.</tt><tt class="descname">project_context</tt><big>(</big><em>handler</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#project_context"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.project_context" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create the project context.</p>
@@ -100,10 +94,23 @@ will have respective hostnames:</p>
 queue (this option requires the CELERY_WORKER_DIRECT to be set to <tt class="docutils literal"><span class="pre">True</span></tt>).</p>
 </dd></dl>
 
+<dl class="function">
+<dt id="flasker.__main__.flower_handler">
+<tt class="descclassname">flasker.__main__.</tt><tt class="descname">flower_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#flower_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.flower_handler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start flower worker manager.</p>
+</dd></dl>
+
 </div>
 <div class="section" id="module-flasker.project">
 <span id="configuration"></span><h2>Configuration<a class="headerlink" href="#module-flasker.project" title="Permalink to this headline">¶</a></h2>
 <p>Project module.</p>
+<dl class="exception">
+<dt id="flasker.project.ProjectImportError">
+<em class="property">exception </em><tt class="descclassname">flasker.project.</tt><tt class="descname">ProjectImportError</tt><a class="reference internal" href="_modules/flasker/project.html#ProjectImportError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.ProjectImportError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generic project import error.</p>
+<p>This will be raised for missing or invalid configuration files.</p>
+</dd></dl>
+
 <dl class="class">
 <dt id="flasker.project.Project">
 <em class="property">class </em><tt class="descclassname">flasker.project.</tt><tt class="descname">Project</tt><big>(</big><em>config_path</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project" title="Permalink to this definition">¶</a></dt>
@@ -111,24 +118,17 @@ queue (this option requires the CELERY_WORKER_DIRECT to be set to <tt class="doc
 <p>Global container for the Flask and Celery apps and SQLAlchemy database
 object.</p>
 <dl class="method">
-<dt id="flasker.project.Project.before_startup">
-<tt class="descname">before_startup</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project.before_startup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project.before_startup" title="Permalink to this definition">¶</a></dt>
-<dd><p>Decorator, hook to run a function right before project starts.</p>
-</dd></dl>
-
-<dl class="method">
 <dt id="flasker.project.Project.register_extension">
 <tt class="descname">register_extension</tt><big>(</big><em>extension</em>, <em>config_section=None</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project.register_extension"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project.register_extension" title="Permalink to this definition">¶</a></dt>
 <dd><p>Register an extension.</p>
 </dd></dl>
 
+<dl class="method">
+<dt id="flasker.project.Project.before_startup">
+<tt class="descname">before_startup</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project.before_startup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project.before_startup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator, hook to run a function right before project starts.</p>
 </dd></dl>
 
-<dl class="exception">
-<dt id="flasker.project.ProjectImportError">
-<em class="property">exception </em><tt class="descclassname">flasker.project.</tt><tt class="descname">ProjectImportError</tt><a class="reference internal" href="_modules/flasker/project.html#ProjectImportError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.ProjectImportError" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generic project import error.</p>
-<p>This will be raised for missing or invalid configuration files.</p>
 </dd></dl>
 
 </div>

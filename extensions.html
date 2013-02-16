@@ -89,6 +89,19 @@ validate functions, the API extension should be registered with the project:</p>
 <p>Next steps:</p>
 <p>To configure further the views corresponding to each model, you can access
 the <tt class="docutils literal"><span class="pre">__view__</span></tt> attribute and insert your custom API views there.</p>
+<dl class="exception">
+<dt id="flasker.ext.api.APIError">
+<em class="property">exception </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">APIError</tt><big>(</big><em>code</em>, <em>content</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#APIError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.APIError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Thrown when an API call is invalid.</p>
+<p>The following error codes can occur:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">400</span> <span class="pre">Bad</span> <span class="pre">Request</span></tt> if the request is badly formulated (wrong query
+parameters, invalid form data, etc.)</li>
+<li><tt class="docutils literal"><span class="pre">403</span> <span class="pre">Forbidden</span></tt> if the request is not authorized by the server</li>
+<li><tt class="docutils literal"><span class="pre">404</span> <span class="pre">Not</span> <span class="pre">Found</span></tt> if the request refers to a non-existent resource</li>
+</ul>
+</dd></dl>
+
 <dl class="class">
 <dt id="flasker.ext.api.API">
 <em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">API</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#API"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.API" title="Permalink to this definition">¶</a></dt>
@@ -119,14 +132,38 @@ when registering the extension with the <tt class="docutils literal"><span class
 </pre></div>
 </div>
 <dl class="method">
-<dt id="flasker.ext.api.API.add_all_models">
-<tt class="descname">add_all_models</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#API.add_all_models"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.API.add_all_models" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convenience method to add all registered models.</p>
-<p>This method accepts same arguments as <tt class="docutils literal"><span class="pre">add_model</span></tt>, which will be passed
-to all models.</p>
-<p>Remember that calling <tt class="docutils literal"><span class="pre">add_model</span></tt> overwrites previous options, so it
-is possible to add all models and individually changing the options for
-each by calling the <tt class="docutils literal"><span class="pre">add_model</span></tt> method for a few models afterwards.</p>
+<dt id="flasker.ext.api.API.authorize">
+<tt class="descname">authorize</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#API.authorize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.API.authorize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to set the authorization function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> &#8211; <p>an authorization function. It will be called everytime a new
+request comes in and is passed 2 arguments:</p>
+<ul class="simple">
+<li>the endpoint</li>
+<li>the request method</li>
+</ul>
+<p>If the function returns a truthful value, the request will proceed.
+Otherwise a 403 exception is raised.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.api.API.validate">
+<tt class="descname">validate</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#API.validate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.API.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to set the validate function, called on POST, PUT and PATCH.</p>
+<p>The validator will be passed two arguments:</p>
+<ul class="simple">
+<li>the model class</li>
+<li>the request json</li>
+</ul>
+<p>If the function returns a truthful value, the request will proceed.
+Otherwise a 400 exception is raised.</p>
 </dd></dl>
 
 <dl class="method">
@@ -170,53 +207,16 @@ available directly on the model.</pre>
 </dd></dl>
 
 <dl class="method">
-<dt id="flasker.ext.api.API.authorize">
-<tt class="descname">authorize</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#API.authorize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.API.authorize" title="Permalink to this definition">¶</a></dt>
-<dd><p>Decorator to set the authorization function.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> &#8211; <p>an authorization function. It will be called everytime a new
-request comes in and is passed 2 arguments:</p>
-<ul class="simple">
-<li>the endpoint</li>
-<li>the request method</li>
-</ul>
-<p>If the function returns a truthful value, the request will proceed.
-Otherwise a 403 exception is raised.</p>
-</td>
-</tr>
-</tbody>
-</table>
+<dt id="flasker.ext.api.API.add_all_models">
+<tt class="descname">add_all_models</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#API.add_all_models"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.API.add_all_models" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method to add all registered models.</p>
+<p>This method accepts same arguments as <tt class="docutils literal"><span class="pre">add_model</span></tt>, which will be passed
+to all models.</p>
+<p>Remember that calling <tt class="docutils literal"><span class="pre">add_model</span></tt> overwrites previous options, so it
+is possible to add all models and individually changing the options for
+each by calling the <tt class="docutils literal"><span class="pre">add_model</span></tt> method for a few models afterwards.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="flasker.ext.api.API.validate">
-<tt class="descname">validate</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#API.validate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.API.validate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Decorator to set the validate function, called on POST, PUT and PATCH.</p>
-<p>The validator will be passed two arguments:</p>
-<ul class="simple">
-<li>the model class</li>
-<li>the request json</li>
-</ul>
-<p>If the function returns a truthful value, the request will proceed.
-Otherwise a 400 exception is raised.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="exception">
-<dt id="flasker.ext.api.APIError">
-<em class="property">exception </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">APIError</tt><big>(</big><em>code</em>, <em>content</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#APIError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.APIError" title="Permalink to this definition">¶</a></dt>
-<dd><p>Thrown when an API call is invalid.</p>
-<p>The following error codes can occur:</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">400</span> <span class="pre">Bad</span> <span class="pre">Request</span></tt> if the request is badly formulated (wrong query
-parameters, invalid form data, etc.)</li>
-<li><tt class="docutils literal"><span class="pre">403</span> <span class="pre">Forbidden</span></tt> if the request is not authorized by the server</li>
-<li><tt class="docutils literal"><span class="pre">404</span> <span class="pre">Not</span> <span class="pre">Found</span></tt> if the request refers to a non-existent resource</li>
-</ul>
 </dd></dl>
 
 <dl class="class">
@@ -224,14 +224,6 @@ parameters, invalid form data, etc.)</li>
 <em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">APIView</tt><a class="reference internal" href="_modules/flasker/ext/api.html#APIView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.APIView" title="Permalink to this definition">¶</a></dt>
 <dd><p>Base API view.</p>
 <p>Subclass this to implement your own.</p>
-<dl class="classmethod">
-<dt id="flasker.ext.api.APIView.attach_view">
-<em class="property">classmethod </em><tt class="descname">attach_view</tt><big>(</big><em>*view_args</em>, <em>**view_kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#APIView.attach_view"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.APIView.attach_view" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create and attach a view to the blueprint.</p>
-<p>New views should be created with this method otherwise the extension will
-be unaware of them.</p>
-</dd></dl>
-
 <dl class="method">
 <dt id="flasker.ext.api.APIView.get_endpoint">
 <tt class="descname">get_endpoint</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#APIView.get_endpoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.APIView.get_endpoint" title="Permalink to this definition">¶</a></dt>
@@ -246,6 +238,14 @@ be unaware of them.</p>
 <p>Routes should be unique (duh).</p>
 </dd></dl>
 
+<dl class="classmethod">
+<dt id="flasker.ext.api.APIView.attach_view">
+<em class="property">classmethod </em><tt class="descname">attach_view</tt><big>(</big><em>*view_args</em>, <em>**view_kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#APIView.attach_view"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.APIView.attach_view" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create and attach a view to the blueprint.</p>
+<p>New views should be created with this method otherwise the extension will
+be unaware of them.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="class">
@@ -255,9 +255,39 @@ be unaware of them.</p>
 </dd></dl>
 
 <dl class="class">
+<dt id="flasker.ext.api.ModelView">
+<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">ModelView</tt><big>(</big><em>Model</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#ModelView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.ModelView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default view for individual model endpoints.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.ext.api.RelationshipView">
+<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">RelationshipView</tt><big>(</big><em>rel</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#RelationshipView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.RelationshipView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Not an actual view, meant to be subclassed.</p>
+</dd></dl>
+
+<dl class="class">
 <dt id="flasker.ext.api.DynamicRelationshipView">
 <em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">DynamicRelationshipView</tt><big>(</big><em>rel</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#DynamicRelationshipView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.DynamicRelationshipView" title="Permalink to this definition">¶</a></dt>
 <dd><p>Default view for dynamic relationships.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.ext.api.LazyRelationshipView">
+<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">LazyRelationshipView</tt><big>(</big><em>rel</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#LazyRelationshipView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.LazyRelationshipView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default view for lazy relationships.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.ext.api.RelationshipModelView">
+<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">RelationshipModelView</tt><big>(</big><em>rel</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#RelationshipModelView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.RelationshipModelView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default view for relationship models.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.ext.api.IndexView">
+<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">IndexView</tt><a class="reference internal" href="_modules/flasker/ext/api.html#IndexView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.IndexView" title="Permalink to this definition">¶</a></dt>
+<dd><p>API splash page with a few helpful keys.</p>
 </dd></dl>
 
 <dl class="class">
@@ -293,39 +323,9 @@ type checking on the properties for example) to maximize speed.</p>
 </dd></dl>
 
 <dl class="class">
-<dt id="flasker.ext.api.IndexView">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">IndexView</tt><a class="reference internal" href="_modules/flasker/ext/api.html#IndexView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.IndexView" title="Permalink to this definition">¶</a></dt>
-<dd><p>API splash page with a few helpful keys.</p>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.api.LazyRelationshipView">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">LazyRelationshipView</tt><big>(</big><em>rel</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#LazyRelationshipView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.LazyRelationshipView" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default view for lazy relationships.</p>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.api.ModelView">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">ModelView</tt><big>(</big><em>Model</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#ModelView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.ModelView" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default view for individual model endpoints.</p>
-</dd></dl>
-
-<dl class="class">
 <dt id="flasker.ext.api.Parser">
 <em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">Parser</tt><big>(</big><em>allowed_keys</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#Parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.Parser" title="Permalink to this definition">¶</a></dt>
 <dd><p>The request parameter parser.</p>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.api.RelationshipModelView">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">RelationshipModelView</tt><big>(</big><em>rel</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#RelationshipModelView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.RelationshipModelView" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default view for relationship models.</p>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.api.RelationshipView">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">RelationshipView</tt><big>(</big><em>rel</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#RelationshipView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.RelationshipView" title="Permalink to this definition">¶</a></dt>
-<dd><p>Not an actual view, meant to be subclassed.</p>
 </dd></dl>
 
 </div>
