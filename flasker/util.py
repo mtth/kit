@@ -293,6 +293,8 @@ class Cacheable(object):
 
   """Adds a few cache maintenance utilities."""
 
+  _cache = None
+
   def _get_cached_properties(self):
     return [
         varname
@@ -300,12 +302,41 @@ class Cacheable(object):
         if isinstance(getattr(self.__class__, varname), _CachedProperty)
     ]
 
-  def refresh_cached_property(self, name, expiration=0):
-    setattr(self, name, _CacheRefresh(expiration))
+  def refresh_cache(self, names=None, expiration=0, remove_deleted=True):
+    """Refresh all cached properties.
 
-  def refresh_all_cached_properties(self, expiration=0):
-    for varname in self._get_cached_properties():
-      setattr(self, varname, _CacheRefresh(expiration))
+    Can also remove  keys of properties that do not exist anymore (useful for
+    persistent caches).
+
+    """
+    if names:
+      for name in names:
+        setattr(self, name, _CacheRefresh(expiration))
+      if remove_deleted:
+        cached_properties = set(self._get_cached_properties())
+        for varname in self._cache.keys():
+          if not varname in cached_properties:
+            del self._cache[varname]
+    else:
+      if remove_deleted:
+        self._cache = {}
+      for varname in self._get_cached_properties():
+        setattr(self, varname, _CacheRefresh(expiration))
+    try:
+      self._cache.changed()
+    except:
+      pass
+
+  def view_cache(self):
+    """Not yet cached properties will appear as None."""
+    rv = dict.fromkeys(self._get_cached_properties(), None)
+    if self._cache:
+      now = time()
+      rv.update(dict(
+        (k, now - v[1])
+        for k, v in self._cache.items()
+      ))
+    return rv
 
 class _CacheRefresh(object):
 
@@ -330,9 +361,12 @@ class _CachedProperty(property):
     if obj is None:
       return self
     else:
-      if not obj._cache or not self.func.__name__ in obj._cache:
-        return None
-      return obj._cache[self.func.__name__][0]
+      try:
+        return obj._cache[self.func.__name__][0]
+      except (KeyError, TypeError) as e:
+        value = self.func(obj)
+        self.__set__(obj, value)
+        return value
 
   def __set__(self, obj, value):
     """Sets the value in the cache.
@@ -360,6 +394,15 @@ class _CachedProperty(property):
 
   def __repr__(self):
     return '<CachedProperty %r>' % self.func
+
+class Foo(Cacheable):
+
+  def __init__(self):
+    self.a = 1
+
+  @cached_property
+  def bar(self):
+    return 48
 
 
 # Jsonifification
