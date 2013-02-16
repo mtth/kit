@@ -4,3 +4,4 @@ wiki
 *.egg-info/
 *.sch
 *.sqlite
+*.pickle
