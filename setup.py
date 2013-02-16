@@ -4,12 +4,12 @@ from setuptools import find_packages, setup
 
 setup(
     name='flasker',
-    version='0.1.31',
+    version='0.1.32',
     description='Flask, SQLAlchemy, and Celery integration',
     long_description=open('README.rst').read(),
     author='Matthieu Monsch',
     author_email='monsch@mit.edu',
-    url='https://github.com/mtth/flasker',
+    url='http://mtth.github.com/flasker/',
     license='MIT',
     packages=find_packages(),
     classifiers=[

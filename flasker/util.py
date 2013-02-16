@@ -148,47 +148,111 @@ def partition(collection, batches=0, batch_size=0):
 
 class Dict(dict):
 
-  """Dictionary class with a few helper methods.
+  """Expands the dictionary class with a few helper methods.
 
-  The goal of this class is to make multilevel dictionary actions
-  simple.
-
-  Usage::
-
-    d = Dict(d)
-    d.flattened()
-
-  :param cname: key used when unflattening a dictionary and a key with a
-    value also becomes a branch
-  :type cname: string
-  :param sep: the separator used to separate hierarchy levels
-  :type sep: string
+  In particular, the goal of this class is to make multilevel dictionary
+  actions simple.
 
   """
 
   cname = 'all'
   sep = '_'
 
-  def depth(self):
-    """Depth of a dictionary."""
+  @classmethod
+  def depth(cls, dct):
+    """Depth of a dictionary.
+
+    :param dct: dictionary
+    :type dct: dict
+    :rtype: int
+    
+    """
     values = [
-        Dict(value)
+        value
+        for value in dct.itervalues()
+        if isinstance(value, dict)
+    ]
+    return max(cls.depth(value) for value in values) + 1 if values else 1
+
+  @classmethod
+  def width(cls, dct):
+    """Width of a dictionary.
+
+    :param dct: dictionary
+    :type dct: dict
+    :rtype: int
+    
+    """
+    values = [
+        cls(dct)
         for value in self.itervalues()
         if isinstance(value, dict)
     ]
-    return max(value.depth() for value in values) + 1 if values else 1
+    return sum(cls.width(value) for value in values) + len(dct) - len(values)
 
-  def width(self):
-    """Width of a dictionary."""
-    values = [
-        Dict(value)
-        for value in self.itervalues()
-        if isinstance(value, dict)
-    ]
-    return sum(value.width() for value in values) + len(self) - len(values)
+  @classmethod
+  def flatten(cls, dct, sep='_', prefix=''):
+    """Flatten a dictionary.
 
-  def table(self, mode='horizontal', left_columns=None):
-    """For HTML headers mostly."""
+    :param dct: dictionary
+    :type dct: dict
+    :param sep: the separator used when concatenating keys
+    :type sep: str
+    :param prefix: a prefix to add to all new keys
+    :type prefix: str
+    :rtype: dict:
+
+    """
+    items = []
+    for key, value in dct.iteritems():
+      k = prefix + sep + key if prefix else key
+      if isinstance(value, dict) and value:
+        items.extend(cls.flatten(value, sep, k).items())
+      else:
+        items.append((k, value))
+    return dict(items)
+
+  @classmethod
+  def unflatten(cls, dct, sep='_', cname='all'):
+    """Unflatten a dictionary.
+
+    :param dct: dictionary
+    :type dct: dict
+    :param sep: the separator used to split keys
+    :type sep: str
+    :param cname: a key name used when a value would be added on an already
+      expanded dictionary. A simple example is when trying to unflatten 
+      ``{'a': 1, 'a_b': 2}``: there is ambiguity on where to store the value
+      for key ``'a'`` because it already contains the dictionary ``{'b': 2}``.
+      This is resolved creating a new key ``cname`` in this latter dictionary.
+    :type cname: str
+    :rtype: dict:
+
+    """
+    result = {}
+    keys = []
+    for key in dct.iterkeys():
+      keys.append(key.split(sep))
+    keys.sort(key=len, reverse=True)
+    for key in keys:
+      d = result
+      for part in key[:-1]:
+        if part not in d:
+          d[part] = {}
+        d = d[part]
+      if key[-1] in d:
+        d[key[-1]][cname] = dct[sep.join(key)]
+      else:
+        d[key[-1]] = dct[sep.join(key)]
+    return result
+
+  @classmethod
+  def table(cls, mode='horizontal', left_columns=None):
+    """To create nested HTML table headers.
+
+    Not functional anymore.
+    
+    """
     items = []
     unflattened = Dict(self.unflattened())
     depth = unflattened.depth()
@@ -236,61 +300,33 @@ class Dict(dict):
         items.append(row)
     return items
 
-  def flattened(self):
-    """Flattened representation of the dictionary."""
-    return self.__class__.flatten(self)
-
-  def unflattened(self):
-    """Unflattened representation of the dictionary."""
-    return self.__class__.unflatten(self)
-
-  @classmethod
-  def flatten(cls, dic, sep=None, prefix=''):
-    """Flatten. Classmethod for convenience."""
-    sep = sep if sep else cls.sep
-    items = []
-    for key, value in dic.iteritems():
-      k = prefix + sep + key if prefix else key
-      if isinstance(value, dict) and value:
-        items.extend(cls.flatten(value, sep, k).items())
-      else:
-        items.append((k, value))
-    return dict(items)
-
-  @classmethod
-  def unflatten(cls, dic, sep=None, cname=None):
-    """Unflatten. Classmethod for convenience"""
-    sep = sep if sep else cls.sep
-    cname = cname if cname else cls.cname
-    result = {}
-    keys = []
-    for key in dic.iterkeys():
-      keys.append(key.split(sep))
-    keys.sort(key=len, reverse=True)
-    for key in keys:
-      d = result
-      for part in key[:-1]:
-        if part not in d:
-          d[part] = {}
-        d = d[part]
-      if key[-1] in d:
-        d[key[-1]][cname] = dic[sep.join(key)]
-      else:
-        d[key[-1]] = dic[sep.join(key)]
-    return result
 
 class SmartDictReader(DictReader):
 
-  """Helper for importing .csv files.
+  """``DictReader`` with built-in value conversion.
 
-  :param csvfile: open file instance
-  :type csvfile: ``file``
-  :param fields: list of fieldnames or list of tuples (fieldname, fieldtype)
+  :param csvfile: open file instance.
+  :type csvfile: file
+  :param fields: list of ``fieldnames`` or list of tuples
+    ``(fieldname, fieldtype)``. If specified, the ``fieldtype`` will be passed
+    as second argument to the ``convert`` function.
+  :type fields: list
+  :param silent: whether or not to silence errors while processing the file.
+  :type silent: bool
+  :param kwargs: keyword arguments to forward to the undelying
+    ``csv.DictReader`` object.
   :rtype: iterable
 
   Interesting values for kwargs can be:
+
   * delimiter = '\t'
   * quotechar = '\x07'
+
+  The following attributes are also available:
+
+  * ``rows_imported``, the total number of rows successfully imported
+  * ``errors``, a list of tuples ``(e, row)`` where ``e`` is error and ``row``
+    the full row for each error raised
 
   """
 
@@ -347,7 +383,7 @@ def cached_property(func):
 
 class Cacheable(object):
 
-  """Class with cacheable properties.
+  """Mixin to support cacheable properties.
   
   Implements a few cache maintenance utilities.
   
@@ -490,16 +526,7 @@ def _jsonify(value, depth, expand):
 
 class Jsonifiable(object):
 
-  """For easy API calls.
-
-  This is depth first (different from the one in the ExpandedBase class).
-
-  We keep track of what has already been jsonified. There might still be
-  some repetition given that we do not control the order of exploration.
-  If a key is revisited at a lower depth, it will be reparsed to allow for
-  more exploration.
-
-  """
+  """JSONification mixin."""
 
   @property
   def __json__(self):
@@ -534,7 +561,7 @@ class Jsonifiable(object):
         rv[varname] = _jsonify(getattr(self, varname), depth - 1)
       except ValueError as e:
         rv[varname] = e.message
-      except JSONDepthExceededError:
+      except JSONDepthExceededError as e:
         pass
     return rv
 
@@ -543,15 +570,18 @@ class Jsonifiable(object):
 
 class Loggable(object):
 
-  """To easily log stuff.
+  """Convenient logging mixin.
 
-  This implements the main logging methods ('debug', 'info', 'warn', 'error')
-  directly on the class instance. For example, this allows something like::
+  This implements the main logging methods directly on the class instance. For
+  example, this allows something like::
 
-    instance.log('Some message.')
+    instance.info('Some message.')
 
-  Not using __getattr__ to preserve exception context. Otherwise the line where
-  the inexistent attribute was accessed will be lost.
+  The instance's ``__str__`` is prepended to the message for easier debugging.
+
+  Note that this class doesn't override `` __getattr__`` to preserve exception
+  context. Otherwise the line where the inexistent attribute was accessed will
+  be lost.
 
   """
 
@@ -562,15 +592,19 @@ class Loggable(object):
     return action('%s :: %s' % (self, message))
 
   def debug(self, message):
+    """Debug level message."""
     return self._logger(message, 'debug')
 
   def info(self, message):
+    """Info level message."""
     return self._logger(message, 'info')
 
   def warn(self, message):
+    """Warn level message."""
     return self._logger(message, 'warn')
 
   def error(self, message):
+    """Error level message."""
     return self._logger(message, 'error')
 
 
@@ -578,16 +612,22 @@ class Loggable(object):
 
 class JSONEncodedDict(TypeDecorator):
 
-  """Represents an immutable structure as a JSON encoded dict.
+  """Implements dictionary column field type for SQLAlchemy.
 
   This can be used as a Column type during table creation::
 
     some_column_name = Column(JSONEncodedDict)
 
-  .. note::
+  It also implements limited  mutability tracking to know when to update the
+  database: set, del and update actions are tracked. If another method to
+  update the dictionary is used, it will not automatically flag the
+  dictionary for update (for example if a deeply nested key is updated).
+  In such a case, the ``changed`` method needs the be called manually
+  after the operation.
 
-    There is a character limit in the UnicodeText field of the database
-    so care is needed when storing very large dictionaries.
+  The undelying immutable object is of kind ``sqlalchemy.types.UnicodeText``.
+  Note that it has a character limit so care is needed when storing very large
+  dictionaries.
 
   """
 
@@ -606,14 +646,6 @@ class _MutableDict(Mutable, dict):
   This enables the database to know when it should update the stored string
   representation of the dictionary. This is much more efficient than naive
   automatic updating after each query.
-
-  .. note::
-
-    Only set, del and update actions are tracked. If another method to
-    update the dictionary is used, it will not automatically flag the
-    dictionary for update (for example if a deeply nested key is updated).
-    In such a case, the ``changed`` method needs the be called manually
-    after the operation.
 
   """
 
