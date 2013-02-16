@@ -109,7 +109,7 @@ inside each module is to do:
   # the Celery application
   celery = current_project.celery
 
-  # the SQLAlchemy scoped session maker 
+  # the SQLAlchemy scoped session registry 
   session = current_project.session
 
   # normally you probably wouldn't need all three in a single file
