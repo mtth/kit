@@ -1,0 +1,288 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>flasker.ext.auth &mdash; Flasker 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/theme_extras.js"></script>
+    <link rel="top" title="Flasker 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="../../../index.html">
+          <span>Flasker 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>flasker.ext.auth</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="../../../index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <h1>Source code for flasker.ext.auth</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;Auth Extension.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Blueprint</span><span class="p">,</span> <span class="n">current_app</span><span class="p">,</span> <span class="n">flash</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">redirect</span><span class="p">,</span>
+  <span class="n">render_template</span><span class="p">,</span> <span class="n">url_for</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">flask.ext.login</span> <span class="kn">import</span> <span class="p">(</span><span class="n">current_user</span><span class="p">,</span> <span class="n">login_user</span><span class="p">,</span> <span class="n">logout_user</span><span class="p">,</span>
+  <span class="n">LoginManager</span><span class="p">,</span> <span class="n">UserMixin</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">json</span> <span class="kn">import</span> <span class="n">loads</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">abspath</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">dirname</span>
+<span class="kn">from</span> <span class="nn">urllib</span> <span class="kn">import</span> <span class="n">urlencode</span>
+<span class="kn">from</span> <span class="nn">urllib2</span> <span class="kn">import</span> <span class="n">Request</span><span class="p">,</span> <span class="n">urlopen</span>
+
+<span class="kn">from</span> <span class="nn">..util</span> <span class="kn">import</span> <span class="n">Loggable</span>
+
+<div class="viewcode-block" id="User"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.auth.User">[docs]</a><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Loggable</span><span class="p">,</span> <span class="n">UserMixin</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Base user class.&quot;&quot;&quot;</span>
+
+  <span class="n">__all__</span> <span class="o">=</span>  <span class="p">{}</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">email</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">email</span>
+
+  <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;&lt;User id=</span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">__logger__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">current_app</span><span class="o">.</span><span class="n">logger</span>
+
+<div class="viewcode-block" id="User.get_id"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.auth.User.get_id">[docs]</a>  <span class="k">def</span> <span class="nf">get_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Necessary for Flask login extension.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+</div>
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span> <span class="nf">get_from_id</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">cls</span><span class="o">.</span><span class="n">__all__</span><span class="p">:</span>
+      <span class="n">rv</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">__all__</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">rv</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="n">rv</span>
+</div>
+<span class="k">class</span> <span class="nc">Auth</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;URL_PREFIX&#39;</span><span class="p">:</span> <span class="s">&#39;/auth&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PROTECT_ALL_VIEWS&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+  <span class="p">}</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">k</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">=</span> <span class="n">v</span>
+
+  <span class="k">def</span> <span class="nf">_create_blueprint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+
+    <span class="k">return</span> <span class="n">Blueprint</span><span class="p">(</span>
+      <span class="s">&#39;auth&#39;</span><span class="p">,</span>
+      <span class="n">project</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;PROJECT&#39;</span><span class="p">][</span><span class="s">&#39;APP_FOLDER&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;.auth&#39;</span><span class="p">,</span>
+      <span class="n">template_folder</span><span class="o">=</span><span class="n">abspath</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">),</span> <span class="s">&#39;templates&#39;</span><span class="p">,</span> <span class="s">&#39;auth&#39;</span><span class="p">)),</span>
+      <span class="n">url_prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;URL_PREFIX&#39;</span><span class="p">]</span>
+    <span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_create_login_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+    <span class="n">login_manager</span> <span class="o">=</span> <span class="n">LoginManager</span><span class="p">()</span>
+    <span class="n">login_manager</span><span class="o">.</span><span class="n">login_view</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;URL_PREFIX&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;/sign_in&#39;</span>
+    <span class="n">login_manager</span><span class="o">.</span><span class="n">login_message</span> <span class="o">=</span> <span class="s">&#39;Please sign in&#39;</span>
+
+    <span class="nd">@login_manager.user_loader</span>
+    <span class="k">def</span> <span class="nf">load_user</span><span class="p">(</span><span class="nb">id</span><span class="p">):</span>
+      <span class="sd">&quot;&quot;&quot;Return the user from his email.</span>
+
+<span class="sd">      Necessary for flask.login module.</span>
+<span class="sd">        </span>
+<span class="sd">      &quot;&quot;&quot;</span>
+      <span class="k">return</span> <span class="n">User</span><span class="o">.</span><span class="n">get_from_id</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">login_manager</span>
+
+  <span class="k">def</span> <span class="nf">_before_register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Will be called right before the blueprint is registered.&quot;&quot;&quot;</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">blueprint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_blueprint</span><span class="p">(</span><span class="n">project</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">login_manager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_login_manager</span><span class="p">()</span>
+
+  <span class="k">def</span> <span class="nf">_after_register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Will be called right after the blueprint is registered.&quot;&quot;&quot;</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">login_manager</span><span class="o">.</span><span class="n">setup_app</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">app</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;PROTECT_ALL_VIEWS&#39;</span><span class="p">]:</span>
+
+      <span class="nd">@project.app.before_request</span>
+      <span class="k">def</span> <span class="nf">check_if_logged_in</span><span class="p">():</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">blueprint</span> <span class="o">!=</span> <span class="s">&#39;auth&#39;</span>
+            <span class="ow">and</span> <span class="n">request</span><span class="o">.</span><span class="n">endpoint</span> <span class="c"># favicon</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">==</span> <span class="s">&#39;static&#39;</span> <span class="c"># static files</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="n">current_user</span><span class="o">.</span><span class="n">is_authenticated</span><span class="p">()):</span>
+          <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_manager</span><span class="o">.</span><span class="n">unauthorized</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+<span class="k">class</span> <span class="nc">GoogleAuth</span><span class="p">(</span><span class="n">Auth</span><span class="p">):</span>
+
+  <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;URL_PREFIX&#39;</span><span class="p">:</span> <span class="s">&#39;/auth&#39;</span><span class="p">,</span>
+    <span class="s">&#39;PROTECT_ALL_VIEWS&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="s">&#39;CLIENT_ID&#39;</span><span class="p">:</span> <span class="s">&#39;&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AUTHORIZED_EMAILS&#39;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+    <span class="s">&#39;CALLBACK_URL&#39;</span><span class="p">:</span> <span class="s">&#39;/oauth2callback&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ENDPOINTS&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;get_token_or_code&#39;</span><span class="p">:</span> <span class="s">&quot;https://accounts.google.com/o/oauth2/auth&quot;</span><span class="p">,</span>
+        <span class="s">&#39;validate_token&#39;</span><span class="p">:</span> <span class="s">&quot;https://www.googleapis.com/oauth2/v1/tokeninfo&quot;</span><span class="p">,</span>
+        <span class="s">&#39;get_token_from_code&#39;</span><span class="p">:</span> <span class="s">&quot;https://accounts.google.com/o/oauth2/token&quot;</span><span class="p">,</span>
+        <span class="s">&#39;get_user_info&#39;</span><span class="p">:</span> <span class="s">&quot;https://www.googleapis.com/oauth2/v2/userinfo&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s">&#39;SCOPES&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;email&#39;</span><span class="p">:</span> <span class="s">&quot;https://www.googleapis.com/auth/userinfo.email&quot;</span><span class="p">,</span>
+        <span class="s">&#39;profile&#39;</span><span class="p">:</span> <span class="s">&quot;https://www.googleapis.com/auth/userinfo.profile&quot;</span>
+    <span class="p">},</span>
+    <span class="s">&#39;RESPONSE_TYPE&#39;</span><span class="p">:</span> <span class="s">&quot;token&quot;</span><span class="p">,</span>
+    <span class="s">&#39;GRANT_TYPE&#39;</span><span class="p">:</span> <span class="s">&quot;authorization_code&quot;</span><span class="p">,</span>
+    <span class="s">&#39;ACCESS_TYPE&#39;</span><span class="p">:</span> <span class="s">&quot;offline&quot;</span><span class="p">,</span>
+  <span class="p">}</span>
+
+  <span class="k">def</span> <span class="nf">_before_register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+
+    <span class="nb">super</span><span class="p">(</span><span class="n">GoogleAuth</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_before_register</span><span class="p">(</span><span class="n">project</span><span class="p">)</span>
+
+    <span class="n">emails</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;AUTHORIZED_EMAILS&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">emails</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+      <span class="k">for</span> <span class="n">email</span> <span class="ow">in</span> <span class="n">emails</span><span class="p">:</span>
+        <span class="n">User</span><span class="o">.</span><span class="n">__all__</span><span class="p">[</span><span class="n">email</span><span class="p">]</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">email</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">emails</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+      <span class="k">for</span> <span class="n">email</span> <span class="ow">in</span> <span class="n">emails</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">):</span>
+        <span class="n">email</span> <span class="o">=</span> <span class="n">email</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">email</span><span class="p">:</span>
+          <span class="n">User</span><span class="o">.</span><span class="n">__all__</span><span class="p">[</span><span class="n">email</span><span class="p">]</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">email</span><span class="p">)</span>
+
+    <span class="n">bp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blueprint</span>
+
+    <span class="nd">@bp.route</span><span class="p">(</span><span class="s">&#39;/sign_in&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sign_in</span><span class="p">():</span>
+      <span class="sd">&quot;&quot;&quot;Sign in view.&quot;&quot;&quot;</span>
+      <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;sign_in_url&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_url</span><span class="p">}</span>
+      <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">&#39;google_sign_in.html&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="nd">@bp.route</span><span class="p">(</span><span class="s">&#39;/sign_out&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">sign_out</span><span class="p">():</span>
+      <span class="sd">&quot;&quot;&quot;Sign out.&quot;&quot;&quot;</span>
+      <span class="k">if</span> <span class="n">current_user</span><span class="o">.</span><span class="n">is_authenticated</span><span class="p">():</span>
+        <span class="n">current_user</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Signed out.&#39;</span><span class="p">)</span>
+        <span class="n">logout_user</span><span class="p">()</span>
+        <span class="n">flash</span><span class="p">(</span><span class="s">&#39;Goodbye&#39;</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">&#39;.sign_in&#39;</span><span class="p">))</span>
+
+
+    <span class="nd">@bp.route</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;CALLBACK_URL&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">oauth2callback</span><span class="p">():</span>
+      <span class="sd">&quot;&quot;&quot;Handles OAuth2 callback.</span>
+
+<span class="sd">      Callbacks from the Google API first arrive here. However, since the token</span>
+<span class="sd">      information is stored after the hash in the URL, Flask can&#39;t process it</span>
+<span class="sd">      directly. Therefore this page renders a page with only JavaScript which</span>
+<span class="sd">      then catches the token information and redirects to ``catch_token``.</span>
+
+<span class="sd">      &quot;&quot;&quot;</span>
+      <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;catch_token_url&#39;</span><span class="p">:</span> <span class="n">url_for</span><span class="p">(</span><span class="s">&#39;.catch_token&#39;</span><span class="p">)}</span>
+      <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">&#39;get_token_from_hash.html&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="nd">@bp.route</span><span class="p">(</span><span class="s">&#39;/catch_token&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">catch_token</span><span class="p">():</span>
+      <span class="sd">&quot;&quot;&quot;Catches the token and signs in the user if it passes validation.</span>
+
+<span class="sd">      If the user got to the sign in page from an non anonymous authorized page</span>
+<span class="sd">      he will be directly redirected there after sign in. Otherwise he will be</span>
+<span class="sd">      redirected to the home page.</span>
+
+<span class="sd">      &quot;&quot;&quot;</span>
+      <span class="n">token</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="s">&#39;access_token&#39;</span><span class="p">]</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_token</span><span class="p">(</span><span class="n">token</span><span class="p">):</span>
+        <span class="n">flash</span><span class="p">(</span><span class="s">&#39;Invalid token&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">&#39;.sign_in&#39;</span><span class="p">))</span>
+      <span class="n">user_infos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_user_info_from_token</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+      <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">get_from_id</span><span class="p">(</span><span class="n">user_infos</span><span class="p">[</span><span class="s">&#39;email&#39;</span><span class="p">])</span>
+      <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+        <span class="n">login_user</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Signed in.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="s">&#39;state&#39;</span><span class="p">])</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">current_app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> tried to sign in.&#39;</span> <span class="o">%</span> <span class="n">user_infos</span><span class="p">[</span><span class="s">&#39;email&#39;</span><span class="p">])</span>
+        <span class="n">flash</span><span class="p">(</span><span class="s">&#39;Unauthorized&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">&#39;.sign_in&#39;</span><span class="p">))</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">login_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Combines the endpoint with the parameters to generate the API url.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;ENDPOINTS&#39;</span><span class="p">][</span><span class="s">&#39;get_token_or_code&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;?&#39;</span> <span class="o">+</span> <span class="n">urlencode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_params</span><span class="p">())</span>
+    
+  <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Builds the dictionary of parameters required the API request.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+      <span class="s">&#39;scope&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;SCOPES&#39;</span><span class="p">][</span><span class="s">&#39;email&#39;</span><span class="p">],</span>
+      <span class="s">&#39;redirect_uri&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">url_root</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">blueprint</span><span class="o">.</span><span class="n">url_prefix</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;CALLBACK_URL&#39;</span><span class="p">],</span>
+      <span class="s">&#39;response_type&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;RESPONSE_TYPE&#39;</span><span class="p">],</span>
+      <span class="s">&#39;state&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="s">&#39;next&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s">&#39;next&#39;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span> <span class="k">else</span> <span class="s">&#39;/&#39;</span><span class="p">,</span>
+      <span class="s">&#39;client_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;CLIENT_ID&#39;</span><span class="p">]</span>
+    <span class="p">}</span>
+
+  <span class="k">def</span> <span class="nf">validate_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Checks if the token is valid.&quot;&quot;&quot;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;ENDPOINTS&#39;</span><span class="p">][</span><span class="s">&#39;validate_token&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;?access_token=&#39;</span> <span class="o">+</span> <span class="n">token</span>
+    <span class="n">req</span> <span class="o">=</span> <span class="n">Request</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">token_info</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+    <span class="k">return</span> <span class="bp">False</span> <span class="k">if</span> <span class="s">&#39;error&#39;</span> <span class="ow">in</span> <span class="n">token_info</span> <span class="k">else</span> <span class="bp">True</span>
+
+  <span class="k">def</span> <span class="nf">get_user_info_from_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Grabs user email from token. &quot;&quot;&quot;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;ENDPOINTS&#39;</span><span class="p">][</span><span class="s">&#39;get_user_info&#39;</span><span class="p">]</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;Authorization&#39;</span><span class="p">:</span> <span class="s">&#39;Bearer &#39;</span> <span class="o">+</span> <span class="n">token</span><span class="p">}</span>
+    <span class="n">req</span> <span class="o">=</span> <span class="n">Request</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">res</span>
+</pre></div>
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="../../../index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

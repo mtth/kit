@@ -1,0 +1,970 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>flasker.ext.api &mdash; Flasker 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/theme_extras.js"></script>
+    <link rel="top" title="Flasker 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="../../../index.html">
+          <span>Flasker 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>flasker.ext.api</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="../../../index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <h1>Source code for flasker.ext.api</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;API Extension.</span>
+
+<span class="sd">Models can be added in two ways. Either individually::</span>
+<span class="sd">  </span>
+<span class="sd">  api.add_model(Model)</span>
+
+<span class="sd">or globally::</span>
+
+<span class="sd">  api.add_all_models()</span>
+
+<span class="sd">Both functions accept the same additional options (cf. ``add_all_models``)</span>
+
+<span class="sd">It also exposes the `authorize` and `validate` decorators.</span>
+
+<span class="sd">Once all the models have been added along with (optionally) the authorize and</span>
+<span class="sd">validate functions, the API extension should be registered with the project::</span>
+
+<span class="sd">  current_project.register_extension(extension)</span>
+
+<span class="sd">Next steps:</span>
+
+<span class="sd">To configure further the views corresponding to each model, you can access</span>
+<span class="sd">the ``__view__`` attribute and insert your custom API views there.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Blueprint</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">,</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">abspath</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">join</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">func</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span><span class="p">,</span> <span class="n">declared_attr</span> 
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">class_mapper</span><span class="p">,</span> <span class="n">mapperlib</span><span class="p">,</span> <span class="n">Query</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm.attributes</span> <span class="kn">import</span> <span class="n">InstrumentedAttribute</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm.collections</span> <span class="kn">import</span> <span class="n">InstrumentedList</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm.dynamic</span> <span class="kn">import</span> <span class="n">AppenderQuery</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm.mapper</span> <span class="kn">import</span> <span class="n">Mapper</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm.properties</span> <span class="kn">import</span> <span class="n">ColumnProperty</span><span class="p">,</span> <span class="n">RelationshipProperty</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+<span class="kn">from</span> <span class="nn">werkzeug.exceptions</span> <span class="kn">import</span> <span class="n">HTTPException</span>
+
+<span class="kn">from</span> <span class="nn">..project</span> <span class="kn">import</span> <span class="n">current_project</span> <span class="k">as</span> <span class="n">pj</span>
+<span class="kn">from</span> <span class="nn">..util</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Cacheable</span><span class="p">,</span> <span class="n">_jsonify</span><span class="p">,</span> <span class="n">JSONDepthExceededError</span><span class="p">,</span>
+  <span class="n">JSONEncodedDict</span><span class="p">,</span> <span class="n">Loggable</span><span class="p">,</span> <span class="n">uncamelcase</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="APIError"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.APIError">[docs]</a><span class="k">class</span> <span class="nc">APIError</span><span class="p">(</span><span class="n">HTTPException</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Thrown when an API call is invalid.</span>
+
+<span class="sd">  The following error codes can occur:</span>
+
+<span class="sd">  * ``400 Bad Request`` if the request is badly formulated (wrong query</span>
+<span class="sd">    parameters, invalid form data, etc.)</span>
+<span class="sd">  * ``403 Forbidden`` if the request is not authorized by the server</span>
+<span class="sd">  * ``404 Not Found`` if the request refers to a non-existent resource</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">content</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">code</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">content</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">APIError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;&lt;APIError </span><span class="si">%r</span><span class="s">: </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="API"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.API">[docs]</a><span class="k">class</span> <span class="nc">API</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Main API extension.</span>
+
+<span class="sd">  Handles the creation and registration of all API views. The following</span>
+<span class="sd">  configuration options are available:</span>
+
+<span class="sd">  * ``URL_PREFIX`` the blueprint URL prefix (defaults to ``/api``)</span>
+<span class="sd">  * ``DEFAULT_DEPTH`` the default depth models are jsonified to. ``0`` yields </span>
+<span class="sd">    an empty dictionary (defaults to ``1``).</span>
+<span class="sd">  * ``DEFAULT_LIMIT`` the default number of results returned per query </span>
+<span class="sd">    (defaults to ``20``)</span>
+<span class="sd">  * ``MAX_LIMIT`` the maximum number of results returned by a query. ``0`` </span>
+<span class="sd">    means no limit (defaults to ``0``).</span>
+<span class="sd">  * ``EXPAND`` if ``True``, same model data will be repeated in the response</span>
+<span class="sd">    if the model is encountered multiple times, otherwise only the key will</span>
+<span class="sd">    be returned. This can be very useful for efficiency when used with a </span>
+<span class="sd">    client-side library such as Backbone-Relational (defaults to ``True``).</span>
+
+<span class="sd">  These can either be passed to the constructor (parameter names are not case</span>
+<span class="sd">  sensitive)::</span>
+
+<span class="sd">    api = API(url_prefix=&#39;/my_api&#39;, max_limit=10)</span>
+
+<span class="sd">  Or they can be stored in the main project configuration file and passed on</span>
+<span class="sd">  when registering the extension with the ``config_section`` argument::</span>
+
+<span class="sd">    current_project.register_extension(api, config_section=&#39;API&#39;)</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">_authorize</span> <span class="o">=</span> <span class="bp">None</span>
+  <span class="n">_validate</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;URL_PREFIX&#39;</span><span class="p">:</span> <span class="s">&#39;/api&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DEFAULT_DEPTH&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s">&#39;DEFAULT_LIMIT&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+    <span class="s">&#39;MAX_LIMIT&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s">&#39;EXPAND&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+  <span class="p">}</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">k</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="n">APIView</span><span class="o">.</span><span class="n">__extension__</span> <span class="o">=</span> <span class="bp">self</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">Models</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="API.authorize"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.API.authorize">[docs]</a>  <span class="k">def</span> <span class="nf">authorize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decorator to set the authorization function.</span>
+
+<span class="sd">    :param func: an authorization function. It will be called everytime a new</span>
+<span class="sd">      request comes in and is passed 2 arguments:</span>
+<span class="sd">    </span>
+<span class="sd">      * the endpoint</span>
+<span class="sd">      * the request method</span>
+
+<span class="sd">      If the function returns a truthful value, the request will proceed.</span>
+<span class="sd">      Otherwise a 403 exception is raised.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_authorize</span> <span class="o">=</span> <span class="n">func</span>
+</div>
+<div class="viewcode-block" id="API.validate"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.API.validate">[docs]</a>  <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decorator to set the validate function, called on POST, PUT and PATCH.</span>
+
+<span class="sd">    The validator will be passed two arguments:</span>
+
+<span class="sd">    * the model class</span>
+<span class="sd">    * the request json</span>
+
+<span class="sd">    If the function returns a truthful value, the request will proceed.</span>
+<span class="sd">    Otherwise a 400 exception is raised.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span> <span class="o">=</span> <span class="n">func</span>
+</div>
+<div class="viewcode-block" id="API.add_model"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.API.add_model">[docs]</a>  <span class="k">def</span> <span class="nf">add_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Model</span><span class="p">,</span> <span class="n">relationships</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Flag a Model to be added.</span>
+
+<span class="sd">    :param Model: the ``Model`` subclass to be exposed.</span>
+<span class="sd">    :param relationships: whether or not to create subroutes for the model&#39;s</span>
+<span class="sd">      lazy and dynamic relationships. This parameter can take the following</span>
+<span class="sd">      values:</span>
+
+<span class="sd">      * ``True`` to create routes for all </span>
+<span class="sd">      * ``False`` to create none</span>
+<span class="sd">      * a list of relationship keys to create routes for</span>
+
+<span class="sd">    :param methods: which request methods to allow. Can take the following</span>
+<span class="sd">      values:</span>
+
+<span class="sd">      * ``True`` to allow all</span>
+<span class="sd">      * a list of methods to allow</span>
+<span class="sd">    </span>
+<span class="sd">    Calling this function multiple times will override any options previously </span>
+<span class="sd">    set for the Model.</span>
+
+<span class="sd">    ..note::</span>
+<span class="sd">      </span>
+<span class="sd">      Only relationships with ``lazy`` set to ``&#39;dynamic&#39;``, ``&#39;select&#39;`` or</span>
+<span class="sd">      ``True`` can have subroutes. All eagerly loaded relationships are simply</span>
+<span class="sd">      available directly on the model.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">Models</span><span class="p">[</span><span class="n">Model</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">Model</span><span class="p">,</span> <span class="p">{</span>
+      <span class="s">&#39;relationships&#39;</span><span class="p">:</span> <span class="n">relationships</span><span class="p">,</span>
+      <span class="s">&#39;methods&#39;</span><span class="p">:</span> <span class="n">methods</span>
+    <span class="p">})</span>
+</div>
+<div class="viewcode-block" id="API.add_all_models"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.API.add_all_models">[docs]</a>  <span class="k">def</span> <span class="nf">add_all_models</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convenience method to add all registered models.</span>
+<span class="sd">    </span>
+<span class="sd">    This method accepts same arguments as ``add_model``, which will be passed</span>
+<span class="sd">    to all models.</span>
+<span class="sd">    </span>
+<span class="sd">    Remember that calling ``add_model`` overwrites previous options, so it</span>
+<span class="sd">    is possible to add all models and individually changing the options for</span>
+<span class="sd">    each by calling the ``add_model`` method for a few models afterwards.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">model_class</span> <span class="ow">in</span> <span class="p">[</span><span class="n">k</span><span class="o">.</span><span class="n">class_</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">mapperlib</span><span class="o">.</span><span class="n">_mapper_registry</span><span class="p">]:</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">model_class</span><span class="o">.</span><span class="n">__name__</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Models</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_model</span><span class="p">(</span><span class="n">model_class</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+  <span class="k">def</span> <span class="nf">_create_model_views</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Model</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
+    <span class="n">view</span> <span class="o">=</span> <span class="n">Model</span><span class="o">.</span><span class="n">__view__</span>
+    <span class="n">relationships</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;relationships&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s">&#39;collection&#39;</span> <span class="ow">in</span> <span class="n">view</span><span class="p">:</span> <span class="n">view</span><span class="p">[</span><span class="s">&#39;collection&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attach_view</span><span class="p">(</span><span class="n">Model</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s">&#39;model&#39;</span> <span class="ow">in</span> <span class="n">view</span><span class="p">:</span> <span class="n">view</span><span class="p">[</span><span class="s">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attach_view</span><span class="p">(</span><span class="n">Model</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">relationships</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+      <span class="n">rels</span> <span class="o">=</span> <span class="n">Model</span><span class="o">.</span><span class="n">get_relationships</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">relationships</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+      <span class="n">rels</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">rels</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">key</span> <span class="ow">in</span> <span class="n">relationships</span><span class="p">,</span>
+        <span class="n">Model</span><span class="o">.</span><span class="n">get_relationships</span><span class="p">()</span>
+      <span class="p">)</span>
+    <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">rels</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">rel</span><span class="o">.</span><span class="n">lazy</span> <span class="o">==</span> <span class="s">&#39;dynamic&#39;</span> <span class="ow">and</span> <span class="n">rel</span><span class="o">.</span><span class="n">uselist</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s">&#39;relationship_model&#39;</span> <span class="ow">in</span> <span class="n">view</span><span class="p">:</span>
+          <span class="n">view</span><span class="p">[</span><span class="s">&#39;relationship_model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attach_view</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s">&#39;dynamic_relationship&#39;</span> <span class="ow">in</span> <span class="n">view</span><span class="p">:</span>
+          <span class="n">view</span><span class="p">[</span><span class="s">&#39;dynamic_relationship&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attach_view</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+      <span class="k">elif</span> <span class="n">rel</span><span class="o">.</span><span class="n">lazy</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">True</span><span class="p">,</span> <span class="s">&#39;select&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">rel</span><span class="o">.</span><span class="n">uselist</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s">&#39;relationship_model&#39;</span> <span class="ow">in</span> <span class="n">view</span><span class="p">:</span>
+          <span class="n">view</span><span class="p">[</span><span class="s">&#39;relationship_model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attach_view</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s">&#39;lazy_relationship&#39;</span> <span class="ow">in</span> <span class="n">view</span><span class="p">:</span>
+          <span class="n">view</span><span class="p">[</span><span class="s">&#39;lazy_relationship&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">attach_view</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_before_register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">blueprint</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span>
+      <span class="s">&#39;api&#39;</span><span class="p">,</span>
+      <span class="n">project</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;PROJECT&#39;</span><span class="p">][</span><span class="s">&#39;APP_FOLDER&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39;.api&#39;</span><span class="p">,</span>
+      <span class="n">template_folder</span><span class="o">=</span><span class="n">abspath</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">),</span> <span class="s">&#39;templates&#39;</span><span class="p">,</span> <span class="s">&#39;api&#39;</span><span class="p">)),</span>
+      <span class="n">url_prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;URL_PREFIX&#39;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">model_class</span><span class="p">,</span> <span class="n">options</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Models</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_create_model_views</span><span class="p">(</span><span class="n">model_class</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
+    <span class="n">IndexView</span><span class="o">.</span><span class="n">attach_view</span><span class="p">()</span>
+
+  <span class="k">def</span> <span class="nf">_after_register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+    <span class="n">Model</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">_engine</span><span class="p">,</span> <span class="n">checkfirst</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">Model</span><span class="o">.</span><span class="n">query</span> <span class="o">=</span> <span class="n">_QueryProperty</span><span class="p">(</span><span class="n">project</span><span class="p">)</span>
+
+<span class="c"># Views</span>
+</div>
+<div class="viewcode-block" id="APIView"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.APIView">[docs]</a><span class="k">class</span> <span class="nc">APIView</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Base API view.</span>
+
+<span class="sd">  Subclass this to implement your own.</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">__all__</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">__extension__</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="c"># Flask stuff</span>
+  <span class="n">decorators</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">methods</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="s">&#39;POST&#39;</span><span class="p">,</span> <span class="s">&#39;HEAD&#39;</span><span class="p">,</span> <span class="s">&#39;OPTIONS&#39;</span><span class="p">,</span>
+                       <span class="s">&#39;DELETE&#39;</span><span class="p">,</span> <span class="s">&#39;PUT&#39;</span><span class="p">,</span> <span class="s">&#39;TRACE&#39;</span><span class="p">,</span> <span class="s">&#39;PATCH&#39;</span><span class="p">])</span>
+
+  <span class="c"># these control which requests are allowed:</span>
+  <span class="c"># the default behavior is to allow all request methods that have a </span>
+  <span class="c"># corresponding method implemented but this can be further restricted</span>
+  <span class="c"># with the ``methods`` kwarg of ``add_model``, reflected here</span>
+  <span class="n">allowed_methods</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">()</span>
+  <span class="c"># which url query parameters are allowed by the parser</span>
+  <span class="n">allowed_request_keys</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">()</span>
+
+  <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s">&#39;HEAD&#39;</span><span class="p">:</span>
+      <span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;get&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">method</span> <span class="ow">or</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">allowed_methods</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">405</span><span class="p">,</span> <span class="s">&#39;Method Not Allowed&#39;</span><span class="p">)</span>
+      <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_authorized</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">403</span><span class="p">,</span> <span class="s">&#39;Not authorized&#39;</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">Parser</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">allowed_request_keys</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">method</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">APIError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+        <span class="s">&#39;status&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="p">,</span>
+        <span class="s">&#39;request&#39;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="s">&#39;base_url&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
+          <span class="s">&#39;method&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+          <span class="s">&#39;values&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span>
+        <span class="p">},</span>
+        <span class="s">&#39;content&#39;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">content</span>
+      <span class="p">}),</span> <span class="n">e</span><span class="o">.</span><span class="n">code</span>
+
+<div class="viewcode-block" id="APIView.get_endpoint"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.APIView.get_endpoint">[docs]</a>  <span class="k">def</span> <span class="nf">get_endpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the endpoint for use in the blueprint.</span>
+
+<span class="sd">    These should be unique accross all your API views.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">uncamelcase</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="APIView.get_rule"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.APIView.get_rule">[docs]</a>  <span class="k">def</span> <span class="nf">get_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the URL route for the view.</span>
+
+<span class="sd">    Routes should be unique (duh).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span>
+</div>
+  <span class="k">def</span> <span class="nf">_get_available_methods</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">endpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_endpoint</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">[</span>
+      <span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">allowed_methods</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_authorized</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span>
+    <span class="p">]</span>
+
+  <span class="k">def</span> <span class="nf">_is_authorized</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="n">method</span> <span class="ow">or</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span>
+    <span class="n">authorize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__extension__</span><span class="o">.</span><span class="n">_authorize</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">authorize</span> <span class="ow">or</span> <span class="n">authorize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_endpoint</span><span class="p">(),</span> <span class="n">method</span><span class="p">):</span>
+      <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="bp">False</span>
+
+  <span class="k">def</span> <span class="nf">_is_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Model</span><span class="p">,</span> <span class="n">json</span><span class="p">):</span>
+    <span class="n">validate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__extension__</span><span class="o">.</span><span class="n">_validate</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">validate</span> <span class="ow">or</span> <span class="n">validate</span><span class="p">(</span><span class="n">Model</span><span class="p">,</span> <span class="n">json</span><span class="p">):</span>
+      <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="bp">False</span>
+
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="APIView.attach_view"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.APIView.attach_view">[docs]</a>  <span class="k">def</span> <span class="nf">attach_view</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">view_args</span><span class="p">,</span> <span class="o">**</span><span class="n">view_kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create and attach a view to the blueprint.</span>
+
+<span class="sd">    New views should be created with this method otherwise the extension will</span>
+<span class="sd">    be unaware of them.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">view</span> <span class="o">=</span> <span class="n">cls</span><span class="p">(</span><span class="o">*</span><span class="n">view_args</span><span class="p">)</span>
+    <span class="n">methods</span> <span class="o">=</span> <span class="n">view_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;methods&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">methods</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+      <span class="n">view</span><span class="o">.</span><span class="n">allowed_methods</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">methods</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">view</span><span class="o">.</span><span class="n">allowed_methods</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">methods</span><span class="p">)</span>
+    <span class="n">cls</span><span class="o">.</span><span class="n">__extension__</span><span class="o">.</span><span class="n">blueprint</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span>
+      <span class="n">rule</span><span class="o">=</span><span class="n">view</span><span class="o">.</span><span class="n">get_rule</span><span class="p">(),</span>
+      <span class="n">endpoint</span><span class="o">=</span><span class="n">view</span><span class="o">.</span><span class="n">get_endpoint</span><span class="p">(),</span>
+      <span class="n">view_func</span><span class="o">=</span><span class="n">view</span><span class="p">,</span>
+      <span class="n">methods</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">methods</span>
+    <span class="p">)</span>
+    <span class="n">cls</span><span class="o">.</span><span class="n">__all__</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">view</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="CollectionView"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.CollectionView">[docs]</a><span class="k">class</span> <span class="nc">CollectionView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Default view for collection endpoints.&quot;&quot;&quot;</span>
+
+  <span class="n">allowed_request_keys</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;depth&#39;</span><span class="p">,</span> <span class="s">&#39;limit&#39;</span><span class="p">,</span> <span class="s">&#39;offset&#39;</span><span class="p">,</span> <span class="s">&#39;filter&#39;</span><span class="p">,</span> 
+                                    <span class="s">&#39;sort&#39;</span><span class="p">,</span> <span class="s">&#39;expand&#39;</span><span class="p">])</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">Model</span> <span class="o">=</span> <span class="n">Model</span>
+
+  <span class="k">def</span> <span class="nf">get_endpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;collection_view_for_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">__tablename__</span>
+
+  <span class="k">def</span> <span class="nf">get_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">__tablename__</span>
+
+  <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">timers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">filtered_query</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">filter_and_sort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">query</span><span class="p">)</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">filter_and_sort</span><span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get_count_query</span><span class="p">(),</span> <span class="bp">False</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">one</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">timers</span><span class="p">[</span><span class="s">&#39;count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">now</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="p">[</span>
+      <span class="n">e</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="o">**</span><span class="n">parser</span><span class="o">.</span><span class="n">get_jsonify_kwargs</span><span class="p">())</span>
+      <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">parser</span><span class="o">.</span><span class="n">offset_and_limit</span><span class="p">(</span><span class="n">filtered_query</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">timers</span><span class="p">[</span><span class="s">&#39;jsonification&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">now</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+      <span class="s">&#39;status&#39;</span><span class="p">:</span> <span class="s">&#39;200 Success&#39;</span><span class="p">,</span>
+      <span class="s">&#39;processing_time&#39;</span><span class="p">:</span> <span class="n">timers</span><span class="p">,</span>
+      <span class="s">&#39;matches&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;total&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
+        <span class="s">&#39;returned&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">),</span>
+      <span class="p">},</span>
+      <span class="s">&#39;request&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;base_url&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
+        <span class="s">&#39;method&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+        <span class="s">&#39;values&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span>
+      <span class="p">},</span>
+      <span class="s">&#39;content&#39;</span><span class="p">:</span> <span class="n">content</span>
+    <span class="p">}),</span> <span class="mi">200</span>
+
+  <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_valid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="p">):</span>
+      <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="o">**</span><span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="p">)</span>
+      <span class="n">pj</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+      <span class="n">pj</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span> <span class="c"># generate an ID</span>
+      <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="o">**</span><span class="n">parser</span><span class="o">.</span><span class="n">get_jsonify_kwargs</span><span class="p">()))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Failed validation&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ModelView"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.ModelView">[docs]</a><span class="k">class</span> <span class="nc">ModelView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Default view for individual model endpoints.&quot;&quot;&quot;</span>
+
+  <span class="n">allowed_request_keys</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;depth&#39;</span><span class="p">,</span> <span class="s">&#39;expand&#39;</span><span class="p">])</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">Model</span> <span class="o">=</span> <span class="n">Model</span>
+
+  <span class="k">def</span> <span class="nf">get_endpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;model_view_for_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">__tablename__</span>
+
+  <span class="k">def</span> <span class="nf">get_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s">&#39;/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">__tablename__</span>
+    <span class="n">url</span> <span class="o">+=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;/&lt;</span><span class="si">%s</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">get_primary_key_names</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">url</span>
+
+  <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;No resource found&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="o">**</span><span class="n">parser</span><span class="o">.</span><span class="n">get_jsonify_kwargs</span><span class="p">()))</span>
+
+  <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">model</span><span class="p">:</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_valid</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+          <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="o">**</span><span class="n">parser</span><span class="o">.</span><span class="n">get_jsonify_kwargs</span><span class="p">()))</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Failed validation&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;No resource found for this ID&#39;</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">patch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+  <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">model</span><span class="p">:</span>
+      <span class="n">pj</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s">&#39;status&#39;</span><span class="p">:</span> <span class="s">&#39;200 Success&#39;</span><span class="p">,</span> <span class="s">&#39;content&#39;</span><span class="p">:</span> <span class="s">&#39;Resource deleted&#39;</span><span class="p">})</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;No resource found for this ID&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RelationshipView"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.RelationshipView">[docs]</a><span class="k">class</span> <span class="nc">RelationshipView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Not an actual view, meant to be subclassed.&quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rel</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">rel</span> <span class="o">=</span> <span class="n">rel</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">Model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">mapper</span><span class="o">.</span><span class="n">class_</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">parent_Model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">class_</span>
+
+  <span class="k">def</span> <span class="nf">get_endpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;relationship_view_for_</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+      <span class="n">uncamelcase</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_Model</span><span class="o">.</span><span class="n">__name__</span><span class="p">),</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">key</span>
+    <span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">get_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s">&#39;/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_Model</span><span class="o">.</span><span class="n">__tablename__</span>
+    <span class="n">url</span> <span class="o">+=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+      <span class="s">&#39;/&lt;</span><span class="si">%s</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_Model</span><span class="o">.</span><span class="n">get_primary_key_names</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">url</span> <span class="o">+=</span> <span class="s">&#39;/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">key</span>
+    <span class="k">return</span> <span class="n">url</span>
+
+  <span class="k">def</span> <span class="nf">get_collection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">parent_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_Model</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">parent_model</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;No resource found&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">parent_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DynamicRelationshipView"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.DynamicRelationshipView">[docs]</a><span class="k">class</span> <span class="nc">DynamicRelationshipView</span><span class="p">(</span><span class="n">RelationshipView</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Default view for dynamic relationships.&quot;&quot;&quot;</span>
+
+  <span class="n">allowed_request_keys</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;depth&#39;</span><span class="p">,</span> <span class="s">&#39;limit&#39;</span><span class="p">,</span> <span class="s">&#39;offset&#39;</span><span class="p">,</span> <span class="s">&#39;filter&#39;</span><span class="p">,</span>
+                                    <span class="s">&#39;sort&#39;</span><span class="p">,</span> <span class="s">&#39;expand&#39;</span><span class="p">])</span>
+
+  <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">filter_and_sort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+    <span class="n">timers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+    <span class="n">timers</span><span class="p">[</span><span class="s">&#39;count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">now</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="p">[</span>
+      <span class="n">e</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="o">**</span><span class="n">parser</span><span class="o">.</span><span class="n">get_jsonify_kwargs</span><span class="p">())</span>
+      <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">parser</span><span class="o">.</span><span class="n">offset_and_limit</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">timers</span><span class="p">[</span><span class="s">&#39;jsonification&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">now</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+      <span class="s">&#39;status&#39;</span><span class="p">:</span> <span class="s">&#39;200 Success&#39;</span><span class="p">,</span>
+      <span class="s">&#39;processing_time&#39;</span><span class="p">:</span> <span class="n">timers</span><span class="p">,</span>
+      <span class="s">&#39;matches&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;total&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
+        <span class="s">&#39;returned&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">),</span>
+      <span class="p">},</span>
+      <span class="s">&#39;request&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;base_url&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
+        <span class="s">&#39;method&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+        <span class="s">&#39;values&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span>
+      <span class="p">},</span>
+      <span class="s">&#39;content&#39;</span><span class="p">:</span> <span class="n">content</span>
+    <span class="p">}),</span> <span class="mi">200</span>
+</div>
+<div class="viewcode-block" id="LazyRelationshipView"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.LazyRelationshipView">[docs]</a><span class="k">class</span> <span class="nc">LazyRelationshipView</span><span class="p">(</span><span class="n">RelationshipView</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Default view for lazy relationships.&quot;&quot;&quot;</span>
+
+  <span class="n">allowed_request_keys</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;depth&#39;</span><span class="p">,</span> <span class="s">&#39;expand&#39;</span><span class="p">])</span>
+
+  <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">timers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="p">[</span>
+      <span class="n">e</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="o">**</span><span class="n">parser</span><span class="o">.</span><span class="n">get_jsonify_kwargs</span><span class="p">())</span>
+      <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+    <span class="n">timers</span><span class="p">[</span><span class="s">&#39;jsonification&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">now</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+      <span class="s">&#39;status&#39;</span><span class="p">:</span> <span class="s">&#39;200 Success&#39;</span><span class="p">,</span>
+      <span class="s">&#39;processing_time&#39;</span><span class="p">:</span> <span class="n">timers</span><span class="p">,</span>
+      <span class="s">&#39;matches&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;total&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
+        <span class="s">&#39;returned&#39;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
+      <span class="p">},</span>
+      <span class="s">&#39;request&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&#39;base_url&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
+        <span class="s">&#39;method&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+        <span class="s">&#39;values&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span>
+      <span class="p">},</span>
+      <span class="s">&#39;content&#39;</span><span class="p">:</span> <span class="n">content</span>
+    <span class="p">}),</span> <span class="mi">200</span>
+</div>
+<div class="viewcode-block" id="RelationshipModelView"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.RelationshipModelView">[docs]</a><span class="k">class</span> <span class="nc">RelationshipModelView</span><span class="p">(</span><span class="n">RelationshipView</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Default view for relationship models.&quot;&quot;&quot;</span>
+
+  <span class="n">allowed_request_keys</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;depth&#39;</span><span class="p">,</span> <span class="s">&#39;expand&#39;</span><span class="p">])</span>
+
+  <span class="k">def</span> <span class="nf">get_endpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;relationship_model_view_for_</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">parent_Model</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">key</span>
+    <span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">get_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s">&#39;/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_Model</span><span class="o">.</span><span class="n">__tablename__</span>
+    <span class="n">url</span> <span class="o">+=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+      <span class="s">&#39;/&lt;</span><span class="si">%s</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_Model</span><span class="o">.</span><span class="n">get_primary_key_names</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">url</span> <span class="o">+=</span> <span class="s">&#39;/</span><span class="si">%s</span><span class="s">/&lt;key&gt;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">key</span>
+    <span class="k">return</span> <span class="n">url</span>
+
+  <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;key&#39;</span><span class="p">)</span>
+    <span class="n">collection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="p">(</span><span class="n">InstrumentedList</span><span class="p">,</span> <span class="n">AppenderQuery</span><span class="p">)):</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+      <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid key&#39;</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">pos</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+          <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">InstrumentedList</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+              <span class="n">model</span> <span class="o">=</span> <span class="n">collection</span><span class="p">[</span><span class="n">pos</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+              <span class="n">model</span> <span class="o">=</span> <span class="bp">None</span>
+          <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid position index&#39;</span><span class="p">)</span>
+    <span class="c"># TODO: support attribute mapped collections</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;No resource found&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="o">**</span><span class="n">parser</span><span class="o">.</span><span class="n">get_jsonify_kwargs</span><span class="p">()))</span>
+
+  <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="IndexView"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.IndexView">[docs]</a><span class="k">class</span> <span class="nc">IndexView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;API splash page with a few helpful keys.&quot;&quot;&quot;</span>
+
+  <span class="n">url</span> <span class="o">=</span> <span class="s">&#39;/&#39;</span>
+
+  <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+      <span class="s">&#39;status&#39;</span><span class="p">:</span> <span class="s">&#39;200 Welcome&#39;</span><span class="p">,</span>
+      <span class="s">&#39;available_endpoints&#39;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s">&#39;</span><span class="si">%s</span><span class="s"> (</span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="p">(</span>
+          <span class="n">view</span><span class="o">.</span><span class="n">get_rule</span><span class="p">(),</span>
+          <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">view</span><span class="o">.</span><span class="n">_get_available_methods</span><span class="p">()))</span>
+        <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__all__</span>
+        <span class="k">if</span> <span class="n">view</span><span class="o">.</span><span class="n">_get_available_methods</span><span class="p">()</span>
+      <span class="p">]</span>
+    <span class="p">})</span>
+
+<span class="c"># SQLAlchemy Model</span>
+</div>
+<span class="k">def</span> <span class="nf">get_model_classes_from_query</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+  <span class="k">return</span> <span class="p">[</span>
+    <span class="n">d</span><span class="p">[</span><span class="s">&#39;expr&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">class_</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">column_descriptions</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s">&#39;expr&#39;</span><span class="p">],</span> <span class="n">Mapper</span><span class="p">)</span>
+  <span class="p">]</span>
+
+<span class="k">class</span> <span class="nc">_BaseQuery</span><span class="p">(</span><span class="n">Query</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Base query class.</span>
+
+<span class="sd">  The first two methods are copied from Flask-SQLAlchemy.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">get_or_404</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Like get but aborts with 404 if not found.&quot;&quot;&quot;</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">model_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rv</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">abort</span><span class="p">(</span><span class="mi">404</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rv</span>
+
+  <span class="k">def</span> <span class="nf">first_or_404</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Like first but aborts with 404 if not found.&quot;&quot;&quot;</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">rv</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">abort</span><span class="p">(</span><span class="mi">404</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rv</span>
+
+  <span class="k">def</span> <span class="nf">get_count_query</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get correspondint count query.</span>
+
+<span class="sd">    This should be used for fast counts. Apply filters to it and apply the</span>
+<span class="sd">    method ``one()`` to bypass the use of subqueries (which are highly</span>
+<span class="sd">    inefficient in MySQL).</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">models</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_models</span><span class="p">()</span>
+
+    <span class="c"># _BaseQuery objects should only ever have one model</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s"> models found for </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
+
+    <span class="n">Model</span> <span class="o">=</span> <span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">pj</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">Model</span><span class="p">))</span><span class="o">.</span><span class="n">select_from</span><span class="p">(</span><span class="n">Model</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">query</span>
+
+  <span class="k">def</span> <span class="nf">get_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">get_model_classes_from_query</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">_QueryProperty</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">project</span> <span class="o">=</span> <span class="n">project</span>
+
+  <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">cls</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">mapper</span> <span class="o">=</span> <span class="n">class_mapper</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">mapper</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_BaseQuery</span><span class="p">(</span><span class="n">mapper</span><span class="p">,</span> <span class="n">session</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">session</span><span class="p">())</span>
+    <span class="k">except</span> <span class="n">UnmappedClassError</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="ExpandedBase"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.ExpandedBase">[docs]</a><span class="k">class</span> <span class="nc">ExpandedBase</span><span class="p">(</span><span class="n">Cacheable</span><span class="p">,</span> <span class="n">Loggable</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Adding a few features to the declarative base.</span>
+
+<span class="sd">  Currently:</span>
+
+<span class="sd">  * Automatic table naming</span>
+<span class="sd">  * Caching</span>
+<span class="sd">  * Jsonifying</span>
+<span class="sd">  * Logging</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">__view__</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;model&#39;</span><span class="p">:</span> <span class="n">ModelView</span><span class="p">,</span>
+    <span class="s">&#39;collection&#39;</span><span class="p">:</span> <span class="n">CollectionView</span><span class="p">,</span>
+    <span class="s">&#39;dynamic_relationship&#39;</span><span class="p">:</span> <span class="n">RelationshipView</span><span class="p">,</span>
+    <span class="s">&#39;lazy_relationship&#39;</span><span class="p">:</span> <span class="n">LazyRelationshipView</span><span class="p">,</span>
+    <span class="s">&#39;relationship_model&#39;</span><span class="p">:</span> <span class="n">RelationshipModelView</span>
+  <span class="p">}</span>
+
+  <span class="n">_cache</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedDict</span><span class="p">)</span>
+  <span class="n">_json_depth</span> <span class="o">=</span> <span class="mi">0</span>
+
+  <span class="n">query</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">primary_keys</span> <span class="o">=</span> <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+      <span class="s">&#39;</span><span class="si">%s</span><span class="s">=</span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">))</span>
+      <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">get_primary_key_names</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="s">&#39;&lt;</span><span class="si">%s</span><span class="s"> (</span><span class="si">%s</span><span class="s">)&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">primary_keys</span><span class="p">)</span>
+
+  <span class="nd">@declared_attr</span>
+  <span class="k">def</span> <span class="nf">__json__</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Varnames that get JSONified.</span>
+
+<span class="sd">    Doesn&#39;t emit any additional queries!</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span>
+      <span class="n">varname</span>
+      <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">varname</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)</span>  <span class="c"># don&#39;t show private properties</span>
+      <span class="k">if</span> <span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">varname</span><span class="p">),</span> <span class="nb">property</span><span class="p">)</span> 
+      <span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">varname</span><span class="p">),</span> <span class="n">InstrumentedAttribute</span><span class="p">)</span> <span class="ow">and</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">varname</span><span class="p">)</span><span class="o">.</span><span class="n">property</span><span class="p">,</span> <span class="n">ColumnProperty</span><span class="p">)</span>
+      <span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">varname</span><span class="p">),</span> <span class="n">InstrumentedAttribute</span><span class="p">)</span> <span class="ow">and</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">varname</span><span class="p">)</span><span class="o">.</span><span class="n">property</span><span class="p">,</span> <span class="n">RelationshipProperty</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="p">(</span>
+          <span class="nb">getattr</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">varname</span><span class="p">)</span><span class="o">.</span><span class="n">property</span><span class="o">.</span><span class="n">lazy</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="s">&#39;joined&#39;</span><span class="p">,</span> <span class="s">&#39;immediate&#39;</span><span class="p">]</span>
+        <span class="p">)</span>
+      <span class="p">)</span>
+    <span class="p">)</span>
+
+  <span class="nd">@declared_attr</span>
+  <span class="k">def</span> <span class="nf">__tablename__</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Automatically create the table name.</span>
+
+<span class="sd">    Override this to choose your own tablename (e.g. for single table</span>
+<span class="sd">    inheritance).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">s&#39;</span> <span class="o">%</span> <span class="n">uncamelcase</span><span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ExpandedBase.jsonify"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.ExpandedBase.jsonify">[docs]</a>  <span class="k">def</span> <span class="nf">jsonify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Special implementation of jsonify for Model objects.</span>
+<span class="sd">    </span>
+<span class="sd">    Overrides the basic jsonify method to specialize it for models.</span>
+
+<span class="sd">    This function minimizes the number of lookups it does (no dynamic</span>
+<span class="sd">    type checking on the properties for example) to maximize speed.</span>
+
+<span class="sd">    :param depth:</span>
+<span class="sd">    :type depth: int</span>
+<span class="sd">    :rtype: dict</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">depth</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_depth</span><span class="p">:</span>
+      <span class="c"># this instance has already been jsonified at a greater or</span>
+      <span class="c"># equal depth, so we simply return its key (only used if expand is False)</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_primary_keys</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">expand</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_json_depth</span> <span class="o">=</span> <span class="n">depth</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__json__</span><span class="p">:</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">rv</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="o">=</span> <span class="n">_jsonify</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">varname</span><span class="p">),</span> <span class="n">depth</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">expand</span><span class="p">)</span>
+      <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">rv</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span>
+      <span class="k">except</span> <span class="n">JSONDepthExceededError</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">rv</span>
+</div>
+  <span class="k">def</span> <span class="nf">get_primary_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
+      <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">))</span>
+      <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">get_primary_key_names</span><span class="p">()</span>
+    <span class="p">)</span>
+
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span> <span class="nf">find_or_create</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">instance</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">instance</span><span class="p">,</span> <span class="bp">False</span>
+    <span class="n">instance</span> <span class="o">=</span> <span class="n">cls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">session</span>
+    <span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+    <span class="n">session</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">instance</span><span class="p">,</span> <span class="bp">True</span>
+
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span> <span class="nf">get_columns</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">show_private</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="n">class_mapper</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">show_private</span><span class="p">:</span>
+      <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">c</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">columns</span>
+
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span> <span class="nf">get_primary_key_names</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">class_mapper</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="o">.</span><span class="n">primary_key</span><span class="p">]</span>
+
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span> <span class="nf">get_relationships</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">show_private</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="n">rels</span> <span class="o">=</span>  <span class="n">class_mapper</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="o">.</span><span class="n">relationships</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">show_private</span><span class="p">:</span>
+      <span class="n">rels</span> <span class="o">=</span> <span class="p">[</span><span class="n">rel</span> <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">rels</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">rel</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">rels</span>
+
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span> <span class="nf">get_related_models</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">show_private</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span>
+      <span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">mapper</span><span class="o">.</span><span class="n">class_</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">cls</span><span class="o">.</span><span class="n">get_relationships</span><span class="p">(</span><span class="n">show_private</span><span class="p">)</span>
+    <span class="p">]</span>
+</div>
+<span class="n">Model</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">(</span><span class="n">cls</span><span class="o">=</span><span class="n">ExpandedBase</span><span class="p">)</span>
+
+<span class="c"># Helper</span>
+
+<div class="viewcode-block" id="Parser"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.api.Parser">[docs]</a><span class="k">class</span> <span class="nc">Parser</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;The request parameter parser.</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">sep</span> <span class="o">=</span> <span class="s">&#39;;&#39;</span> <span class="c"># the separator used for filters and sorts</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">allowed_keys</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">defaults</span> <span class="o">=</span> <span class="n">APIView</span><span class="o">.</span><span class="n">__extension__</span><span class="o">.</span><span class="n">config</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">allowed_keys</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid parameters found: </span><span class="si">%s</span><span class="s"> not in </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+        <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">),</span> <span class="nb">list</span><span class="p">(</span><span class="n">allowed_keys</span><span class="p">)</span>
+       <span class="p">))</span>
+
+  <span class="k">def</span> <span class="nf">get_jsonify_kwargs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span>
+      <span class="s">&#39;depth&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;depth&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s">&#39;DEFAULT_DEPTH&#39;</span><span class="p">],</span> <span class="nb">int</span><span class="p">),</span>
+      <span class="s">&#39;expand&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;expand&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s">&#39;EXPAND&#39;</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="p">}</span>
+
+  <span class="k">def</span> <span class="nf">filter_and_sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="n">Model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_model_class</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="c"># filter</span>
+    <span class="n">raws</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getlist</span><span class="p">(</span><span class="s">&#39;filter&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">raws</span><span class="p">:</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+      <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid filter: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">raw</span><span class="p">)</span>
+      <span class="n">column</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">Model</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">column</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid filter column: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s">&#39;in&#39;</span><span class="p">:</span>
+        <span class="n">filt</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="n">attr</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">e</span> <span class="o">%</span> <span class="n">op</span><span class="p">),</span>
+            <span class="p">[</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">_&#39;</span><span class="p">,</span> <span class="s">&#39;__</span><span class="si">%s</span><span class="s">__&#39;</span><span class="p">]</span>
+          <span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span> <span class="n">op</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid filter operator: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">op</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="s">&#39;null&#39;</span><span class="p">:</span>
+          <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">filt</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">attr</span><span class="p">)(</span><span class="n">value</span><span class="p">)</span>
+      <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">filt</span><span class="p">)</span>
+    <span class="c"># sort</span>
+    <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
+      <span class="n">raws</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getlist</span><span class="p">(</span><span class="s">&#39;sort&#39;</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">raws</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="n">key</span><span class="p">,</span> <span class="n">order</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid sort: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">raw</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">order</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;asc&#39;</span><span class="p">,</span> <span class="s">&#39;desc&#39;</span><span class="p">]:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid sort order: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">order</span><span class="p">)</span>
+        <span class="n">column</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">Model</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">column</span><span class="p">:</span>
+          <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">order</span><span class="p">)())</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid sort column: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">query</span>
+
+  <span class="k">def</span> <span class="nf">offset_and_limit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+    <span class="c"># offset</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;offset&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">offset</span><span class="p">:</span>
+      <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+    <span class="c"># limit</span>
+    <span class="n">max_limit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s">&#39;MAX_LIMIT&#39;</span><span class="p">]</span>
+    <span class="n">limit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;limit&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s">&#39;DEFAULT_LIMIT&#39;</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">max_limit</span><span class="p">:</span>
+      <span class="n">limit</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span> <span class="n">max_limit</span><span class="p">)</span> <span class="k">if</span> <span class="n">limit</span> <span class="k">else</span> <span class="n">max_limit</span>
+    <span class="k">if</span> <span class="n">limit</span><span class="p">:</span>
+      <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">query</span>
+
+  <span class="k">def</span> <span class="nf">_get_model_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+
+    <span class="c"># only tested for _BaseQueries and associated count queries</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&#39;Invalid query&#39;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">):</span>
+      <span class="c"># this is a count query</span>
+      <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">_select_from_entity</span>
+    <span class="c"># this is a _BaseQuery</span>
+    <span class="k">return</span> <span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div></div>
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="../../../index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

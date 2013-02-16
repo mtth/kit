@@ -1,0 +1,458 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Utilities &mdash; Flasker 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/theme_extras.js"></script>
+    <link rel="top" title="Flasker 0.1 documentation" href="index.html" />
+    <link rel="prev" title="Extensions" href="extensions.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="index.html">
+          <span>Flasker 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>Utilities</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        «&#160;&#160;<a href="extensions.html">Extensions</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <div class="section" id="module-flasker.util">
+<span id="utilities"></span><h1>Utilities<a class="headerlink" href="#module-flasker.util" title="Permalink to this headline">¶</a></h1>
+<p>General helpers.</p>
+<dl class="class">
+<dt id="flasker.util.Cacheable">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Cacheable</tt><a class="reference internal" href="_modules/flasker/util.html#Cacheable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Cacheable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class with cacheable properties.</p>
+<p>Implements a few cache maintenance utilities.</p>
+<dl class="method">
+<dt id="flasker.util.Cacheable.refresh_cache">
+<tt class="descname">refresh_cache</tt><big>(</big><em>names=None</em>, <em>expiration=0</em>, <em>remove_deleted=True</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Cacheable.refresh_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Cacheable.refresh_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refresh cached properties.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>names</strong> (<em>iterable</em>) &#8211; list of cached property names to refresh. If specified, only
+these will be refreshed.</li>
+<li><strong>expiration</strong> (<em>int</em>) &#8211; if specified, only properties of age greater than this
+value will be refreshed.</li>
+<li><strong>remove_deleted</strong> (<em>bool</em>) &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, cached properties that aren&#8217;t defined
+but are still present in the cache will be removed (useful especially for
+persistent caches)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.Cacheable.view_cache">
+<tt class="descname">view_cache</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Cacheable.view_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Cacheable.view_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the age of cached values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+<p>Properties not yet cached will appear as <tt class="docutils literal"><span class="pre">None</span></tt>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.Dict">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Dict</tt><a class="reference internal" href="_modules/flasker/util.html#Dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dictionary class with a few helper methods.</p>
+<p>The goal of this class is to make multilevel dictionary actions
+simple.</p>
+<p>Usage:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">d</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+<span class="n">d</span><span class="o">.</span><span class="n">flattened</span><span class="p">()</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cname</strong> (<em>string</em>) &#8211; key used when unflattening a dictionary and a key with a
+value also becomes a branch</li>
+<li><strong>sep</strong> (<em>string</em>) &#8211; the separator used to separate hierarchy levels</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="flasker.util.Dict.depth">
+<tt class="descname">depth</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.depth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.depth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Depth of a dictionary.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="flasker.util.Dict.flatten">
+<em class="property">classmethod </em><tt class="descname">flatten</tt><big>(</big><em>dic</em>, <em>sep=None</em>, <em>prefix=''</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.flatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.flatten" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flatten. Classmethod for convenience.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.Dict.flattened">
+<tt class="descname">flattened</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.flattened"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.flattened" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flattened representation of the dictionary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.Dict.table">
+<tt class="descname">table</tt><big>(</big><em>mode='horizontal'</em>, <em>left_columns=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.table" title="Permalink to this definition">¶</a></dt>
+<dd><p>For HTML headers mostly.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="flasker.util.Dict.unflatten">
+<em class="property">classmethod </em><tt class="descname">unflatten</tt><big>(</big><em>dic</em>, <em>sep=None</em>, <em>cname=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.unflatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.unflatten" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unflatten. Classmethod for convenience</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.Dict.unflattened">
+<tt class="descname">unflattened</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.unflattened"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.unflattened" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unflattened representation of the dictionary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.Dict.width">
+<tt class="descname">width</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.width"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.width" title="Permalink to this definition">¶</a></dt>
+<dd><p>Width of a dictionary.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.JSONEncodedDict">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">JSONEncodedDict</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#JSONEncodedDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.JSONEncodedDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an immutable structure as a JSON encoded dict.</p>
+<p>This can be used as a Column type during table creation:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">some_column_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedDict</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">There is a character limit in the UnicodeText field of the database
+so care is needed when storing very large dictionaries.</p>
+</div>
+<dl class="attribute">
+<dt id="flasker.util.JSONEncodedDict.impl">
+<tt class="descname">impl</tt><a class="headerlink" href="#flasker.util.JSONEncodedDict.impl" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">UnicodeText</span></tt></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.Jsonifiable">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Jsonifiable</tt><a class="reference internal" href="_modules/flasker/util.html#Jsonifiable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Jsonifiable" title="Permalink to this definition">¶</a></dt>
+<dd><p>For easy API calls.</p>
+<p>This is depth first (different from the one in the ExpandedBase class).</p>
+<p>We keep track of what has already been jsonified. There might still be
+some repetition given that we do not control the order of exploration.
+If a key is revisited at a lower depth, it will be reparsed to allow for
+more exploration.</p>
+<dl class="method">
+<dt id="flasker.util.Jsonifiable.jsonify">
+<tt class="descname">jsonify</tt><big>(</big><em>depth=0</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Jsonifiable.jsonify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Jsonifiable.jsonify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all keys and properties of an instance in a dictionary.</p>
+<p>Overrides the basic jsonify method to specialize it for models.</p>
+<p>This function minimizes the number of lookups it does (no dynamic
+type checking on the properties for example) to maximize speed.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>depth</strong> (<em>int</em>) &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.Loggable">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Loggable</tt><a class="reference internal" href="_modules/flasker/util.html#Loggable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Loggable" title="Permalink to this definition">¶</a></dt>
+<dd><p>To easily log stuff.</p>
+<p>This implements the main logging methods (&#8216;debug&#8217;, &#8216;info&#8217;, &#8216;warn&#8217;, &#8216;error&#8217;)
+directly on the class instance. For example, this allows something like:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">instance</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&#39;Some message.&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Not using __getattr__ to preserve exception context. Otherwise the line where
+the inexistent attribute was accessed will be lost.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.RunningStatistic">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">RunningStatistic</tt><a class="reference internal" href="_modules/flasker/util.html#RunningStatistic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.RunningStatistic" title="Permalink to this definition">¶</a></dt>
+<dd><p>To compute running statistics efficiently.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.SmartDictReader">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">SmartDictReader</tt><big>(</big><em>csvfile</em>, <em>fields=None</em>, <em>silent=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#SmartDictReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.SmartDictReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper for importing .csv files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>csvfile</strong> (<tt class="docutils literal"><span class="pre">file</span></tt>) &#8211; open file instance</li>
+<li><strong>fields</strong> &#8211; list of fieldnames or list of tuples (fieldname, fieldtype)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">iterable</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Interesting values for kwargs can be:
+* delimiter = &#8216;       &#8216;
+* quotechar = &#8216;&#8217;</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.cached_property">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">cached_property</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#cached_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.cached_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that turns a class method into a cached property.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> (<em>func</em>) &#8211; bound method to be turned in to a property</td>
+</tr>
+</tbody>
+</table>
+<p>A cached property acts similarly to a property but is only computed once and
+then stored in the instance&#8217;s <tt class="docutils literal"><span class="pre">_cache</span></tt> attribute along with the time it was
+last computed. Subsequent calls will read directly from the cached value.  To
+refresh several or all cached properties, use the <tt class="docutils literal"><span class="pre">refresh_cache</span></tt> method.</p>
+<p>Should only be used with methods of classes that inherit from <tt class="docutils literal"><span class="pre">Cacheable</span></tt>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.convert">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">convert</tt><big>(</big><em>value</em>, <em>rtype=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.convert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a string to another value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>value</strong> (<em>str</em>) &#8211; the value to be converted</li>
+<li><strong>rtype</strong> (<em>str</em>) &#8211; string representation of the type the value should be
+converted to</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int, float, bool, str, unicode</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>If <tt class="docutils literal"><span class="pre">rtype</span></tt> isn&#8217;t specified, the following conversions are attempted in
+order: <tt class="docutils literal"><span class="pre">int</span></tt>, <tt class="docutils literal"><span class="pre">float</span></tt>, <tt class="docutils literal"><span class="pre">bool</span></tt>. If all fail, the method returns the
+string <tt class="docutils literal"><span class="pre">value</span></tt> unchanged.</p>
+<p>Boolean conversions convert <tt class="docutils literal"><span class="pre">'true',</span> <span class="pre">'1'</span></tt> to <tt class="docutils literal"><span class="pre">True</span></tt>, and <tt class="docutils literal"><span class="pre">'false',</span> <span class="pre">'0'</span></tt>
+to <tt class="docutils literal"><span class="pre">False</span></tt> (case insensitive) and otherwise raises an error.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.exponential_smoothing">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">exponential_smoothing</tt><big>(</big><em>data</em>, <em>alpha=0.5</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#exponential_smoothing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.exponential_smoothing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Smoothing data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<tt class="docutils literal"><span class="pre">list</span></tt>) &#8211; list of tuples. The smoothing will be done on
+the first item of each tuple.</li>
+<li><strong>alpha</strong> (<tt class="docutils literal"><span class="pre">float</span></tt>) &#8211; the discount factor</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">list</span></tt></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.histogram">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">histogram</tt><big>(</big><em>data</em>, <em>key=None</em>, <em>bins=50</em>, <em>restrict=None</em>, <em>categories=None</em>, <em>order=0</em>, <em>expand=False</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#histogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.histogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a histogram of counts for the data.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param data:</th><td class="field-body">the data to be binned</td>
+</tr>
+<tr class="field-even field"><th class="field-name">type data:</th><td class="field-body">iterable of tuples</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">param restrict:</th><td class="field-body">if provided, only data elements which return <cite>True</cite>
+will be included in the histogram. Default is <cite>None</cite> (all elements
+are included).</td>
+</tr>
+<tr class="field-even field"><th class="field-name">type restrict:</th><td class="field-body">function or None</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">param categories:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">if provided, elements will be counted in separate
+categories. This changes the format of the output to a dictionary
+with the different categories as keys in each bin.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">type categories:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">function or None</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">param bins:</th><td class="field-body">either an int (total number of bins, which will be 
+uniformly spread) or a list of increasing bin values. smaller
+values will be in the first bin, larger in the last one.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">type bins:</th><td class="field-body">int or list(int)</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">param order:</th><td class="field-body">0 if data isn&#8217;t sorted, 1 if sorted in ascending, -1 if
+sorted in descending order.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">type order:</th><td class="field-body">string</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>Possible extension: allow categories to return a list of keys, which would
+allow elements to be included in several counts.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.partition">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">partition</tt><big>(</big><em>collection</em>, <em>batches=0</em>, <em>batch_size=0</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#partition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.partition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split an iterable into several pieces.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>collection</strong> (<em>list or query</em>) &#8211; the iterable that will be partitioned. Note that
+<tt class="docutils literal"><span class="pre">partition</span></tt> needs to be able to compute the total length of the iterable
+so generators won&#8217;t work.</li>
+<li><strong>batches</strong> (<em>int</em>) &#8211; number of batches to split the collection into</li>
+<li><strong>batch_size</strong> (<em>int</em>) &#8211; number of items per batch</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">generator</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Only one of <tt class="docutils literal"><span class="pre">batches</span></tt> and <tt class="docutils literal"><span class="pre">batch_size</span></tt> can be specified at a time.</p>
+<p><tt class="docutils literal"><span class="pre">partition</span></tt> returns a generator that yields a tuple <tt class="docutils literal"><span class="pre">(batch,</span> <span class="pre">partition)</span></tt>
+on each iteration. <tt class="docutils literal"><span class="pre">batch</span></tt> is of the same type as <tt class="docutils literal"><span class="pre">collection</span></tt>, filtered
+to the corresponding partition and <tt class="docutils literal"><span class="pre">partition</span></tt> is a named tuple with two 
+properties:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">offset</span></tt>, the first index of the partition</li>
+<li><tt class="docutils literal"><span class="pre">limit</span></tt>, the max-length of the partition (the last one might be shorter)</li>
+</ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.prod">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">prod</tt><big>(</big><em>iterable</em>, <em>key=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#prod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.prod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cumulative product function (the equivalent of <tt class="docutils literal"><span class="pre">sum</span></tt>).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<em>callable</em>) &#8211; function called on each element of the iterable, if none then
+identity is assumed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">int, float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.uncamelcase">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">uncamelcase</tt><big>(</big><em>name</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#uncamelcase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.uncamelcase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms CamelCase to underscore_case.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<em>str</em>) &#8211; string input</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        «&#160;&#160;<a href="extensions.html">Extensions</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
