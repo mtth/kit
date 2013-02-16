@@ -55,33 +55,70 @@
 <div class="section" id="module-flasker.__main__">
 <span id="console-tool"></span><h2>Console tool<a class="headerlink" href="#module-flasker.__main__" title="Permalink to this headline">¶</a></h2>
 <p>Flasker command line tool.</p>
+<p>There are currently 5 commands available via the flasker command tool, all
+detailed below.</p>
+<p>All commands, aside from <tt class="docutils literal"><span class="pre">new</span></tt>, accept an optional argument <tt class="docutils literal"><span class="pre">-c,</span> <span class="pre">--conf</span></tt>
+to indicate the path of the configuration file to use. If none is specified
+flasker will search in the current directory for possible matches. If a single
+file <tt class="docutils literal"><span class="pre">.cfg</span></tt> file is found it will use it.</p>
 <dl class="function">
-<dt id="flasker.__main__.project_context">
-<tt class="descclassname">flasker.__main__.</tt><tt class="descname">project_context</tt><big>(</big><em>handler</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#project_context"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.project_context" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create the project context.</p>
-<p>If no configuration file was entered in the main parser through the -c
-option, this function will look in the current directory for possible
-matches. If a single file is found it will use it.</p>
-<p>Some (most) subparser handlers require the project to be created before
-returning, this decorator handles this.</p>
+<dt id="flasker.__main__.new_handler">
+<tt class="descclassname">flasker.__main__.</tt><tt class="descname">new_handler</tt><big>(</big><em>parsed_args</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#new_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.new_handler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new project:</p>
+<div class="highlight-python"><pre>flasker new ...</pre>
+</div>
+<p>The following options are available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">-a,</span> <span class="pre">--app</span></tt> to toggle the creation of a bootstrap starter app</li>
+<li><tt class="docutils literal"><span class="pre">-n,</span> <span class="pre">--name</span></tt> to set the name of the configuration file to be created
+(defaults to <tt class="docutils literal"><span class="pre">default</span></tt>)</li>
+</ul>
 </dd></dl>
 
 <dl class="function">
 <dt id="flasker.__main__.server_handler">
 <tt class="descclassname">flasker.__main__.</tt><tt class="descname">server_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#server_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.server_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Start a Werkzeug server for the Flask application.</p>
+<dd><p>Start a Werkzeug server for the Flask application:</p>
+<div class="highlight-python"><pre>flasker server ...</pre>
+</div>
+<p>The following options are available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">-r,</span> <span class="pre">--restrict</span></tt> to disallow remove server connections.</li>
+<li><tt class="docutils literal"><span class="pre">-p,</span> <span class="pre">--port</span></tt> to set the port on which to run the server (default to 
+<tt class="docutils literal"><span class="pre">5000</span></tt>).</li>
+<li><tt class="docutils literal"><span class="pre">-d,</span> <span class="pre">--debug</span></tt> to run in debug mode (enables autoreloading and in-browser
+debugging).</li>
+</ul>
 </dd></dl>
 
 <dl class="function">
 <dt id="flasker.__main__.shell_handler">
 <tt class="descclassname">flasker.__main__.</tt><tt class="descname">shell_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#shell_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.shell_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Start a shell in the context of the project.</p>
+<dd><p>Start a shell in the context of the project:</p>
+<div class="highlight-python"><pre>flasker shell ...</pre>
+</div>
+<p>The following global variables will be available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">pj</span></tt>, an alias for the <tt class="docutils literal"><span class="pre">current_project</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">app</span></tt>, an alias for <tt class="docutils literal"><span class="pre">current_project.app</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">cel</span></tt>, an alias for <tt class="docutils literal"><span class="pre">current_project.celery</span></tt></li>
+</ul>
 </dd></dl>
 
 <dl class="function">
 <dt id="flasker.__main__.worker_handler">
 <tt class="descclassname">flasker.__main__.</tt><tt class="descname">worker_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#worker_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.worker_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Starts a celery worker.</p>
+<dd><p>Starts a celery worker:</p>
+<div class="highlight-python"><pre>flasker worker ...</pre>
+</div>
+<p>The following options are available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">-o,</span> <span class="pre">--only-direct</span></tt> to have the worker only listen to its direct queue
+(this option requires the CELERY_WORKER_DIRECT to be set to <tt class="docutils literal"><span class="pre">True</span></tt>).</li>
+<li><a href="#id1"><span class="problematic" id="id2">``</span></a>-v, &#8211;verbose-help` to show the worker help.</li>
+<li><tt class="docutils literal"><span class="pre">-r,</span> <span class="pre">--raw</span></tt> to pass arguments to the worker (any arguments after this
+option will be passed through).</li>
+</ul>
 <p>If no hostname is provided, one will be generated automatically using the
 project domain and subdomain and current worker count. For example, the first
 two workers started for project <tt class="docutils literal"><span class="pre">my_project</span></tt> and configuration <tt class="docutils literal"><span class="pre">default</span></tt>
@@ -90,27 +127,27 @@ will have respective hostnames:</p>
 <li>w1.default.my_project</li>
 <li>w2.default.my_project</li>
 </ul>
-<p>The <tt class="docutils literal"><span class="pre">-o</span></tt> flag can be used to have the worker only listen to its direct
-queue (this option requires the CELERY_WORKER_DIRECT to be set to <tt class="docutils literal"><span class="pre">True</span></tt>).</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="flasker.__main__.flower_handler">
 <tt class="descclassname">flasker.__main__.</tt><tt class="descname">flower_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#flower_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.flower_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Start flower worker manager.</p>
+<dd><p>Start flower worker manager:</p>
+<div class="highlight-python"><pre>flasker flower ...</pre>
+</div>
+<p>The following arguments are available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">-p,</span> <span class="pre">--port</span></tt> to set the port to run flower on (defaults to <tt class="docutils literal"><span class="pre">5555</span></tt>).</li>
+<li><a href="#id3"><span class="problematic" id="id4">``</span></a>-v, &#8211;verbose-help` to show the flower help.</li>
+<li><tt class="docutils literal"><span class="pre">-r,</span> <span class="pre">--raw</span></tt> to pass arguments to flower (any arguments after this option
+will be passed through).</li>
+</ul>
 </dd></dl>
 
 </div>
 <div class="section" id="module-flasker.project">
 <span id="configuration"></span><h2>Configuration<a class="headerlink" href="#module-flasker.project" title="Permalink to this headline">¶</a></h2>
 <p>Project module.</p>
-<dl class="exception">
-<dt id="flasker.project.ProjectImportError">
-<em class="property">exception </em><tt class="descclassname">flasker.project.</tt><tt class="descname">ProjectImportError</tt><a class="reference internal" href="_modules/flasker/project.html#ProjectImportError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.ProjectImportError" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generic project import error.</p>
-<p>This will be raised for missing or invalid configuration files.</p>
-</dd></dl>
-
 <dl class="class">
 <dt id="flasker.project.Project">
 <em class="property">class </em><tt class="descclassname">flasker.project.</tt><tt class="descname">Project</tt><big>(</big><em>config_path</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project" title="Permalink to this definition">¶</a></dt>
