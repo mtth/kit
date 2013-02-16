@@ -15,7 +15,11 @@ from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
 
 
-# Utility functions
+# ===
+#
+#   General utilities
+#
+# ===
 
 def prod(iterable, key=None):
   """Cumulative product function (the equivalent of ``sum``).
@@ -144,19 +148,14 @@ def partition(collection, batches=0, batch_size=0):
       yield collection[offset:offset + limit], Partition(offset, limit)
       offset += limit
 
-# Utility Classes
-
 class Dict(dict):
 
   """Expands the dictionary class with a few helper methods.
 
   In particular, the goal of this class is to make multilevel dictionary
-  actions simple.
+  actions simpler.
 
   """
-
-  cname = 'all'
-  sep = '_'
 
   @classmethod
   def depth(cls, dct):
@@ -300,7 +299,6 @@ class Dict(dict):
         items.append(row)
     return items
 
-
 class SmartDictReader(DictReader):
 
   """``DictReader`` with built-in value conversion.
@@ -362,24 +360,13 @@ class SmartDictReader(DictReader):
       self.rows_imported += 1
       return processed_row
 
+# ===
+# 
+#   Mixins
+# 
+# ===
 
 # Caching
-
-def cached_property(func):
-  """Decorator that turns a class method into a cached property.
-
-  :param func: bound method to be turned in to a property
-  :type func: func
-
-  A cached property acts similarly to a property but is only computed once and
-  then stored in the instance's ``_cache`` attribute along with the time it was
-  last computed. Subsequent calls will read directly from the cached value.  To
-  refresh several or all cached properties, use the ``refresh_cache`` method.
-
-  Should only be used with methods of classes that inherit from ``Cacheable``.
-  
-  """
-  return _CachedProperty(func)
 
 class Cacheable(object):
 
@@ -448,6 +435,23 @@ class Cacheable(object):
       ))
     return rv
 
+  @classmethod
+  def cached_property(cls, func):
+    """Decorator that turns a class method into a cached property.
+
+    :param func: bound method to be turned in to a property
+    :type func: func
+
+    A cached property acts similarly to a property but is only computed once and
+    then stored in the instance's ``_cache`` attribute along with the time it was
+    last computed. Subsequent calls will read directly from the cached value.  To
+    refresh several or all cached properties, use the ``refresh_cache`` method.
+
+    Should only be used with methods of classes that inherit from ``Cacheable``.
+    
+    """
+    return _CachedProperty(func)
+
 class _CacheRefresh(object):
 
   """Special class used to trigger cache refreshes."""
@@ -500,8 +504,7 @@ class _CachedProperty(property):
   def __repr__(self):
     return '<CachedProperty %r>' % self.func
 
-
-# Jsonifification
+# Jsonifying
 
 class JSONDepthExceededError(Exception):
 
@@ -565,7 +568,6 @@ class Jsonifiable(object):
         pass
     return rv
 
-
 # Logging
 
 class Loggable(object):
@@ -607,8 +609,13 @@ class Loggable(object):
     """Error level message."""
     return self._logger(message, 'error')
 
+# ===
+#
+#   SQLAlchemy custom
+#
+# ===
 
-# SQLAlchemy Mutables
+# Mutables
 
 class JSONEncodedDict(TypeDecorator):
 
@@ -676,8 +683,11 @@ class _MutableDict(Mutable, dict):
     
 _MutableDict.associate_with(JSONEncodedDict)
 
-
+# ===
+#
 # Computations
+#
+# ===
 
 class RunningStatistic(object):
 
