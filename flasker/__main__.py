@@ -188,6 +188,8 @@ def shell_handler(parsed_args):
   * ``pj``, an alias for the ``current_project``
   * ``app``, an alias for ``current_project.app``
   * ``cel``, an alias for ``current_project.celery``
+
+  Flasker will use IPython if it is available.
   
   """
   pj = current_project
@@ -236,7 +238,7 @@ def worker_handler(parsed_args):
 
   * ``-o, --only-direct`` to have the worker only listen to its direct queue
     (this option requires the CELERY_WORKER_DIRECT to be set to ``True``).
-  * ``-v, --verbose-help` to show the worker help.
+  * ``-v, --verbose-help`` to show the worker help.
   * ``-r, --raw`` to pass arguments to the worker (any arguments after this
     option will be passed through).
 
@@ -300,7 +302,7 @@ def flower_handler(parsed_args):
   The following arguments are available:
 
   * ``-p, --port`` to set the port to run flower on (defaults to ``5555``).
-  * ``-v, --verbose-help` to show the flower help.
+  * ``-v, --verbose-help`` to show the flower help.
   * ``-r, --raw`` to pass arguments to flower (any arguments after this option
     will be passed through).
   

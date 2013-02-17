@@ -617,7 +617,28 @@ class Loggable(object):
 
 # Mutables
 
-class JSONEncodedDict(TypeDecorator):
+class JSONEncodedType(TypeDecorator):
+
+  """Base class for storing python mutables as a JSON.
+
+  For mutability tracking, associate with a Mutable.
+
+  The underlying immutable object is of kind ``sqlalchemy.types.unicodetext``.
+  Note that it has a character limit so care is needed when storing very large
+  objects.
+
+
+  """
+
+  impl = UnicodeText
+
+  def process_bind_param(self, value, dialect):
+    return dumps(value) if value else None
+
+  def process_result_value(self, value, dialect):
+    return loads(value) if value else {}
+
+class JSONEncodedDict(JSONEncodedType):
 
   """Implements dictionary column field type for SQLAlchemy.
 
@@ -632,19 +653,9 @@ class JSONEncodedDict(TypeDecorator):
   In such a case, the ``changed`` method needs the be called manually
   after the operation.
 
-  The undelying immutable object is of kind ``sqlalchemy.types.UnicodeText``.
-  Note that it has a character limit so care is needed when storing very large
-  dictionaries.
-
   """
 
-  impl = UnicodeText
-
-  def process_bind_param(self, value, dialect):
-    return dumps(value) if value else None
-
-  def process_result_value(self, value, dialect):
-    return loads(value) if value else {}
+  pass
 
 class _MutableDict(Mutable, dict):
 
@@ -682,6 +693,42 @@ class _MutableDict(Mutable, dict):
     self.changed()
     
 _MutableDict.associate_with(JSONEncodedDict)
+
+class JSONEncodedList(JSONEncodedType):
+
+  """Implements list column field type for SQLAlchemy.
+
+  This can be used as a Column type during table creation::
+
+    some_column_name = Column(JSONEncodedList)
+
+  """
+
+  pass
+
+class _MutableList(Mutable, list):
+
+  """Used with JSONEncoded list to be able to track updates.
+
+  This enables the database to know when it should update the stored string
+  representation of the dictionary. This is much more efficient than naive
+  automatic updating after each query.
+
+  """
+
+  @classmethod
+  def coerce(cls, key, value):
+    """Convert plain dictionaries to Features."""
+    if not isinstance(value, cls):
+      if isinstance(value, list):
+        return cls(value)
+      return Mutable.coerce(key, value) # this will raise an error
+    else:
+      return value
+
+  # TODO: actual mutability tracking
+    
+_MutableList.associate_with(JSONEncodedList)
 
 # ===
 #
