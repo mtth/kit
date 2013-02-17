@@ -636,7 +636,7 @@ class JSONEncodedType(TypeDecorator):
     return dumps(value) if value else None
 
   def process_result_value(self, value, dialect):
-    return loads(value) if value else {}
+    raise NotImplementedError()
 
 class JSONEncodedDict(JSONEncodedType):
 
@@ -655,7 +655,8 @@ class JSONEncodedDict(JSONEncodedType):
 
   """
 
-  pass
+  def process_result_value(self, value, dialect):
+    return loads(value) if value else {}
 
 class _MutableDict(Mutable, dict):
 
@@ -704,7 +705,8 @@ class JSONEncodedList(JSONEncodedType):
 
   """
 
-  pass
+  def process_result_value(self, value, dialect):
+    return loads(value) if value else []
 
 class _MutableList(Mutable, list):
 
