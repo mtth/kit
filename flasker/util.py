@@ -5,6 +5,7 @@
 from collections import defaultdict, namedtuple
 from csv import DictReader
 from datetime import datetime
+from itertools import islice
 from json import dumps, loads
 from functools import partial, wraps
 from math import ceil
@@ -106,10 +107,11 @@ def partition(collection, batches=0, batch_size=0):
   :param collection: the iterable that will be partitioned. Note that
     ``partition`` needs to be able to compute the total length of the iterable
     so generators won't work.
-  :type collection: list or query
+  :type collection: list, query or file
   :param batches: number of batches to split the collection into
   :type batches: int
-  :param batch_size: number of items per batch
+  :param batch_size: number of items (lines if ``collection`` is a file) per
+    batch
   :type batch_size: int
   :rtype: generator
 
@@ -120,7 +122,8 @@ def partition(collection, batches=0, batch_size=0):
   to the corresponding partition and ``partition`` is a named tuple with two 
   properties:
 
-  * ``offset``, the first index of the partition
+  * ``offset``, the first index of the partition (if ``collection`` is a file
+    it will be the first line number instead)
   * ``limit``, the max-length of the partition (the last one might be shorter)
 
   """
@@ -139,13 +142,20 @@ def partition(collection, batches=0, batch_size=0):
     while offset < total:
       yield collection.offset(offset).limit(limit), Partition(offset, limit)
       offset += limit
-  else:
-    # collection is a list
+  elif isinstance(collection, list):
     total = len(collection)
     if batches:
       limit = int(ceil(float(total) / batches))
     while offset < total:
       yield collection[offset:offset + limit], Partition(offset, limit)
+      offset += limit
+  elif isinstance(collection, file):
+    total = sum(1 for line in collection)
+    if batches:
+      limit = int(ceil(float(total) / batches))
+    while offset < total:
+      collection.seek(0)
+      yield islice(collection, offset, offset+limit), Partition(offset, limit)
       offset += limit
 
 class Dict(dict):
