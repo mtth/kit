@@ -894,6 +894,8 @@ class Parser(object):
     return query
 
   def _get_model_class(self, query):
+  
+    models = get_model_classes_from_query(query)
 
     # only tested for _BaseQueries and associated count queries
     assert len(models) < 2, 'Invalid query'
