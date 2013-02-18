@@ -103,6 +103,7 @@ debugging).</li>
 <li><tt class="docutils literal"><span class="pre">app</span></tt>, an alias for <tt class="docutils literal"><span class="pre">current_project.app</span></tt></li>
 <li><tt class="docutils literal"><span class="pre">cel</span></tt>, an alias for <tt class="docutils literal"><span class="pre">current_project.celery</span></tt></li>
 </ul>
+<p>Flasker will use IPython if it is available.</p>
 </dd></dl>
 
 <dl class="function">
@@ -115,7 +116,7 @@ debugging).</li>
 <ul class="simple">
 <li><tt class="docutils literal"><span class="pre">-o,</span> <span class="pre">--only-direct</span></tt> to have the worker only listen to its direct queue
 (this option requires the CELERY_WORKER_DIRECT to be set to <tt class="docutils literal"><span class="pre">True</span></tt>).</li>
-<li><a href="#id1"><span class="problematic" id="id2">``</span></a>-v, &#8211;verbose-help` to show the worker help.</li>
+<li><tt class="docutils literal"><span class="pre">-v,</span> <span class="pre">--verbose-help</span></tt> to show the worker help.</li>
 <li><tt class="docutils literal"><span class="pre">-r,</span> <span class="pre">--raw</span></tt> to pass arguments to the worker (any arguments after this
 option will be passed through).</li>
 </ul>
@@ -138,7 +139,7 @@ will have respective hostnames:</p>
 <p>The following arguments are available:</p>
 <ul class="simple">
 <li><tt class="docutils literal"><span class="pre">-p,</span> <span class="pre">--port</span></tt> to set the port to run flower on (defaults to <tt class="docutils literal"><span class="pre">5555</span></tt>).</li>
-<li><a href="#id3"><span class="problematic" id="id4">``</span></a>-v, &#8211;verbose-help` to show the flower help.</li>
+<li><tt class="docutils literal"><span class="pre">-v,</span> <span class="pre">--verbose-help</span></tt> to show the flower help.</li>
 <li><tt class="docutils literal"><span class="pre">-r,</span> <span class="pre">--raw</span></tt> to pass arguments to flower (any arguments after this option
 will be passed through).</li>
 </ul>

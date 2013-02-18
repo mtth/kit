@@ -119,11 +119,12 @@ to <tt class="docutils literal"><span class="pre">False</span></tt> (case insens
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>collection</strong> (<em>list or query</em>) &#8211; the iterable that will be partitioned. Note that
+<li><strong>collection</strong> (<em>list, query or file</em>) &#8211; the iterable that will be partitioned. Note that
 <tt class="docutils literal"><span class="pre">partition</span></tt> needs to be able to compute the total length of the iterable
 so generators won&#8217;t work.</li>
 <li><strong>batches</strong> (<em>int</em>) &#8211; number of batches to split the collection into</li>
-<li><strong>batch_size</strong> (<em>int</em>) &#8211; number of items per batch</li>
+<li><strong>batch_size</strong> (<em>int</em>) &#8211; number of items (lines if <tt class="docutils literal"><span class="pre">collection</span></tt> is a file) per
+batch</li>
 </ul>
 </td>
 </tr>
@@ -138,7 +139,8 @@ on each iteration. <tt class="docutils literal"><span class="pre">batch</span></
 to the corresponding partition and <tt class="docutils literal"><span class="pre">partition</span></tt> is a named tuple with two 
 properties:</p>
 <ul class="simple">
-<li><tt class="docutils literal"><span class="pre">offset</span></tt>, the first index of the partition</li>
+<li><tt class="docutils literal"><span class="pre">offset</span></tt>, the first index of the partition (if <tt class="docutils literal"><span class="pre">collection</span></tt> is a file
+it will be the first line number instead)</li>
 <li><tt class="docutils literal"><span class="pre">limit</span></tt>, the max-length of the partition (the last one might be shorter)</li>
 </ul>
 </dd></dl>
@@ -404,6 +406,22 @@ be lost.</p>
 </dd></dl>
 
 <dl class="class">
+<dt id="flasker.util.JSONEncodedType">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">JSONEncodedType</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.JSONEncodedType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for storing python mutables as a JSON.</p>
+<p>For mutability tracking, associate with a Mutable.</p>
+<p>The underlying immutable object is of kind <tt class="docutils literal"><span class="pre">sqlalchemy.types.unicodetext</span></tt>.
+Note that it has a character limit so care is needed when storing very large
+objects.</p>
+<dl class="attribute">
+<dt id="flasker.util.JSONEncodedType.impl">
+<tt class="descname">impl</tt><a class="headerlink" href="#flasker.util.JSONEncodedType.impl" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">UnicodeText</span></tt></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
 <dt id="flasker.util.JSONEncodedDict">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">JSONEncodedDict</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#JSONEncodedDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.JSONEncodedDict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Implements dictionary column field type for SQLAlchemy.</p>
@@ -417,15 +435,16 @@ update the dictionary is used, it will not automatically flag the
 dictionary for update (for example if a deeply nested key is updated).
 In such a case, the <tt class="docutils literal"><span class="pre">changed</span></tt> method needs the be called manually
 after the operation.</p>
-<p>The undelying immutable object is of kind <tt class="docutils literal"><span class="pre">sqlalchemy.types.UnicodeText</span></tt>.
-Note that it has a character limit so care is needed when storing very large
-dictionaries.</p>
-<dl class="attribute">
-<dt id="flasker.util.JSONEncodedDict.impl">
-<tt class="descname">impl</tt><a class="headerlink" href="#flasker.util.JSONEncodedDict.impl" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">UnicodeText</span></tt></p>
 </dd></dl>
 
+<dl class="class">
+<dt id="flasker.util.JSONEncodedList">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">JSONEncodedList</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.JSONEncodedList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements list column field type for SQLAlchemy.</p>
+<p>This can be used as a Column type during table creation:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">some_column_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedList</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="class">
