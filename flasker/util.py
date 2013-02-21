@@ -140,14 +140,14 @@ def partition(collection, parts=0, size=0):
     if parts:
       limit = int(ceil(float(total) / parts))
     while offset < total:
-      yield collection.offset(offset).limit(limit), Partition(offset, limit)
+      yield collection.offset(offset).limit(limit), Part(offset, limit)
       offset += limit
   elif isinstance(collection, list):
     total = len(collection)
     if parts:
       limit = int(ceil(float(total) / parts))
     while offset < total:
-      yield collection[offset:offset + limit], Partition(offset, limit)
+      yield collection[offset:offset + limit], Part(offset, limit)
       offset += limit
   elif isinstance(collection, file):
     total = sum(1 for line in collection)
@@ -155,7 +155,7 @@ def partition(collection, parts=0, size=0):
       limit = int(ceil(float(total) / parts))
     while offset < total:
       collection.seek(0)
-      yield islice(collection, offset, offset+limit), Partition(offset, limit)
+      yield islice(collection, offset, offset+limit), Part(offset, limit)
       offset += limit
 
 class Dict(dict):
