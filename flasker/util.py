@@ -841,32 +841,66 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
 #
 # ===
 
-class RunningStatistic(object):
+class RunningStat(object):
 
-  """ To compute running statistics efficiently."""
+  """ To compute running means and variances efficiently.
+
+  Usage::
+
+    rs = RunningStat()
+    for i in range(10):
+      rs.push(i)
+    rs.var
+
+  """
 
   def __init__(self):
     self.count = 0
-    self.mean = float(0)
+    self._mean = float(0)
     self.unweighted_variance = float(0)
 
+  def __repr__(self):
+    return '<RunningStat (count=%s, avg=%s, sdv=%s)>' % (
+      self.count, self.avg, self.sdv
+  )
+
+  @property
+  def avg(self):
+    """Current mean."""
+    if self.count > 0:
+      return self._mean
+    return 0
+
+  @property
+  def var(self):
+    """Current variance."""
+    if self.count > 1:
+      return self.unweighted_variance/(self.count-1)
+    return 0
+
+  @property
+  def sdv(self):
+    """Current standard deviation."""
+    return self.var ** 0.5
+
   def push(self, n):
+    """Add a new element to the statistic.
+
+    :param n: number to add
+    :type n: int, float
+
+    """
     if n == None:
       return
     self.count += 1
     if self.count == 1:
-      self.mean = float(n)
+      self._mean = float(n)
       self.unweighted_variance = float(0)
     else:
-      mean = self.mean
+      mean = self._mean
       s = self.unweighted_variance
-      self.mean = mean + (n - mean) / self.count
-      self.unweighted_variance = s + (n - self.mean) * (n - mean)
-
-  def variance(self):
-      if self.count>1:
-        return self.unweighted_variance/(self.count-1)
-      return 0
+      self._mean = mean + (n - mean) / self.count
+      self.unweighted_variance = s + (n - self._mean) * (n - mean)
 
 def exponential_smoothing(data, alpha=0.5):
   """Smoothing data.
