@@ -14,21 +14,23 @@ from ..util import (Cacheable, _jsonify, JSONDepthExceededError,
 
 class ORM(object):
 
-  config = {}
+  config = {
+    'CREATE_ALL': True
+  }
 
   def __init__(self, **kwargs):
     for k, v in kwargs.items():
       self.config[k.upper()] = v
-    APIView.__extension__ = self
-    self.Models = {}
 
-  def _before_register(self, project):
+  def on_register(self, project):
     project._query_class = Query
 
-  def _after_register(self, project):
-    Model.metadata.create_all(project._engine, checkfirst=True)
-    Model.q = _QueryProperty(project)
-    Model.c = _CountProperty(project)
+    @project.before_startup
+    def handler(project):
+      if self.config['CREATE_ALL']:
+        Model.metadata.create_all(project._engine, checkfirst=True)
+      Model.q = _QueryProperty(project)
+      Model.c = _CountProperty(project)
 
 
 class Query(_Query):
@@ -168,10 +170,8 @@ class Base(Cacheable, Loggable):
         isinstance(getattr(cls, varname).property, ColumnProperty)
       ) or (
         isinstance(getattr(cls, varname), InstrumentedAttribute) and
-        isinstance(getattr(cls, varname).property, RelationshipProperty)
-        and (
-          getattr(cls, varname).property.lazy in [False, 'joined', 'immediate']
-        )
+        isinstance(getattr(cls, varname).property, RelationshipProperty) and
+        getattr(cls, varname).property.lazy in [False, 'joined', 'immediate']
       )
     )
 

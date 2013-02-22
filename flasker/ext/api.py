@@ -204,7 +204,7 @@ class API(object):
         RelationshipModelView.attach_view(rel, **options)
         LazyRelationshipView.attach_view(rel, **options)
 
-  def _before_register(self, project):
+  def on_register(self, project):
     self.__project__ = project
     self.blueprint = Blueprint(
       'api',
@@ -216,8 +216,9 @@ class API(object):
       self._create_model_views(model_class, options)
     IndexView.attach_view()
 
-  def _after_register(self, project):
-    pass
+    @project.before_startup
+    def handler(project):
+      project.app.register_blueprint(self.blueprint)
 
 # Views
 

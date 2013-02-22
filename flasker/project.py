@@ -123,20 +123,15 @@ class Project(object):
     for mod in project_modules:
       __import__(mod.strip())
 
-    # extensions first step
+    # extensions
     for extension, config_section in self._extensions or []:
       if config_section:
         for k, v in self.config[config_section].items():
           extension.config[k] = v
-      extension._before_register(self)
+      extension.on_register(self)
 
     # database
     self._setup_database_connection()
-
-    # extensions second step
-    for extension, config_section in self._extensions or []:
-      self.app.register_blueprint(extension.blueprint)
-      extension._after_register(self)
 
     # final hook
     for func in self._before_startup or []:
