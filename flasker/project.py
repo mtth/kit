@@ -65,7 +65,6 @@ class Project(object):
 
   def __init__(self, config_path=None, make=True):
 
-
     self.__dict__ = _tls._state
 
     if _tls._current_project is None:
