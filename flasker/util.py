@@ -876,3 +876,28 @@ def histogram(data, key=None, bins=50, restrict=None, categories=None,
       )
     return data_histogram
 
+
+def query_to_dataframe(query, connection=None, exclude=None):
+  """Load a Pandas dataframe from an SQLAlchemy query.
+
+  :param query: the query to be executed
+  :type query: sqlalchemy.orm.query.Query
+  :param connection: the connection to use to execute the query. By default
+    the method will use the query's session's current connection. Note that
+    connection is left open afterwards.
+  :type connection: sqlalchemy.engine.base.Connection
+  :param exclude: a list of column names to exclude from the dataframe
+  :type exclude: list
+  :rtype: pandas.DataFrame
+  
+  """
+  from pandas import DataFrame
+  connection = connection or query._connection_from_session()
+  exclude = exclude or []
+  result = connection.execute(query.statement)
+  dataframe = DataFrame.from_records(
+    result.fetchall(),
+    columns=result.keys(),
+    exclude=exclude,
+  )
+  return dataframe
