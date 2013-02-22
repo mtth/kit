@@ -83,7 +83,7 @@ Here is a sample minimalistic project configuration file:
   [ENGINE]
   # SQLAlchemy engine configuration
   URL = sqlite:///db/db.sqlite
-  [APP]
+  [FLASK]
   # any valid Flask configuration option can go here
   DEBUG = True
   TESTING = True
@@ -107,7 +107,7 @@ inside each module is to do:
   app = current_project.app
 
   # the Celery application
-  celery = current_project.celery
+  celery = current_project.cel
 
   # the SQLAlchemy scoped session registry 
   session = current_project.session

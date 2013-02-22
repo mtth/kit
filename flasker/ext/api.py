@@ -40,7 +40,7 @@ from time import time
 from werkzeug.exceptions import HTTPException
 
 from ..util import (Cacheable, _jsonify, JSONDepthExceededError,
-  JSONEncodedDict, Loggable, uncamelcase, query_to_models)
+  JSONEncodedDict, Loggable, uncamelcase, query_to_models, query_to_dataframe)
 
 
 class APIError(HTTPException):
@@ -655,6 +655,16 @@ class Query(_Query):
     if len(rv) == 1:
       return rv[0]
     return rv
+
+  def dataframe(self, *args, **kwargs):
+    """Loads a dataframe with the records from the query and returns it.
+
+    Accepts the same arguments as ``flasker.util.query_to_dataframe``.
+    Requires the ``pandas``library to be installed.
+
+    """
+    return query_to_dataframe(self, *args, **kwargs)
+
 
 class _QueryProperty(object):
 

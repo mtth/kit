@@ -2,22 +2,22 @@
 
 """Project module."""
 
-from celery.signals import task_postrun
 from ConfigParser import SafeConfigParser
-from flask import abort
 from os.path import abspath, dirname, join, sep, split, splitext
 from re import match, sub
 from sqlalchemy import create_engine  
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Query, scoped_session, sessionmaker
-from weakref import proxy
+from sys import path
 from werkzeug.local import LocalProxy
 
 from .util import convert
 
+
 class ProjectImportError(Exception):
 
   pass
+
 
 class Project(object):
 
@@ -28,7 +28,8 @@ class Project(object):
   
   """
 
-  __current__ = None
+  __state = {}
+  __registered = False
 
   config = {
     'PROJECT': {
@@ -44,7 +45,7 @@ class Project(object):
     'ENGINE': {
       'URL': 'sqlite://',
     },
-    'APP': {
+    'FLASK': {
       'SECRET_KEY': 'a_default_unsafe_key',
     },
     'CELERY': {
@@ -54,35 +55,49 @@ class Project(object):
     },
   }
 
-  def __init__(self, config_path):
+  def __init__(self, config_path=None, make=True):
 
-    config = self._parse_config(config_path)
-    for key in config:
-      if key in self.config:
-        self.config[key].update(config[key])
-      else:
-        self.config[key] = config[key]
+    self.__dict__ = self.__state
 
-    self.root_dir = dirname(abspath(config_path))
-    self.domain = (
-      self.config['PROJECT']['DOMAIN'] or
-      sub(r'\W+', '_', self.config['PROJECT']['NAME'].lower())
-    )
-    self.subdomain = (
-      self.config['PROJECT']['SUBDOMAIN'] or
-      splitext(config_path)[0].replace(sep, '-')
-    )
+    if not self.__registered:
 
-    assert Project.__current__ is None, 'More than one project.'
-    Project.__current__ = proxy(self)
+      if config_path is None:
+        raise ProjectImportError('Project instantiation outside the Flasker '
+                                 'command line tool requires a configuration '
+                                 'file path.')
 
-    self.app = None
-    self.celery = None
-    self.session = None
-    self._engine = None
-    self._query_class = Query
-    self._extensions = []
-    self._before_startup = []
+      # configure project
+      config = self._parse_config(config_path)
+      for key in config:
+        if key in self.config:
+          self.config[key].update(config[key])
+        else:
+          self.config[key] = config[key]
+
+      self.root_dir = dirname(abspath(config_path))
+      self.domain = (
+        self.config['PROJECT']['DOMAIN'] or
+        sub(r'\W+', '_', self.config['PROJECT']['NAME'].lower())
+      )
+      self.subdomain = (
+        self.config['PROJECT']['SUBDOMAIN'] or
+        splitext(config_path)[0].replace(sep, '-')
+      )
+
+      path.append(self.root_dir)
+
+      self.app = None
+      self.cel = None
+      self.session = None
+      self._engine = None
+      self._query_class = Query
+      self._extensions = []
+      self._before_startup = []
+
+      self.__registered = True
+
+      if make:
+        self._make()
 
   def __repr__(self):
     return '<Project %r, %r>' % (self.config['PROJECT']['NAME'], self.root_dir)
@@ -95,32 +110,39 @@ class Project(object):
     """Decorator, hook to run a function right before project starts."""
     self._before_startup.append(func)
 
-  def _make(self, app=False, celery=False):
+  def _make(self):
     """Create all project components."""
+
     # core
-    for mod in  ['app', 'celery']:
+    for mod in  ['flask', 'celery']:
       __import__('flasker.core.%s' % mod)
+
     # project modules
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
+
     # extensions first step
     for extension, config_section in self._extensions or []:
       if config_section:
         for k, v in self.config[config_section].items():
           extension.config[k] = v
       extension._before_register(self)
+
     # database
     self._setup_database_connection()
+
     # extensions second step
     for extension, config_section in self._extensions or []:
       self.app.register_blueprint(extension.blueprint)
       extension._after_register(self)
+
     # final hook
     for func in self._before_startup or []:
       func(self)
 
   def _setup_database_connection(self):
+    """Setup the database engine."""
     engine_ops = dict((k.lower(), v) for k,v in self.config['ENGINE'].items())
     self._engine = create_engine(engine_ops.pop('url'), **engine_ops)
     self.session = scoped_session(
@@ -128,18 +150,14 @@ class Project(object):
     )
 
   def _dismantle_database_connections(self):
-    """Remove database connections.
-
-    Has to be called after app request/job terminates or connections
-    will leak.
-
-    """
+    """Remove database connections."""
     try:
       if self.config['PROJECT']['COMMIT_ON_TEARDOWN']:
         self.session.commit()
     except InvalidRequestError as e:
       self.session.rollback()
       self.session.expunge_all()
+      raise e
     finally:
       self.session.remove()
 
@@ -168,10 +186,6 @@ class Project(object):
       raise ProjectImportError('Missing project name.')
     return conf
 
-  @classmethod
-  def _get_current_project(cls):
-    """Hook for ``current_project`` proxy."""
-    return Project.__current__
 
-current_project = LocalProxy(lambda: Project._get_current_project())
+current_project = LocalProxy(lambda: Project())
 
