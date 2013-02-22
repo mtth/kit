@@ -726,6 +726,9 @@ class JSONEncodedList(_JSONEncodedType):
 
     some_column_name = Column(JSONEncodedList)
 
+  Currently only set, delete, append and extend events are tracked. Others
+  will require a call to ``changed`` to be persisted.
+
   """
 
   def process_result_value(self, value, dialect):
@@ -739,9 +742,6 @@ class _MutableList(Mutable, list):
   This enables the database to know when it should update the stored string
   representation of the dictionary. This is much more efficient than naive
   automatic updating after each query.
-
-  Currently only set, delete, append and extend events are tracked. Others
-  will require a call to ``changed`` to be persisted.
 
   """
 

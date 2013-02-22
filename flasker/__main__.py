@@ -20,10 +20,10 @@ from os import listdir, mkdir
 from os.path import abspath, dirname, exists, join, splitext
 from re import findall
 from shutil import copy
-from sys import path
 
 from flasker import current_project
 from flasker.project import Project, ProjectImportError
+
 
 def _project_context(handler):
   """Create the project context.
@@ -53,8 +53,7 @@ def _project_context(handler):
           return
         else:
           conf_file = conf_files[0]
-      path.append(abspath(dirname(conf_file))) # for reloader to work
-      pj = Project(conf_file)
+      pj = Project(conf_file, make=False)
     except ProjectImportError as e:
       print e
       return
@@ -62,6 +61,7 @@ def _project_context(handler):
       pj._make()
       handler(*args, **kwargs)
   return wrapper
+
 
 # Parsers
 
@@ -186,8 +186,6 @@ def shell_handler(parsed_args):
   The following global variables will be available:
 
   * ``pj``, an alias for the ``current_project``
-  * ``app``, an alias for ``current_project.app``
-  * ``cel``, an alias for ``current_project.celery``
 
   Flasker will use IPython if it is available.
   
@@ -195,8 +193,6 @@ def shell_handler(parsed_args):
   pj = current_project
   context = {
     'pj': pj,
-    'app': pj.app,
-    'cel': pj.celery
   }
   try:
     import IPython
@@ -252,7 +248,7 @@ def worker_handler(parsed_args):
 
   """
   pj = current_project
-  pj_worker_names = [d.keys()[0] for d in pj.celery.control.ping()]
+  pj_worker_names = [d.keys()[0] for d in pj.cel.control.ping()]
   worker_pattern = r'w(\d+)\.%s.%s' % (pj.subdomain, pj.domain)
   worker_numbers = [
     findall(worker_pattern, worker_name) or ['0']
@@ -263,7 +259,7 @@ def worker_handler(parsed_args):
     set([int(n[0]) for n in worker_numbers] or [len(worker_numbers) + 2]) 
   )
   if parsed_args.verbose_help:
-    pj.celery.worker_main(['worker', '-h'])
+    pj.cel.worker_main(['worker', '-h'])
   else:
     hostname = 'w%s.%s.%s' % (wkn, pj.subdomain, pj.domain)
     options = ['worker', '--hostname=%s' % hostname]
@@ -271,7 +267,7 @@ def worker_handler(parsed_args):
       options.append('--queues=%s.dq' % hostname)
     if parsed_args.raw:
       options.extend(parsed_args.raw)
-    pj.celery.worker_main(options)
+    pj.cel.worker_main(options)
 
 worker_parser.set_defaults(handler=worker_handler)
 
@@ -309,12 +305,12 @@ def flower_handler(parsed_args):
   """
   pj = current_project
   if parsed_args.verbose_help:
-    pj.celery.start(['celery', 'flower', '--help'])
+    pj.cel.start(['celery', 'flower', '--help'])
   else:
     options = ['celery', 'flower', '--port=%s' % parsed_args.port]
     if parsed_args.raw:
       options.extend(parsed_args.raw)
-    pj.celery.start(options)
+    pj.cel.start(options)
 
 flower_parser.set_defaults(handler=flower_handler)
 

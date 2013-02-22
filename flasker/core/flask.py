@@ -19,7 +19,7 @@ app = Flask(
   instance_path=join(pj.root_dir, conf['APP_FOLDER']),
   instance_relative_config=True,
 )
-app.config.update(pj.config['APP'])
+app.config.update(pj.config['FLASK'])
 
 @app.context_processor
 def inject():
