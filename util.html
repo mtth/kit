@@ -51,39 +51,6 @@
 <span id="utilities"></span><h1>Utilities<a class="headerlink" href="#module-flasker.util" title="Permalink to this headline">¶</a></h1>
 <p>General helpers.</p>
 <dl class="function">
-<dt id="flasker.util.prod">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">prod</tt><big>(</big><em>iterable</em>, <em>key=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#prod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.prod" title="Permalink to this definition">¶</a></dt>
-<dd><p>Cumulative product function (the equivalent of <tt class="docutils literal"><span class="pre">sum</span></tt>).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<em>callable</em>) &#8211; function called on each element of the iterable, if none then
-identity is assumed</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">int, float</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="flasker.util.uncamelcase">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">uncamelcase</tt><big>(</big><em>name</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#uncamelcase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.uncamelcase" title="Permalink to this definition">¶</a></dt>
-<dd><p>Transforms CamelCase to underscore_case.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<em>str</em>) &#8211; string input</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">str</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
 <dt id="flasker.util.convert">
 <tt class="descclassname">flasker.util.</tt><tt class="descname">convert</tt><big>(</big><em>value</em>, <em>rtype=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.convert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts a string to another value.</p>
@@ -161,6 +128,39 @@ properties:</p>
 it will be the first line number instead)</li>
 <li><tt class="docutils literal"><span class="pre">limit</span></tt>, the max-length of the partition (the last one might be shorter)</li>
 </ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.prod">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">prod</tt><big>(</big><em>iterable</em>, <em>key=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#prod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.prod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cumulative product function (the equivalent of <tt class="docutils literal"><span class="pre">sum</span></tt>).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<em>callable</em>) &#8211; function called on each element of the iterable, if none then
+identity is assumed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">int, float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.uncamelcase">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">uncamelcase</tt><big>(</big><em>name</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#uncamelcase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.uncamelcase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms CamelCase to underscore_case.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<em>str</em>) &#8211; string input</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="class">
@@ -467,7 +467,7 @@ after the operation.</p>
 
 <dl class="function">
 <dt id="flasker.util.query_to_dataframe">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_dataframe</tt><big>(</big><em>query</em>, <em>connection=None</em>, <em>exclude=None</em>, <em>index=None</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_dataframe" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_dataframe</tt><big>(</big><em>query</em>, <em>connection=None</em>, <em>exclude=None</em>, <em>index=None</em>, <em>columns=None</em>, <em>coerce_float=False</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_dataframe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load a Pandas dataframe from an SQLAlchemy query.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -480,6 +480,13 @@ the method will use the query&#8217;s session&#8217;s current connection. Note t
 connection is left open afterwards.</li>
 <li><strong>exclude</strong> (<em>list</em>) &#8211; a list of column names to exclude from the dataframe</li>
 <li><strong>index</strong> (<em>str</em>) &#8211; the column to use as index</li>
+<li><strong>names</strong> (<em>list</em>) &#8211; a list of column names. If unspecified, the method will use
+the table&#8217;s keys from the query&#8217;s metadata. If the passed data do not have
+named associated with them, this argument provides names for the columns.
+Otherwise this argument indicates the order of the columns in the result
+(any names not found in the data will become all-NA columns)</li>
+<li><strong>coerce_float</strong> (<em>bool</em>) &#8211; Attempt to convert values to non-string, non-numeric
+objects (like decimal.Decimal) to floating point.</li>
 </ul>
 </td>
 </tr>
@@ -491,9 +498,48 @@ connection is left open afterwards.</li>
 </dd></dl>
 
 <dl class="class">
-<dt id="flasker.util.RunningStatistic">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">RunningStatistic</tt><a class="reference internal" href="_modules/flasker/util.html#RunningStatistic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.RunningStatistic" title="Permalink to this definition">¶</a></dt>
-<dd><p>To compute running statistics efficiently.</p>
+<dt id="flasker.util.RunningStat">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">RunningStat</tt><a class="headerlink" href="#flasker.util.RunningStat" title="Permalink to this definition">¶</a></dt>
+<dd><p>To compute running means and variances efficiently.</p>
+<p>Usage:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">rs</span> <span class="o">=</span> <span class="n">RunningStat</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+  <span class="n">rs</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+<span class="n">rs</span><span class="o">.</span><span class="n">var</span>
+</pre></div>
+</div>
+<dl class="attribute">
+<dt id="flasker.util.RunningStat.avg">
+<tt class="descname">avg</tt><a class="headerlink" href="#flasker.util.RunningStat.avg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current mean.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.util.RunningStat.var">
+<tt class="descname">var</tt><a class="headerlink" href="#flasker.util.RunningStat.var" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current variance.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.util.RunningStat.sdv">
+<tt class="descname">sdv</tt><a class="headerlink" href="#flasker.util.RunningStat.sdv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current standard deviation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.RunningStat.push">
+<tt class="descname">push</tt><big>(</big><em>n</em><big>)</big><a class="headerlink" href="#flasker.util.RunningStat.push" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new element to the statistic.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int, float</em>) &#8211; number to add</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="function">
