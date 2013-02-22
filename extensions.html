@@ -291,6 +291,50 @@ be unaware of them.</p>
 </dd></dl>
 
 <dl class="class">
+<dt id="flasker.ext.api.Query">
+<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">Query</tt><big>(</big><em>entities</em>, <em>session=None</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base query class.</p>
+<p>The first two methods are copied from Flask-SQLAlchemy.</p>
+<dl class="method">
+<dt id="flasker.ext.api.Query.get_or_404">
+<tt class="descname">get_or_404</tt><big>(</big><em>model_id</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Query.get_or_404" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like get but aborts with 404 if not found.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.api.Query.first_or_404">
+<tt class="descname">first_or_404</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.ext.api.Query.first_or_404" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like first but aborts with 404 if not found.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.api.Query.random">
+<tt class="descname">random</tt><big>(</big><em>n=1</em>, <em>dialect=None</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Query.random" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns n random model instances.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>n</strong> (<em>int</em>) &#8211; the number of instances to return</li>
+<li><strong>dialect</strong> (<em>str</em>) &#8211; the engine dialect (the implementation of random differs
+between MySQL and SQLite among others). By default will look up on the
+query for the dialect used. If no random function is available for the 
+chosen dialect, the fallback implementation uses total row count to 
+generate random offsets.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">model instances</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
 <dt id="flasker.ext.api.ExpandedBase">
 <em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">ExpandedBase</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#ExpandedBase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.ExpandedBase" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adding a few features to the declarative base.</p>

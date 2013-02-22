@@ -424,22 +424,6 @@ be lost.</p>
 </dd></dl>
 
 <dl class="class">
-<dt id="flasker.util.JSONEncodedType">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">JSONEncodedType</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.JSONEncodedType" title="Permalink to this definition">¶</a></dt>
-<dd><p>Base class for storing python mutables as a JSON.</p>
-<p>For mutability tracking, associate with a Mutable.</p>
-<p>The underlying immutable object is of kind <tt class="docutils literal"><span class="pre">sqlalchemy.types.unicodetext</span></tt>.
-Note that it has a character limit so care is needed when storing very large
-objects.</p>
-<dl class="attribute">
-<dt id="flasker.util.JSONEncodedType.impl">
-<tt class="descname">impl</tt><a class="headerlink" href="#flasker.util.JSONEncodedType.impl" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <tt class="xref py py-class docutils literal"><span class="pre">UnicodeText</span></tt></p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
 <dt id="flasker.util.JSONEncodedDict">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">JSONEncodedDict</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#JSONEncodedDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.JSONEncodedDict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Implements dictionary column field type for SQLAlchemy.</p>
@@ -463,6 +447,47 @@ after the operation.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">some_column_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedList</span><span class="p">)</span>
 </pre></div>
 </div>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.query_to_models">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_models</tt><big>(</big><em>query</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_models" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the model classes associated with a query.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.query_to_dataframe">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_dataframe</tt><big>(</big><em>query</em>, <em>connection=None</em>, <em>exclude=None</em>, <em>index=None</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a Pandas dataframe from an SQLAlchemy query.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</li>
+<li><strong>connection</strong> (<em>sqlalchemy.engine.base.Connection</em>) &#8211; the connection to use to execute the query. By default
+the method will use the query&#8217;s session&#8217;s current connection. Note that
+connection is left open afterwards.</li>
+<li><strong>exclude</strong> (<em>list</em>) &#8211; a list of column names to exclude from the dataframe</li>
+<li><strong>index</strong> (<em>str</em>) &#8211; the column to use as index</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="class">
@@ -497,69 +522,33 @@ the first item of each tuple.</li>
 <dt id="flasker.util.histogram">
 <tt class="descclassname">flasker.util.</tt><tt class="descname">histogram</tt><big>(</big><em>data</em>, <em>key=None</em>, <em>bins=50</em>, <em>restrict=None</em>, <em>categories=None</em>, <em>order=0</em>, <em>expand=False</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#histogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.histogram" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a histogram of counts for the data.</p>
-<blockquote>
-<div><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">param data:</th><td class="field-body">the data to be binned</td>
-</tr>
-<tr class="field-even field"><th class="field-name">type data:</th><td class="field-body">iterable of tuples</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">param restrict:</th><td class="field-body">if provided, only data elements which return <cite>True</cite>
-will be included in the histogram. Default is <cite>None</cite> (all elements
-are included).</td>
-</tr>
-<tr class="field-even field"><th class="field-name">type restrict:</th><td class="field-body">function or None</td>
-</tr>
-<tr class="field-odd field"><th class="field-name" colspan="2">param categories:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">if provided, elements will be counted in separate
-categories. This changes the format of the output to a dictionary
-with the different categories as keys in each bin.</td>
-</tr>
-<tr class="field-even field"><th class="field-name" colspan="2">type categories:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body">function or None</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">param bins:</th><td class="field-body">either an int (total number of bins, which will be 
-uniformly spread) or a list of increasing bin values. smaller
-values will be in the first bin, larger in the last one.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">type bins:</th><td class="field-body">int or list(int)</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">param order:</th><td class="field-body">0 if data isn&#8217;t sorted, 1 if sorted in ascending, -1 if
-sorted in descending order.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">type order:</th><td class="field-body">string</td>
-</tr>
-</tbody>
-</table>
-</div></blockquote>
-<p>Possible extension: allow categories to return a list of keys, which would
-allow elements to be included in several counts.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="flasker.util.query_to_dataframe">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_dataframe</tt><big>(</big><em>query</em>, <em>connection=None</em>, <em>exclude=None</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_dataframe" title="Permalink to this definition">¶</a></dt>
-<dd><p>Load a Pandas dataframe from an SQLAlchemy query.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</li>
-<li><strong>connection</strong> (<em>sqlalchemy.engine.base.Connection</em>) &#8211; the connection to use to execute the query. By default
-the method will use the query&#8217;s session&#8217;s current connection. Note that
-connection is left open afterwards.</li>
-<li><strong>exclude</strong> (<em>list</em>) &#8211; a list of column names to exclude from the dataframe</li>
+<li><strong>data</strong> (<em>iterable of tuples</em>) &#8211; the data to be binned</li>
+<li><strong>restrict</strong> (<em>function or None</em>) &#8211; if provided, only data elements which return <cite>True</cite>
+will be included in the histogram. Default is <cite>None</cite> (all elements
+are included).</li>
+<li><strong>categories</strong> (<em>function or None</em>) &#8211; if provided, elements will be counted in separate
+categories. This changes the format of the output to a dictionary
+with the different categories as keys in each bin.</li>
+<li><strong>bins</strong> (<em>int or list(int)</em>) &#8211; either an int (total number of bins, which will be 
+uniformly spread) or a list of increasing bin values. smaller
+values will be in the first bin, larger in the last one.</li>
+<li><strong>order</strong> (<em>string</em>) &#8211; 0 if data isn&#8217;t sorted, 1 if sorted in ascending, -1 if
+sorted in descending order.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
 </td>
 </tr>
 </tbody>
 </table>
+<p>Possible extension: allow categories to return a list of keys, which would
+allow elements to be included in several counts.</p>
 </dd></dl>
 
 </div>
