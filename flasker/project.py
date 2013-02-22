@@ -9,9 +9,20 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Query, scoped_session, sessionmaker
 from sys import path
+from threading import local
 from werkzeug.local import LocalProxy
 
 from .util import convert
+
+
+class _Tls(local):
+
+  """Thread local storage for the project state."""
+  
+  _state = {}
+  _current_project = None
+
+_tls = _Tls()
 
 
 class ProjectImportError(Exception):
@@ -27,9 +38,6 @@ class Project(object):
   object.
   
   """
-
-  __state = {}
-  __registered = False
 
   config = {
     'PROJECT': {
@@ -57,16 +65,16 @@ class Project(object):
 
   def __init__(self, config_path=None, make=True):
 
-    self.__dict__ = self.__state
 
-    if not self.__registered:
+    self.__dict__ = _tls._state
+
+    if _tls._current_project is None:
 
       if config_path is None:
         raise ProjectImportError('Project instantiation outside the Flasker '
                                  'command line tool requires a configuration '
                                  'file path.')
 
-      # configure project
       config = self._parse_config(config_path)
       for key in config:
         if key in self.config:
@@ -95,7 +103,7 @@ class Project(object):
       self._extensions = []
       self._before_startup = []
 
-      self.__registered = True
+      _tls._current_project = self
 
       if make:
         self._make()
@@ -177,11 +185,13 @@ class Project(object):
       (s, dict((k, convert(v)) for (k, v) in parser.items(s)))
       for s in parser.sections()
     )
-    # some conf checking
     if not conf['PROJECT']['NAME']:
       raise ProjectImportError('Missing project name.')
     return conf
 
 
-current_project = LocalProxy(lambda: Project())
+def _get_current_project():
+  return _tls._current_project
+
+current_project = LocalProxy(_get_current_project)
 
