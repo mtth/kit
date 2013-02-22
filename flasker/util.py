@@ -12,6 +12,7 @@ from math import ceil
 from re import sub
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.orm import Query
+from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
 
@@ -21,34 +22,6 @@ from time import time
 #   General utilities
 #
 # ===
-
-def prod(iterable, key=None):
-  """Cumulative product function (the equivalent of ``sum``).
-
-  :param key: function called on each element of the iterable, if none then
-    identity is assumed
-  :type key: callable
-  :rtype: int, float
-
-  """
-  rv = 1
-  for elem in iterable:
-    if key is None:
-      rv *= elem
-    else:
-      rv *= key(elem)
-  return rv
-
-def uncamelcase(name):
-  """Transforms CamelCase to underscore_case.
-
-  :param name: string input
-  :type name: str
-  :rtype: str
-  
-  """
-  s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-  return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 def convert(value, rtype=None):
   """Converts a string to another value.
@@ -157,6 +130,34 @@ def partition(collection, parts=0, size=0):
       collection.seek(0)
       yield islice(collection, offset, offset+limit), Part(offset, limit)
       offset += limit
+
+def prod(iterable, key=None):
+  """Cumulative product function (the equivalent of ``sum``).
+
+  :param key: function called on each element of the iterable, if none then
+    identity is assumed
+  :type key: callable
+  :rtype: int, float
+
+  """
+  rv = 1
+  for elem in iterable:
+    if key is None:
+      rv *= elem
+    else:
+      rv *= key(elem)
+  return rv
+
+def uncamelcase(name):
+  """Transforms CamelCase to underscore_case.
+
+  :param name: string input
+  :type name: str
+  :rtype: str
+  
+  """
+  s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+  return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 class Dict(dict):
 
@@ -309,6 +310,7 @@ class Dict(dict):
         items.append(row)
     return items
 
+
 class SmartDictReader(DictReader):
 
   """``DictReader`` with built-in value conversion.
@@ -369,6 +371,7 @@ class SmartDictReader(DictReader):
     else:
       self.rows_imported += 1
       return processed_row
+
 
 # ===
 # 
@@ -462,12 +465,14 @@ class Cacheable(object):
     """
     return _CachedProperty(func)
 
+
 class _CacheRefresh(object):
 
   """Special class used to trigger cache refreshes."""
 
   def __init__(self, expiration):
     self.expiration = expiration
+
 
 class _CachedProperty(property):
 
@@ -514,11 +519,13 @@ class _CachedProperty(property):
   def __repr__(self):
     return '<CachedProperty %r>' % self.func
 
+
 # Jsonifying
 
 class JSONDepthExceededError(Exception):
 
   pass
+
 
 def _jsonify(value, depth, expand):
   if depth < 0:
@@ -536,6 +543,7 @@ def _jsonify(value, depth, expand):
   if value is None:
     return None
   raise ValueError('not jsonifiable')
+
 
 class Jsonifiable(object):
 
@@ -578,6 +586,7 @@ class Jsonifiable(object):
         pass
     return rv
 
+
 # Logging
 
 class Loggable(object):
@@ -619,6 +628,7 @@ class Loggable(object):
     """Error level message."""
     return self._logger(message, 'error')
 
+
 # ===
 #
 #   SQLAlchemy custom
@@ -648,6 +658,7 @@ class _JSONEncodedType(TypeDecorator):
   def process_result_value(self, value, dialect):
     raise NotImplementedError()
 
+
 class JSONEncodedDict(_JSONEncodedType):
 
   """Implements dictionary column field type for SQLAlchemy.
@@ -667,6 +678,7 @@ class JSONEncodedDict(_JSONEncodedType):
 
   def process_result_value(self, value, dialect):
     return loads(value) if value else {}
+
 
 class _MutableDict(Mutable, dict):
 
@@ -705,6 +717,7 @@ class _MutableDict(Mutable, dict):
     
 _MutableDict.associate_with(JSONEncodedDict)
 
+
 class JSONEncodedList(_JSONEncodedType):
 
   """Implements list column field type for SQLAlchemy.
@@ -718,6 +731,7 @@ class JSONEncodedList(_JSONEncodedType):
   def process_result_value(self, value, dialect):
     return loads(value) if value else []
 
+
 class _MutableList(Mutable, list):
 
   """Used with JSONEncoded list to be able to track updates.
@@ -725,6 +739,9 @@ class _MutableList(Mutable, list):
   This enables the database to know when it should update the stored string
   representation of the dictionary. This is much more efficient than naive
   automatic updating after each query.
+
+  Currently only set, delete, append and extend events are tracked. Others
+  will require a call to ``changed`` to be persisted.
 
   """
 
@@ -738,9 +755,28 @@ class _MutableList(Mutable, list):
     else:
       return value
 
-  # TODO: actual mutability tracking
+  def append(self, *args, **kwargs):
+    """Detect update events and emit change events."""
+    list.append(self, *args, **kwargs)
+    self.changed()
+
+  def extend(self, *args, **kwargs):
+    """Detect update events and emit change events."""
+    list.extend(self, *args, **kwargs)
+    self.changed()
     
+  def __setitem__(self, index, value):
+    """Detect set events and emit change events."""
+    list.__setitem__(self, index, value)
+    self.changed()
+    
+  def __delitem__(self, index):
+    """Detect del events and emit change events."""
+    list.__delitem__(self, index)
+    self.changed()
+
 _MutableList.associate_with(JSONEncodedList)
+
 
 # Query helpers
 
@@ -758,7 +794,8 @@ def query_to_models(query):
     if isinstance(d['expr'], Mapper)
   ]
 
-def query_to_dataframe(query, connection=None, exclude=None, index=None):
+def query_to_dataframe(query, connection=None, exclude=None, index=None,
+                       columns=None, coerce_float=False):
   """Load a Pandas dataframe from an SQLAlchemy query.
 
   :param query: the query to be executed
@@ -771,6 +808,15 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None):
   :type exclude: list
   :param index: the column to use as index
   :type index: str
+  :param names: a list of column names. If unspecified, the method will use
+    the table's keys from the query's metadata. If the passed data do not have
+    named associated with them, this argument provides names for the columns.
+    Otherwise this argument indicates the order of the columns in the result
+    (any names not found in the data will become all-NA columns)
+  :type names: list
+  :param coerce_float: Attempt to convert values to non-string, non-numeric
+    objects (like decimal.Decimal) to floating point.
+  :type coerce_float: bool
   :rtype: pandas.DataFrame
   
   """
@@ -778,13 +824,16 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None):
   connection = connection or query._connection_from_session()
   exclude = exclude or []
   result = connection.execute(query.statement)
+  columns = columns or result.keys()
   dataframe = DataFrame.from_records(
     result.fetchall(),
-    columns=result.keys(),
+    columns=columns,
     exclude=exclude,
     index=index,
+    coerce_float=coerce_float,
   )
   return dataframe
+
 
 # ===
 #
@@ -920,3 +969,4 @@ def histogram(data, key=None, bins=50, restrict=None, categories=None,
           for key in keys
       )
     return data_histogram
+
