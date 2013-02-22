@@ -684,7 +684,6 @@ class _CountProperty(object):
     except UnmappedClassError:
       return None
 
-
 class ExpandedBase(Cacheable, Loggable):
 
   """Adding a few features to the declarative base.
@@ -709,7 +708,8 @@ class ExpandedBase(Cacheable, Loggable):
   _cache = Column(JSONEncodedDict)
   _json_depth = 0
 
-  query = None
+  c = None
+  q = None
 
   def __init__(self, **kwargs):
     for k, v in kwargs.items():
