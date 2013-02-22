@@ -28,9 +28,10 @@ the ``__view__`` attribute and insert your custom API views there.
 
 from flask import Blueprint, jsonify, request
 from os.path import abspath, dirname, join
+from random import randint
 from sqlalchemy import Column, func
 from sqlalchemy.ext.declarative import declarative_base, declared_attr 
-from sqlalchemy.orm import class_mapper, mapperlib, Query
+from sqlalchemy.orm import class_mapper, mapperlib, Query as _Query
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.orm.dynamic import AppenderQuery
@@ -39,9 +40,8 @@ from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 from time import time
 from werkzeug.exceptions import HTTPException
 
-from ..project import current_project as pj
 from ..util import (Cacheable, _jsonify, JSONDepthExceededError,
-  JSONEncodedDict, Loggable, uncamelcase)
+  JSONEncodedDict, Loggable, uncamelcase, query_to_models)
 
 
 class APIError(HTTPException):
@@ -95,6 +95,8 @@ class API(object):
     current_project.register_extension(api, config_section='API')
 
   """
+
+  __project__ = None
 
   _authorize = None
   _validate = None
@@ -217,6 +219,8 @@ class API(object):
           view['lazy_relationship'].attach_view(rel, **options)
 
   def _before_register(self, project):
+    self.__project__ = project
+    project._query_class = Query
     self.blueprint = Blueprint(
       'api',
       project.config['PROJECT']['APP_FOLDER'] + '.api',
@@ -229,7 +233,8 @@ class API(object):
 
   def _after_register(self, project):
     Model.metadata.create_all(project._engine, checkfirst=True)
-    Model.query = _QueryProperty(project)
+    Model.q = _QueryProperty(project)
+    Model.c = _CountProperty(project)
 
 # Views
 
@@ -358,9 +363,7 @@ class CollectionView(APIView):
     timers = {}
     filtered_query = parser.filter_and_sort(self.Model.query)
     now = time()
-    count = parser.filter_and_sort(
-      self.Model.query.get_count_query(), False
-    ).one()[0]
+    count = parser.filter_and_sort(self.Model.c, False).scalar()
     timers['count'] = time() - now
     now = time()
     content = [
@@ -604,14 +607,7 @@ class IndexView(APIView):
 
 # SQLAlchemy Model
 
-def get_model_classes_from_query(query):
-  return [
-    d['expr'].class_
-    for d in query.column_descriptions
-    if isinstance(d['expr'], Mapper)
-  ]
-
-class _BaseQuery(Query):
+class Query(_Query):
 
   """Base query class.
 
@@ -633,25 +629,33 @@ class _BaseQuery(Query):
       abort(404)
     return rv
 
-  def get_count_query(self):
-    """Get correspondint count query.
+  def random(self, n=1, dialect=None):
+    """Returns n random model instances.
 
-    This should be used for fast counts. Apply filters to it and apply the
-    method ``one()`` to bypass the use of subqueries (which are highly
-    inefficient in MySQL).
+    :param n: the number of instances to return
+    :type n: int
+    :param dialect: the engine dialect (the implementation of random differs
+      between MySQL and SQLite among others). By default will look up on the
+      query for the dialect used. If no random function is available for the 
+      chosen dialect, the fallback implementation uses total row count to 
+      generate random offsets.
+    :type dialect: str
+    :rtype: model instances
     
     """
-    models = self.get_models()
-
-    # _BaseQuery objects should only ever have one model
-    assert len(models) == 1, '%s models found for %s' % (len(models), self)
-
-    Model = models[0]
-    query = pj.session.query(func.count(Model)).select_from(Model)
-    return query
-
-  def get_models(self):
-    return get_model_classes_from_query(self)
+    if dialect is None:
+      conn = self._connection_from_session()
+      dialect = conn.dialect.name
+    if dialect == 'mysql':
+      rv = self.order_by(func.rand()).limit(n).all()
+    elif dialect in ['sqlite', 'postgresql']:
+      rv = self.order_by(func.random()).limit(n).all()
+    else: # fallback implementation
+      count = self.count()
+      rv = [self.offset(randint(0, count - 1)).first() for _ in range(n)]
+    if len(rv) == 1:
+      return rv[0]
+    return rv
 
 class _QueryProperty(object):
 
@@ -662,7 +666,21 @@ class _QueryProperty(object):
     try:
       mapper = class_mapper(cls)
       if mapper:
-        return _BaseQuery(mapper, session=self.project.session())
+        return Query(mapper, session=self.project.session())
+    except UnmappedClassError:
+      return None
+
+class _CountProperty(object):
+
+  def __init__(self, project):
+    self.project = project
+
+  def __get__(self, obj, cls):
+    try:
+      mapper = class_mapper(cls)
+      if mapper:
+        session = self.project.session()
+        return Query(func.count(cls), session=session).select_from(cls)
     except UnmappedClassError:
       return None
 
@@ -690,7 +708,8 @@ class ExpandedBase(Cacheable, Loggable):
   _cache = Column(JSONEncodedDict)
   _json_depth = 0
 
-  query = None
+  c = None
+  q = None
 
   def __init__(self, **kwargs):
     for k, v in kwargs.items():
@@ -785,6 +804,10 @@ class ExpandedBase(Cacheable, Loggable):
     return instance, True
 
   @classmethod
+  def get_primary_key_names(cls):
+    return [key.name for key in class_mapper(cls).primary_key]
+
+  @classmethod
   def get_columns(cls, show_private=False):
     columns = class_mapper(cls).columns
     if not show_private:
@@ -792,8 +815,11 @@ class ExpandedBase(Cacheable, Loggable):
     return columns
 
   @classmethod
-  def get_primary_key_names(cls):
-    return [key.name for key in class_mapper(cls).primary_key]
+  def get_related_models(cls, show_private=False):
+    return [
+      (r.key, r.mapper.class_)
+      for r in cls.get_relationships(show_private)
+    ]
 
   @classmethod
   def get_relationships(cls, show_private=False):
@@ -801,13 +827,6 @@ class ExpandedBase(Cacheable, Loggable):
     if not show_private:
       rels = [rel for rel in rels if not rel.key.startswith('_')]
     return rels
-
-  @classmethod
-  def get_related_models(cls, show_private=False):
-    return [
-      (r.key, r.mapper.class_)
-      for r in cls.get_relationships(show_private)
-    ]
 
 Model = declarative_base(cls=ExpandedBase)
 
@@ -895,7 +914,7 @@ class Parser(object):
 
   def _get_model_class(self, query):
   
-    models = get_model_classes_from_query(query)
+    models = query_to_models(query)
 
     # only tested for _BaseQueries and associated count queries
     assert len(models) < 2, 'Invalid query'
@@ -903,7 +922,7 @@ class Parser(object):
     if not len(models):
       # this is a count query
       return query._select_from_entity
-    # this is a _BaseQuery
+    # this is a Query
     return models[0]
 
 

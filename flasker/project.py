@@ -9,7 +9,7 @@ from os.path import abspath, dirname, join, sep, split, splitext
 from re import match, sub
 from sqlalchemy import create_engine  
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import Query, scoped_session, sessionmaker
 from weakref import proxy
 from werkzeug.local import LocalProxy
 
@@ -80,6 +80,7 @@ class Project(object):
     self.celery = None
     self.session = None
     self._engine = None
+    self._query_class = Query
     self._extensions = []
     self._before_startup = []
 
@@ -103,14 +104,16 @@ class Project(object):
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
-    # database
-    self._setup_database_connection()
-    # extensions
+    # extensions first step
     for extension, config_section in self._extensions or []:
       if config_section:
         for k, v in self.config[config_section].items():
           extension.config[k] = v
       extension._before_register(self)
+    # database
+    self._setup_database_connection()
+    # extensions second step
+    for extension, config_section in self._extensions or []:
       self.app.register_blueprint(extension.blueprint)
       extension._after_register(self)
     # final hook
@@ -120,7 +123,9 @@ class Project(object):
   def _setup_database_connection(self):
     engine_ops = dict((k.lower(), v) for k,v in self.config['ENGINE'].items())
     self._engine = create_engine(engine_ops.pop('url'), **engine_ops)
-    self.session = scoped_session(sessionmaker(bind=self._engine))
+    self.session = scoped_session(
+      sessionmaker(bind=self._engine, query_cls=self._query_class)
+    )
 
   def _dismantle_database_connections(self):
     """Remove database connections.
