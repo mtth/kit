@@ -682,7 +682,7 @@ class ExpandedBase(Cacheable, Loggable):
   __view__ = {
     'model': ModelView,
     'collection': CollectionView,
-    'dynamic_relationship': RelationshipView,
+    'dynamic_relationship': DynamicRelationshipView,
     'lazy_relationship': LazyRelationshipView,
     'relationship_model': RelationshipModelView
   }

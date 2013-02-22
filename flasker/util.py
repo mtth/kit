@@ -101,25 +101,27 @@ def convert(value, rtype=None):
         else:
           return value
 
-def partition(collection, batches=0, batch_size=0):
+Part = namedtuple('Part', ['offset', 'limit'])
+
+def partition(collection, parts=0, size=0):
   """Split an iterable into several pieces.
 
   :param collection: the iterable that will be partitioned. Note that
     ``partition`` needs to be able to compute the total length of the iterable
     so generators won't work.
   :type collection: list, query or file
-  :param batches: number of batches to split the collection into
-  :type batches: int
-  :param batch_size: number of items (lines if ``collection`` is a file) per
-    batch
-  :type batch_size: int
+  :param parts: number of parts to split the collection into
+  :type parts: int
+  :param size: number of items (lines if ``collection`` is a file) per
+    part
+  :type size: int
   :rtype: generator
 
-  Only one of ``batches`` and ``batch_size`` can be specified at a time.
+  Only one of ``parts`` and ``size`` can be specified at a time.
 
-  ``partition`` returns a generator that yields a tuple ``(batch, partition)``
+  ``partition`` returns a generator that yields a tuple ``(batch, part)``
   on each iteration. ``batch`` is of the same type as ``collection``, filtered
-  to the corresponding partition and ``partition`` is a named tuple with two 
+  to the corresponding partition and ``part`` is a named tuple with two 
   properties:
 
   * ``offset``, the first index of the partition (if ``collection`` is a file
@@ -127,35 +129,33 @@ def partition(collection, batches=0, batch_size=0):
   * ``limit``, the max-length of the partition (the last one might be shorter)
 
   """
-  if (batches and batch_size) or (not batches and not batch_size):
-    raise ValueError('Exactly one of batches and batch_size '
-                     'must be specified.')
+  if (parts and size) or (not parts and not size):
+    raise ValueError('Exactly one of parts and size must be specified.')
   offset = 0
-  limit = batch_size
-  Partition = namedtuple('partition', ['offset', 'limit'])
+  limit = size
   if isinstance(collection, Query):
     # collection is a SQLAlchemy query
     # count won't be very efficient, but only run once so it's ok
     total = collection.count()
-    if batches:
-      limit = int(ceil(float(total) / batches))
+    if parts:
+      limit = int(ceil(float(total) / parts))
     while offset < total:
-      yield collection.offset(offset).limit(limit), Partition(offset, limit)
+      yield collection.offset(offset).limit(limit), Part(offset, limit)
       offset += limit
   elif isinstance(collection, list):
     total = len(collection)
-    if batches:
-      limit = int(ceil(float(total) / batches))
+    if parts:
+      limit = int(ceil(float(total) / parts))
     while offset < total:
-      yield collection[offset:offset + limit], Partition(offset, limit)
+      yield collection[offset:offset + limit], Part(offset, limit)
       offset += limit
   elif isinstance(collection, file):
     total = sum(1 for line in collection)
-    if batches:
-      limit = int(ceil(float(total) / batches))
+    if parts:
+      limit = int(ceil(float(total) / parts))
     while offset < total:
       collection.seek(0)
-      yield islice(collection, offset, offset+limit), Partition(offset, limit)
+      yield islice(collection, offset, offset+limit), Part(offset, limit)
       offset += limit
 
 class Dict(dict):
@@ -876,3 +876,28 @@ def histogram(data, key=None, bins=50, restrict=None, categories=None,
       )
     return data_histogram
 
+
+def query_to_dataframe(query, connection=None, exclude=None):
+  """Load a Pandas dataframe from an SQLAlchemy query.
+
+  :param query: the query to be executed
+  :type query: sqlalchemy.orm.query.Query
+  :param connection: the connection to use to execute the query. By default
+    the method will use the query's session's current connection. Note that
+    connection is left open afterwards.
+  :type connection: sqlalchemy.engine.base.Connection
+  :param exclude: a list of column names to exclude from the dataframe
+  :type exclude: list
+  :rtype: pandas.DataFrame
+  
+  """
+  from pandas import DataFrame
+  connection = connection or query._connection_from_session()
+  exclude = exclude or []
+  result = connection.execute(query.statement)
+  dataframe = DataFrame.from_records(
+    result.fetchall(),
+    columns=result.keys(),
+    exclude=exclude,
+  )
+  return dataframe
