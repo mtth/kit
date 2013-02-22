@@ -197,13 +197,13 @@ class API(object):
     if 'collection' in view: view['collection'].attach_view(Model, **options)
     if 'model' in view: view['model'].attach_view(Model, **options)
     if relationships == True:
-      rels = Model.get_relationships()
+      rels = Model._relationships()
     elif relationships == False:
       rels = []
     else:
       rels = filter(
         lambda r: r.key in relationships,
-        Model.get_relationships()
+        Model._relationships()
       )
     for rel in rels:
       if rel.lazy == 'dynamic' and rel.uselist:
@@ -408,7 +408,7 @@ class ModelView(APIView):
 
   def get_rule(self):
     url = '/%s' % self.Model.__tablename__
-    url += ''.join('/<%s>' % n for n in self.Model.get_primary_key_names())
+    url += ''.join('/<%s>' % k.name for k in self.Model._primary_keys())
     return url
 
   def get(self, parser, **kwargs):
@@ -464,7 +464,7 @@ class RelationshipView(APIView):
   def get_rule(self):
     url = '/%s' % self.parent_Model.__tablename__
     url += ''.join(
-      '/<%s>' % n for n in self.parent_Model.get_primary_key_names()
+      '/<%s>' % k.name for k in self.parent_Model._primary_keys()
     )
     url += '/%s' % self.rel.key
     return url
@@ -554,7 +554,7 @@ class RelationshipModelView(RelationshipView):
   def get_rule(self):
     url = '/%s' % self.parent_Model.__tablename__
     url += ''.join(
-      '/<%s>' % n for n in self.parent_Model.get_primary_key_names()
+      '/<%s>' % k.name for k in self.parent_Model._primary_keys()
     )
     url += '/%s/<key>' % self.rel.key
     return url
@@ -610,7 +610,7 @@ class Query(_Query):
 
   """Base query class.
 
-  The first two methods are copied from Flask-SQLAlchemy.
+  The first two methods are from Flask-SQLAlchemy.
 
   """
 
@@ -683,7 +683,6 @@ class _CountProperty(object):
     except UnmappedClassError:
       return None
 
-
 class ExpandedBase(Cacheable, Loggable):
 
   """Adding a few features to the declarative base.
@@ -710,17 +709,6 @@ class ExpandedBase(Cacheable, Loggable):
 
   c = None
   q = None
-
-  def __init__(self, **kwargs):
-    for k, v in kwargs.items():
-      setattr(self, k, v)
-
-  def __repr__(self):
-    primary_keys = ', '.join(
-      '%s=%r' % (k, getattr(self, k))
-      for k in self.__class__.get_primary_key_names()
-    )
-    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
 
   @declared_attr
   def __json__(cls):
@@ -757,6 +745,17 @@ class ExpandedBase(Cacheable, Loggable):
     """
     return '%ss' % uncamelcase(cls.__name__)
 
+  def __init__(self, **kwargs):
+    for k, v in kwargs.items():
+      setattr(self, k, v)
+
+  def __repr__(self):
+    primary_keys = ', '.join(
+      '%s=%r' % (k, v)
+      for k, v in self.get_primary_keys().items()
+    )
+    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
+
   def jsonify(self, depth=1, expand=True):
     """Special implementation of jsonify for Model objects.
     
@@ -788,8 +787,8 @@ class ExpandedBase(Cacheable, Loggable):
 
   def get_primary_keys(self):
     return dict(
-      (k, getattr(self, k))
-      for k in self.__class__.get_primary_key_names()
+      (k.name, getattr(self, k.name))
+      for k in self.__class__._primary_keys()
     )
 
   @classmethod
@@ -804,25 +803,25 @@ class ExpandedBase(Cacheable, Loggable):
     return instance, True
 
   @classmethod
-  def get_primary_key_names(cls):
-    return [key.name for key in class_mapper(cls).primary_key]
-
-  @classmethod
-  def get_columns(cls, show_private=False):
+  def _columns(cls, show_private=False):
     columns = class_mapper(cls).columns
     if not show_private:
       columns = [c for c in columns if not c.key.startswith('_')]
     return columns
 
   @classmethod
-  def get_related_models(cls, show_private=False):
+  def _primary_keys(cls):
+    return class_mapper(cls).primary_key
+
+  @classmethod
+  def _related_models(cls, show_private=False):
     return [
       (r.key, r.mapper.class_)
-      for r in cls.get_relationships(show_private)
+      for r in cls._relationships(show_private)
     ]
 
   @classmethod
-  def get_relationships(cls, show_private=False):
+  def _relationships(cls, show_private=False):
     rels =  class_mapper(cls).relationships.values()
     if not show_private:
       rels = [rel for rel in rels if not rel.key.startswith('_')]
@@ -924,6 +923,5 @@ class Parser(object):
       return query._select_from_entity
     # this is a Query
     return models[0]
-
 
 

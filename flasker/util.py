@@ -310,6 +310,7 @@ class Dict(dict):
         items.append(row)
     return items
 
+
 class SmartDictReader(DictReader):
 
   """``DictReader`` with built-in value conversion.
@@ -370,6 +371,7 @@ class SmartDictReader(DictReader):
     else:
       self.rows_imported += 1
       return processed_row
+
 
 # ===
 # 
@@ -463,12 +465,14 @@ class Cacheable(object):
     """
     return _CachedProperty(func)
 
+
 class _CacheRefresh(object):
 
   """Special class used to trigger cache refreshes."""
 
   def __init__(self, expiration):
     self.expiration = expiration
+
 
 class _CachedProperty(property):
 
@@ -515,11 +519,13 @@ class _CachedProperty(property):
   def __repr__(self):
     return '<CachedProperty %r>' % self.func
 
+
 # Jsonifying
 
 class JSONDepthExceededError(Exception):
 
   pass
+
 
 def _jsonify(value, depth, expand):
   if depth < 0:
@@ -537,6 +543,7 @@ def _jsonify(value, depth, expand):
   if value is None:
     return None
   raise ValueError('not jsonifiable')
+
 
 class Jsonifiable(object):
 
@@ -579,6 +586,7 @@ class Jsonifiable(object):
         pass
     return rv
 
+
 # Logging
 
 class Loggable(object):
@@ -620,6 +628,7 @@ class Loggable(object):
     """Error level message."""
     return self._logger(message, 'error')
 
+
 # ===
 #
 #   SQLAlchemy custom
@@ -649,6 +658,7 @@ class _JSONEncodedType(TypeDecorator):
   def process_result_value(self, value, dialect):
     raise NotImplementedError()
 
+
 class JSONEncodedDict(_JSONEncodedType):
 
   """Implements dictionary column field type for SQLAlchemy.
@@ -668,6 +678,7 @@ class JSONEncodedDict(_JSONEncodedType):
 
   def process_result_value(self, value, dialect):
     return loads(value) if value else {}
+
 
 class _MutableDict(Mutable, dict):
 
@@ -706,6 +717,7 @@ class _MutableDict(Mutable, dict):
     
 _MutableDict.associate_with(JSONEncodedDict)
 
+
 class JSONEncodedList(_JSONEncodedType):
 
   """Implements list column field type for SQLAlchemy.
@@ -719,6 +731,7 @@ class JSONEncodedList(_JSONEncodedType):
   def process_result_value(self, value, dialect):
     return loads(value) if value else []
 
+
 class _MutableList(Mutable, list):
 
   """Used with JSONEncoded list to be able to track updates.
@@ -726,6 +739,9 @@ class _MutableList(Mutable, list):
   This enables the database to know when it should update the stored string
   representation of the dictionary. This is much more efficient than naive
   automatic updating after each query.
+
+  Currently only set, delete, append and extend events are tracked. Others
+  will require a call to ``changed`` to be persisted.
 
   """
 
@@ -739,9 +755,28 @@ class _MutableList(Mutable, list):
     else:
       return value
 
-  # TODO: actual mutability tracking
+  def append(self, *args, **kwargs):
+    """Detect update events and emit change events."""
+    list.append(self, *args, **kwargs)
+    self.changed()
+
+  def extend(self, *args, **kwargs):
+    """Detect update events and emit change events."""
+    list.extend(self, *args, **kwargs)
+    self.changed()
     
+  def __setitem__(self, index, value):
+    """Detect set events and emit change events."""
+    list.__setitem__(self, index, value)
+    self.changed()
+    
+  def __delitem__(self, index):
+    """Detect del events and emit change events."""
+    list.__delitem__(self, index)
+    self.changed()
+
 _MutableList.associate_with(JSONEncodedList)
+
 
 # Query helpers
 
@@ -798,6 +833,7 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
     coerce_float=coerce_float,
   )
   return dataframe
+
 
 # ===
 #
