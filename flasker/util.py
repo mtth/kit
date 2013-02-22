@@ -12,6 +12,7 @@ from math import ceil
 from re import sub
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.orm import Query
+from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
 
@@ -21,34 +22,6 @@ from time import time
 #   General utilities
 #
 # ===
-
-def prod(iterable, key=None):
-  """Cumulative product function (the equivalent of ``sum``).
-
-  :param key: function called on each element of the iterable, if none then
-    identity is assumed
-  :type key: callable
-  :rtype: int, float
-
-  """
-  rv = 1
-  for elem in iterable:
-    if key is None:
-      rv *= elem
-    else:
-      rv *= key(elem)
-  return rv
-
-def uncamelcase(name):
-  """Transforms CamelCase to underscore_case.
-
-  :param name: string input
-  :type name: str
-  :rtype: str
-  
-  """
-  s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-  return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 def convert(value, rtype=None):
   """Converts a string to another value.
@@ -157,6 +130,34 @@ def partition(collection, parts=0, size=0):
       collection.seek(0)
       yield islice(collection, offset, offset+limit), Part(offset, limit)
       offset += limit
+
+def prod(iterable, key=None):
+  """Cumulative product function (the equivalent of ``sum``).
+
+  :param key: function called on each element of the iterable, if none then
+    identity is assumed
+  :type key: callable
+  :rtype: int, float
+
+  """
+  rv = 1
+  for elem in iterable:
+    if key is None:
+      rv *= elem
+    else:
+      rv *= key(elem)
+  return rv
+
+def uncamelcase(name):
+  """Transforms CamelCase to underscore_case.
+
+  :param name: string input
+  :type name: str
+  :rtype: str
+  
+  """
+  s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+  return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 class Dict(dict):
 
@@ -758,7 +759,8 @@ def query_to_models(query):
     if isinstance(d['expr'], Mapper)
   ]
 
-def query_to_dataframe(query, connection=None, exclude=None, index=None):
+def query_to_dataframe(query, connection=None, exclude=None, index=None,
+                       columns=None, coerce_float=False):
   """Load a Pandas dataframe from an SQLAlchemy query.
 
   :param query: the query to be executed
@@ -771,6 +773,15 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None):
   :type exclude: list
   :param index: the column to use as index
   :type index: str
+  :param names: a list of column names. If unspecified, the method will use
+    the table's keys from the query's metadata. If the passed data do not have
+    named associated with them, this argument provides names for the columns.
+    Otherwise this argument indicates the order of the columns in the result
+    (any names not found in the data will become all-NA columns)
+  :type names: list
+  :param coerce_float: Attempt to convert values to non-string, non-numeric
+    objects (like decimal.Decimal) to floating point.
+  :type coerce_float: bool
   :rtype: pandas.DataFrame
   
   """
@@ -778,11 +789,13 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None):
   connection = connection or query._connection_from_session()
   exclude = exclude or []
   result = connection.execute(query.statement)
+  columns = columns or result.keys()
   dataframe = DataFrame.from_records(
     result.fetchall(),
-    columns=result.keys(),
+    columns=columns,
     exclude=exclude,
     index=index,
+    coerce_float=coerce_float,
   )
   return dataframe
 
@@ -920,3 +933,4 @@ def histogram(data, key=None, bins=50, restrict=None, categories=None,
           for key in keys
       )
     return data_histogram
+

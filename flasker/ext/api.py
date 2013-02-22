@@ -35,7 +35,6 @@ from sqlalchemy.orm import class_mapper, mapperlib, Query as _Query
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.orm.dynamic import AppenderQuery
-from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 from time import time
 from werkzeug.exceptions import HTTPException
@@ -361,7 +360,7 @@ class CollectionView(APIView):
 
   def get(self, parser, **kwargs):
     timers = {}
-    filtered_query = parser.filter_and_sort(self.Model.query)
+    filtered_query = parser.filter_and_sort(self.Model.q )
     now = time()
     count = parser.filter_and_sort(self.Model.c, False).scalar()
     timers['count'] = time() - now
@@ -413,13 +412,13 @@ class ModelView(APIView):
     return url
 
   def get(self, parser, **kwargs):
-    model = self.Model.query.get(kwargs.values())
+    model = self.Model.q.get(kwargs.values())
     if not model:
       raise APIError(404, 'No resource found')
     return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
 
   def put(self, parser, **kwargs):
-    model = self.Model.query.get(kwargs.values())
+    model = self.Model.q.get(kwargs.values())
     if model:
       if self._is_valid(model.__class__, request.json):
         for k, v in request.json.items():
@@ -434,7 +433,7 @@ class ModelView(APIView):
     pass
 
   def delete(self, parser, **kwargs):
-    model = self.Model.query.get(kwargs.values())
+    model = self.Model.q.get(kwargs.values())
     if model:
       pj.session.delete(model)
       return jsonify({'status': '200 Success', 'content': 'Resource deleted'})
@@ -471,7 +470,7 @@ class RelationshipView(APIView):
     return url
 
   def get_collection(self, **kwargs):
-    parent_model = self.parent_Model.query.get(kwargs.values())
+    parent_model = self.parent_Model.q.get(kwargs.values())
     if not parent_model:
       raise APIError(404, 'No resource found')
     return getattr(parent_model, self.rel.key)
@@ -709,7 +708,8 @@ class ExpandedBase(Cacheable, Loggable):
   _cache = Column(JSONEncodedDict)
   _json_depth = 0
 
-  query = None
+  c = None
+  q = None
 
   def __init__(self, **kwargs):
     for k, v in kwargs.items():
@@ -798,7 +798,7 @@ class ExpandedBase(Cacheable, Loggable):
     if instance:
       return instance, False
     instance = cls(**kwargs)
-    session = cls.query.db.session
+    session = cls.q.db.session
     session.add(instance)
     session.flush()
     return instance, True
