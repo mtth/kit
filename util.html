@@ -447,6 +447,8 @@ after the operation.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">some_column_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedList</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>Currently only set, delete, append and extend events are tracked. Others
+will require a call to <tt class="docutils literal"><span class="pre">changed</span></tt> to be persisted.</p>
 </dd></dl>
 
 <dl class="function">

@@ -100,8 +100,6 @@ debugging).</li>
 <p>The following global variables will be available:</p>
 <ul class="simple">
 <li><tt class="docutils literal"><span class="pre">pj</span></tt>, an alias for the <tt class="docutils literal"><span class="pre">current_project</span></tt></li>
-<li><tt class="docutils literal"><span class="pre">app</span></tt>, an alias for <tt class="docutils literal"><span class="pre">current_project.app</span></tt></li>
-<li><tt class="docutils literal"><span class="pre">cel</span></tt>, an alias for <tt class="docutils literal"><span class="pre">current_project.celery</span></tt></li>
 </ul>
 <p>Flasker will use IPython if it is available.</p>
 </dd></dl>
@@ -151,7 +149,7 @@ will be passed through).</li>
 <p>Project module.</p>
 <dl class="class">
 <dt id="flasker.project.Project">
-<em class="property">class </em><tt class="descclassname">flasker.project.</tt><tt class="descname">Project</tt><big>(</big><em>config_path</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">flasker.project.</tt><tt class="descname">Project</tt><big>(</big><em>config_path=None</em>, <em>make=True</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project" title="Permalink to this definition">¶</a></dt>
 <dd><p>Project class.</p>
 <p>Global container for the Flask and Celery apps and SQLAlchemy database
 object.</p>
