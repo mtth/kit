@@ -110,9 +110,27 @@ string <tt class="docutils literal"><span class="pre">value</span></tt> unchange
 to <tt class="docutils literal"><span class="pre">False</span></tt> (case insensitive) and otherwise raises an error.</p>
 </dd></dl>
 
+<dl class="class">
+<dt id="flasker.util.Part">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Part</tt><a class="headerlink" href="#flasker.util.Part" title="Permalink to this definition">¶</a></dt>
+<dd><p>Part(offset, limit)</p>
+<dl class="attribute">
+<dt id="flasker.util.Part.limit">
+<tt class="descname">limit</tt><a class="headerlink" href="#flasker.util.Part.limit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.util.Part.offset">
+<tt class="descname">offset</tt><a class="headerlink" href="#flasker.util.Part.offset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="function">
 <dt id="flasker.util.partition">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">partition</tt><big>(</big><em>collection</em>, <em>batches=0</em>, <em>batch_size=0</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#partition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.partition" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">flasker.util.</tt><tt class="descname">partition</tt><big>(</big><em>collection</em>, <em>parts=0</em>, <em>size=0</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#partition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.partition" title="Permalink to this definition">¶</a></dt>
 <dd><p>Split an iterable into several pieces.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -122,9 +140,9 @@ to <tt class="docutils literal"><span class="pre">False</span></tt> (case insens
 <li><strong>collection</strong> (<em>list, query or file</em>) &#8211; the iterable that will be partitioned. Note that
 <tt class="docutils literal"><span class="pre">partition</span></tt> needs to be able to compute the total length of the iterable
 so generators won&#8217;t work.</li>
-<li><strong>batches</strong> (<em>int</em>) &#8211; number of batches to split the collection into</li>
-<li><strong>batch_size</strong> (<em>int</em>) &#8211; number of items (lines if <tt class="docutils literal"><span class="pre">collection</span></tt> is a file) per
-batch</li>
+<li><strong>parts</strong> (<em>int</em>) &#8211; number of parts to split the collection into</li>
+<li><strong>size</strong> (<em>int</em>) &#8211; number of items (lines if <tt class="docutils literal"><span class="pre">collection</span></tt> is a file) per
+part</li>
 </ul>
 </td>
 </tr>
@@ -133,10 +151,10 @@ batch</li>
 </tr>
 </tbody>
 </table>
-<p>Only one of <tt class="docutils literal"><span class="pre">batches</span></tt> and <tt class="docutils literal"><span class="pre">batch_size</span></tt> can be specified at a time.</p>
-<p><tt class="docutils literal"><span class="pre">partition</span></tt> returns a generator that yields a tuple <tt class="docutils literal"><span class="pre">(batch,</span> <span class="pre">partition)</span></tt>
+<p>Only one of <tt class="docutils literal"><span class="pre">parts</span></tt> and <tt class="docutils literal"><span class="pre">size</span></tt> can be specified at a time.</p>
+<p><tt class="docutils literal"><span class="pre">partition</span></tt> returns a generator that yields a tuple <tt class="docutils literal"><span class="pre">(batch,</span> <span class="pre">part)</span></tt>
 on each iteration. <tt class="docutils literal"><span class="pre">batch</span></tt> is of the same type as <tt class="docutils literal"><span class="pre">collection</span></tt>, filtered
-to the corresponding partition and <tt class="docutils literal"><span class="pre">partition</span></tt> is a named tuple with two 
+to the corresponding partition and <tt class="docutils literal"><span class="pre">part</span></tt> is a named tuple with two 
 properties:</p>
 <ul class="simple">
 <li><tt class="docutils literal"><span class="pre">offset</span></tt>, the first index of the partition (if <tt class="docutils literal"><span class="pre">collection</span></tt> is a file
@@ -518,6 +536,30 @@ sorted in descending order.</td>
 </div></blockquote>
 <p>Possible extension: allow categories to return a list of keys, which would
 allow elements to be included in several counts.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.query_to_dataframe">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_dataframe</tt><big>(</big><em>query</em>, <em>connection=None</em>, <em>exclude=None</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a Pandas dataframe from an SQLAlchemy query.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</li>
+<li><strong>connection</strong> (<em>sqlalchemy.engine.base.Connection</em>) &#8211; the connection to use to execute the query. By default
+the method will use the query&#8217;s session&#8217;s current connection. Note that
+connection is left open afterwards.</li>
+<li><strong>exclude</strong> (<em>list</em>) &#8211; a list of column names to exclude from the dataframe</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </div>
