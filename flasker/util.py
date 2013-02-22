@@ -627,7 +627,7 @@ class Loggable(object):
 
 # Mutables
 
-class JSONEncodedType(TypeDecorator):
+class _JSONEncodedType(TypeDecorator):
 
   """Base class for storing python mutables as a JSON.
 
@@ -648,7 +648,7 @@ class JSONEncodedType(TypeDecorator):
   def process_result_value(self, value, dialect):
     raise NotImplementedError()
 
-class JSONEncodedDict(JSONEncodedType):
+class JSONEncodedDict(_JSONEncodedType):
 
   """Implements dictionary column field type for SQLAlchemy.
 
@@ -705,7 +705,7 @@ class _MutableDict(Mutable, dict):
     
 _MutableDict.associate_with(JSONEncodedDict)
 
-class JSONEncodedList(JSONEncodedType):
+class JSONEncodedList(_JSONEncodedType):
 
   """Implements list column field type for SQLAlchemy.
 
@@ -741,6 +741,50 @@ class _MutableList(Mutable, list):
   # TODO: actual mutability tracking
     
 _MutableList.associate_with(JSONEncodedList)
+
+# Query helpers
+
+def query_to_models(query):
+  """Returns the model classes associated with a query.
+  
+  :param query: the query to be executed
+  :type query: sqlalchemy.orm.query.Query
+  :rtype: list
+
+  """
+  return [
+    d['expr'].class_
+    for d in query.column_descriptions
+    if isinstance(d['expr'], Mapper)
+  ]
+
+def query_to_dataframe(query, connection=None, exclude=None, index=None):
+  """Load a Pandas dataframe from an SQLAlchemy query.
+
+  :param query: the query to be executed
+  :type query: sqlalchemy.orm.query.Query
+  :param connection: the connection to use to execute the query. By default
+    the method will use the query's session's current connection. Note that
+    connection is left open afterwards.
+  :type connection: sqlalchemy.engine.base.Connection
+  :param exclude: a list of column names to exclude from the dataframe
+  :type exclude: list
+  :param index: the column to use as index
+  :type index: str
+  :rtype: pandas.DataFrame
+  
+  """
+  from pandas import DataFrame
+  connection = connection or query._connection_from_session()
+  exclude = exclude or []
+  result = connection.execute(query.statement)
+  dataframe = DataFrame.from_records(
+    result.fetchall(),
+    columns=result.keys(),
+    exclude=exclude,
+    index=index,
+  )
+  return dataframe
 
 # ===
 #
@@ -795,23 +839,24 @@ def histogram(data, key=None, bins=50, restrict=None, categories=None,
               order=0, expand=False):
   """Returns a histogram of counts for the data.
 
-    :param data: the data to be binned
-    :type data: iterable of tuples
-    :param restrict: if provided, only data elements which return `True`
-      will be included in the histogram. Default is `None` (all elements
-      are included).
-    :type restrict: function or None
-    :param categories: if provided, elements will be counted in separate
-      categories. This changes the format of the output to a dictionary
-      with the different categories as keys in each bin.
-    :type categories: function or None
-    :param bins: either an int (total number of bins, which will be 
-      uniformly spread) or a list of increasing bin values. smaller
-      values will be in the first bin, larger in the last one.
-    :type bins: int or list(int)
-    :param order: 0 if data isn't sorted, 1 if sorted in ascending, -1 if
-      sorted in descending order.
-    :type order: string
+  :param data: the data to be binned
+  :type data: iterable of tuples
+  :param restrict: if provided, only data elements which return `True`
+    will be included in the histogram. Default is `None` (all elements
+    are included).
+  :type restrict: function or None
+  :param categories: if provided, elements will be counted in separate
+    categories. This changes the format of the output to a dictionary
+    with the different categories as keys in each bin.
+  :type categories: function or None
+  :param bins: either an int (total number of bins, which will be 
+    uniformly spread) or a list of increasing bin values. smaller
+    values will be in the first bin, larger in the last one.
+  :type bins: int or list(int)
+  :param order: 0 if data isn't sorted, 1 if sorted in ascending, -1 if
+    sorted in descending order.
+  :type order: string
+  :rtype: dict
 
   Possible extension: allow categories to return a list of keys, which would
   allow elements to be included in several counts.
@@ -875,29 +920,3 @@ def histogram(data, key=None, bins=50, restrict=None, categories=None,
           for key in keys
       )
     return data_histogram
-
-
-def query_to_dataframe(query, connection=None, exclude=None):
-  """Load a Pandas dataframe from an SQLAlchemy query.
-
-  :param query: the query to be executed
-  :type query: sqlalchemy.orm.query.Query
-  :param connection: the connection to use to execute the query. By default
-    the method will use the query's session's current connection. Note that
-    connection is left open afterwards.
-  :type connection: sqlalchemy.engine.base.Connection
-  :param exclude: a list of column names to exclude from the dataframe
-  :type exclude: list
-  :rtype: pandas.DataFrame
-  
-  """
-  from pandas import DataFrame
-  connection = connection or query._connection_from_session()
-  exclude = exclude or []
-  result = connection.execute(query.statement)
-  dataframe = DataFrame.from_records(
-    result.fetchall(),
-    columns=result.keys(),
-    exclude=exclude,
-  )
-  return dataframe
