@@ -89,6 +89,7 @@ class Project(object):
       self.app = None
       self.cel = None
       self.session = None
+
       self._engine = None
       self._query_class = Query
       self._extensions = []
