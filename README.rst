@@ -1,12 +1,13 @@
 Flasker
 =======
 
-A configurable, lightweight framework that integrates Flask_, SQLAlchemy_ and Celery_.
+A configurable, lightweight framework that integrates Flask_, SQLAlchemy_ and
+Celery_.
 
 - What Flasker is!
   
-    - A one stop ``.cfg`` configuration file for Flask, Celery and the SQLAlchemy
-      engine.
+    - A one stop ``.cfg`` configuration file for Flask, Celery and the
+      SQLAlchemy engine.
     
     - A simple pattern to organize your project via the
       ``flasker.current_project`` proxy (cf. `Structuring your project`_).
@@ -20,12 +21,14 @@ A configurable, lightweight framework that integrates Flask_, SQLAlchemy_ and Ce
     - A simplified version of Flask, Celery, and SQLAlchemy. Some knowledge of these
       frameworks is therefore required. 
 
-Flasker also comes with two extensions for commonly needed functionalities:
+Flasker also comes with three extensions for commonly needed functionalities:
 
 - Authentication
+- Expanded ORM Models
 - ReSTful API *(still alpha)*
 
-Flasker is under development. You can find the latest version on GitHub_ and read the documentation on `GitHub pages`_.
+Flasker is under development. You can find the latest version on GitHub_ and
+read the documentation on `GitHub pages`_.
 
 
 Quickstart
@@ -91,12 +94,12 @@ Here is a sample minimalistic project configuration file:
   # any valid Celery configuration option can go here
   BROKER_URL = redis://
 
-When it starts, the ``flasker`` command line tool imports all the modules
-declared in the ``MODULES`` key of the configuration file (in the ``PROJECT``
-section). Inside each of these you can use the ``flasker.current_project``
-proxy to get access to the Flask application object, the Celery application
-object and the SQLAlchemy database sessions. Therefore a very simple pattern
-inside each module is to do:
+Before running a command the ``flasker`` command line tool imports all the
+modules declared in the ``MODULES`` key of the configuration file (in the
+``PROJECT`` section). Inside each of these you can use the
+``flasker.current_project`` proxy to get access to the Flask application
+object, the Celery application object and the SQLAlchemy database sessions.
+Therefore a very simple pattern inside each module is to do:
 
 .. code:: python
 
@@ -127,8 +130,15 @@ inside each module is to do:
 
   # and so on...
 
-Once Flasker has finished importing all your project module files and
-configuring the applications, it handles startup!
+If you are not using the command line tool (for example if you are using a
+separate WSGI server or working from an IPython Notebook), you can load the
+project manually as follow:
+
+.. code:: python
+
+   from flasker import Project
+
+   project = Project('path/to/default.cfg')
 
 
 Project configuration
