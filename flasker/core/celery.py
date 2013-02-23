@@ -30,4 +30,4 @@ def create_worker_connection(*args, **kwargs):
 def task_postrun_handler(*args, **kwargs):
   pj._dismantle_database_connections()
 
-pj.cel = celery
+pj.celery = celery

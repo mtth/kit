@@ -3,7 +3,7 @@
 from flasker import current_project
 from time import sleep
 
-celery = current_project.cel
+celery = current_project.celery
 
 @celery.task
 def do_something():
