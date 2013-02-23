@@ -19,7 +19,6 @@ class _Tls(local):
 
   """Thread local storage for the project state."""
   
-  _state = {}
   _current_project = None
 
 _tls = _Tls()
@@ -38,6 +37,9 @@ class Project(object):
   object.
   
   """
+
+  __state = {}
+  __registered = False
 
   config = {
     'PROJECT': {
@@ -65,9 +67,9 @@ class Project(object):
 
   def __init__(self, config_path=None, make=True):
 
-    self.__dict__ = _tls._state
+    self.__dict__ = self.__state
 
-    if _tls._current_project is None:
+    if not self.__registered:
 
       if config_path is None:
         raise ProjectImportError('Project instantiation outside the Flasker '
@@ -101,6 +103,8 @@ class Project(object):
       self._query_class = Query
       self._extensions = []
       self._before_startup = []
+
+      self.__registered = True
 
       _tls._current_project = self
 
@@ -190,7 +194,7 @@ class Project(object):
 
 
 def _get_current_project():
-  return _tls._current_project
+  return _tls._current_project or Project()
 
 current_project = LocalProxy(_get_current_project)
 

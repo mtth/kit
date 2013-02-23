@@ -13,8 +13,8 @@ Celery_.
       ``flasker.current_project`` proxy (cf. `Structuring your project`_).
 
     - A command line tool from where you can create new projects, launch the
-      Flask buit in Werkzeug server, start Celery workers and the Flower_ tool,
-      and run a shell in the current project context.
+      Flask buit in Werkzeug_ server, start Celery workers and the Flower_
+      tool, and run a shell in the current project context.
 
 - What Flasker isn't?
 
@@ -59,11 +59,11 @@ Quickstart
 
   This will list all commands now available for that project:
 
-  - ``server`` to run the app server
+  - ``server`` to run the Werkzeug app server
   - ``worker`` to start a worker for the Celery backend
-  - ``flower`` to run the flower worker management app
-  - ``shell`` to start a shell in the current project context (useful for
-    debugging)
+  - ``flower`` to run the Flower worker management app
+  - ``shell`` to start a shell in the current project context (using IPython_ 
+    if it is available)
   - ``new`` to create a new default configuration file
 
   Extra help is available for each command by typing:
@@ -186,3 +186,6 @@ file:
 .. _Wiki: https://github.com/mtth/flasker/wiki
 .. _GitHub pages: http://mtth.github.com/flasker
 .. _GitHub: http://github.com/mtth/flasker
+.. _IPython: http://ipython.org/
+.. _Werkzeug: http://werkzeug.pocoo.org/
+
