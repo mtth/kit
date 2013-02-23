@@ -68,6 +68,7 @@ class Project(object):
   def __init__(self, config_path=None, make=True):
 
     self.__dict__ = self.__state
+    _tls._current_project = self
 
     if not self.__registered:
 
@@ -105,8 +106,6 @@ class Project(object):
       self._before_startup = []
 
       self.__registered = True
-
-      _tls._current_project = self
 
       if make:
         self._make()
