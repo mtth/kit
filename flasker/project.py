@@ -15,13 +15,13 @@ from werkzeug.local import LocalProxy
 from .util import convert
 
 
-class _Tls(local):
+class _LocalStorage(local):
 
-  """Thread local storage for the project state."""
+  """Thread local storage."""
   
   _current_project = None
 
-_tls = _Tls()
+_local_storage = _LocalStorage()
 
 
 class ProjectImportError(Exception):
@@ -47,9 +47,9 @@ class Project(object):
       'DOMAIN': '',
       'SUBDOMAIN': '',
       'MODULES': '',
-      'APP_FOLDER': 'app',
-      'APP_STATIC_FOLDER': 'static',
-      'APP_TEMPLATE_FOLDER': 'templates',
+      'FLASK_ROOT_FOLDER': 'app',
+      'FLASK_STATIC_FOLDER': 'static',
+      'FLASK_TEMPLATE_FOLDER': 'templates',
       'COMMIT_ON_TEARDOWN': True,
     },
     'ENGINE': {
@@ -68,7 +68,7 @@ class Project(object):
   def __init__(self, config_path=None, make=True):
 
     self.__dict__ = self.__state
-    _tls._current_project = self
+    _local_storage._current_project = self
 
     if not self.__registered:
 
@@ -96,8 +96,8 @@ class Project(object):
 
       path.append(self.root_dir)
 
-      self.app = None
-      self.cel = None
+      self.flask = None
+      self.celery = None
       self.session = None
 
       self._engine = None
@@ -193,7 +193,7 @@ class Project(object):
 
 
 def _get_current_project():
-  return _tls._current_project or Project()
+  return _local_storage._current_project or Project()
 
 current_project = LocalProxy(_get_current_project)
 

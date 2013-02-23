@@ -13,10 +13,10 @@ pj = current_project
 conf = pj.config['PROJECT']
 
 app = Flask(
-  conf['APP_FOLDER'].replace(sep, '.'),
-  static_folder=conf['APP_STATIC_FOLDER'],
-  template_folder=conf['APP_TEMPLATE_FOLDER'],
-  instance_path=join(pj.root_dir, conf['APP_FOLDER']),
+  conf['FLASK_ROOT_FOLDER'].replace(sep, '.'),
+  static_folder=conf['FLASK_STATIC_FOLDER'],
+  template_folder=conf['FLASK_TEMPLATE_FOLDER'],
+  instance_path=join(pj.root_dir, conf['FLASK_ROOT_FOLDER']),
   instance_relative_config=True,
 )
 app.config.update(pj.config['FLASK'])
@@ -31,4 +31,4 @@ def inject():
 def teardown_request_handler(exception=None):
   pj._dismantle_database_connections()
 
-pj.app = app
+pj.flask = app

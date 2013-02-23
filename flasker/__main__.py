@@ -169,7 +169,7 @@ def server_handler(parsed_args):
   """
   pj = current_project
   host = '127.0.0.1' if parsed_args.restrict else '0.0.0.0'
-  pj.app.run(host=host, port=parsed_args.port, debug=parsed_args.debug)
+  pj.flask.run(host=host, port=parsed_args.port, debug=parsed_args.debug)
 
 server_parser.set_defaults(handler=server_handler)
 

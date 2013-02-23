@@ -86,12 +86,12 @@ class Auth(object):
 
     @project.before_startup
     def handler(project):
-      project.app.register_blueprint(self.blueprint)
-      self.login_manager.setup_app(project.app)
+      project.flask.register_blueprint(self.blueprint)
+      self.login_manager.setup_app(project.flask)
 
       if self.config['PROTECT_ALL_VIEWS']:
 
-        @project.app.before_request
+        @project.flask.before_request
         def check_if_logged_in():
           if (request.blueprint != 'auth'
               and request.endpoint # favicon
