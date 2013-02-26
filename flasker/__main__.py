@@ -248,7 +248,7 @@ def worker_handler(parsed_args):
 
   """
   pj = current_project
-  pj_worker_names = [d.keys()[0] for d in pj.cel.control.ping()]
+  pj_worker_names = [d.keys()[0] for d in pj.celery.control.ping()]
   worker_pattern = r'w(\d+)\.%s.%s' % (pj.subdomain, pj.domain)
   worker_numbers = [
     findall(worker_pattern, worker_name) or ['0']
@@ -259,7 +259,7 @@ def worker_handler(parsed_args):
     set([int(n[0]) for n in worker_numbers] or [len(worker_numbers) + 2]) 
   )
   if parsed_args.verbose_help:
-    pj.cel.worker_main(['worker', '-h'])
+    pj.celery.worker_main(['worker', '-h'])
   else:
     hostname = 'w%s.%s.%s' % (wkn, pj.subdomain, pj.domain)
     options = ['worker', '--hostname=%s' % hostname]
@@ -267,7 +267,7 @@ def worker_handler(parsed_args):
       options.append('--queues=%s.dq' % hostname)
     if parsed_args.raw:
       options.extend(parsed_args.raw)
-    pj.cel.worker_main(options)
+    pj.celery.worker_main(options)
 
 worker_parser.set_defaults(handler=worker_handler)
 
@@ -305,12 +305,12 @@ def flower_handler(parsed_args):
   """
   pj = current_project
   if parsed_args.verbose_help:
-    pj.cel.start(['celery', 'flower', '--help'])
+    pj.celery.start(['celery', 'flower', '--help'])
   else:
     options = ['celery', 'flower', '--port=%s' % parsed_args.port]
     if parsed_args.raw:
       options.extend(parsed_args.raw)
-    pj.cel.start(options)
+    pj.celery.start(options)
 
 flower_parser.set_defaults(handler=flower_handler)
 

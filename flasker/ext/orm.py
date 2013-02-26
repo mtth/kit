@@ -196,7 +196,7 @@ class Base(Cacheable, Loggable):
   def __repr__(self):
     primary_keys = ', '.join(
       '%s=%r' % (k, getattr(self, k))
-      for k, v in self.primary_key.items()
+      for k, v in self.get_primary_key().items()
     )
     return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
 
@@ -259,7 +259,7 @@ class Base(Cacheable, Loggable):
     if not expand and depth <= self._json_depth:
       # this instance has already been jsonified at a greater or
       # equal depth, so we simply return its key
-      return self.primary_key
+      return self.get_primary_key()
     self._json_depth = depth
     rv = {}
     for varname in self.__json__:
@@ -269,8 +269,7 @@ class Base(Cacheable, Loggable):
         rv[varname] = e.message
     return rv
 
-  @property
-  def primary_key(self):
+  def get_primary_key(self):
     """Returns the dictionary of primary keys for a given model.
 
     :rtype: dict
