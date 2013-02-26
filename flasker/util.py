@@ -522,20 +522,13 @@ class _CachedProperty(property):
 
 # Jsonifying
 
-class JSONDepthExceededError(Exception):
-
-  pass
-
-
-def _jsonify(value, depth, expand):
-  if depth < 0:
-    raise JSONDepthExceededError()
+def _jsonify(value, depth=0):
   if hasattr(value, 'jsonify'):
-    return value.jsonify(depth, expand)
+    return value.jsonify(depth - 1)
   if isinstance(value, dict):
-    return dict((k, _jsonify(v, depth, expand)) for k, v in value.items())
+    return {k: _jsonify(v, depth - 1) for k, v in value.items()}
   if isinstance(value, list):
-    return [_jsonify(v, depth, expand) for v in value]
+    return [_jsonify(v, depth) for v in value]
   if isinstance(value, (float, int, long, str, unicode, tuple)):
     return value
   if isinstance(value, datetime):
@@ -560,7 +553,7 @@ class Jsonifiable(object):
     return [
       varname for varname in dir(self)
       if not varname.startswith('_')
-      if not hasattr(getattr(self, varname), '__call__')
+      if not callable(getattr(self, varname))
     ]
 
   def jsonify(self, depth=0):
@@ -582,8 +575,6 @@ class Jsonifiable(object):
         rv[varname] = _jsonify(getattr(self, varname), depth - 1)
       except ValueError as e:
         rv[varname] = e.message
-      except JSONDepthExceededError as e:
-        pass
     return rv
 
 

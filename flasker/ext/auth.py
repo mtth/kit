@@ -123,9 +123,9 @@ class GoogleAuth(Auth):
     'ACCESS_TYPE': "offline",
   }
 
-  def _before_register(self, project):
+  def on_register(self, project):
 
-    super(GoogleAuth, self)._before_register(project)
+    super(GoogleAuth, self).on_register(project)
 
     emails = self.config['AUTHORIZED_EMAILS']
     if isinstance(emails, list):

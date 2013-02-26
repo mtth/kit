@@ -8,7 +8,7 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 
-from ..util import (Cacheable, _jsonify, JSONDepthExceededError,
+from ..util import (Cacheable, _jsonify, 
   JSONEncodedDict, Loggable, uncamelcase, query_to_dataframe)
 
 
@@ -141,10 +141,6 @@ class Base(Cacheable, Loggable):
   c = None
   q = None
 
-  def __init__(self, **kwargs):
-    for k, v in kwargs.items():
-      setattr(self, k, v)
-
   def __repr__(self):
     primary_keys = ', '.join(
       '%s=%r' % (k, getattr(self, k))
@@ -206,23 +202,24 @@ class Base(Cacheable, Loggable):
 
     :param depth:
     :type depth: int
+    :param expand: whether or not to repeat keys when jsonifying nested
+      objects (defaults to ``True``). This is useful when the frontend
+      has model support (e.g. using Backbone-Relational).
+    :type expand: bool
     :rtype: dict
 
     """
-    if depth <= self._json_depth:
+    if not expand and depth <= self._json_depth:
       # this instance has already been jsonified at a greater or
-      # equal depth, so we simply return its key (only used if expand is False)
+      # equal depth, so we simply return its key
       return self.get_primary_keys()
-    if not expand:
-      self._json_depth = depth
+    self._json_depth = depth
     rv = {}
     for varname in self.__json__:
       try:
-        rv[varname] = _jsonify(getattr(self, varname), depth - 1, expand)
+        rv[varname] = _jsonify(getattr(self, varname), depth - 1)
       except ValueError as e:
         rv[varname] = e.message
-      except JSONDepthExceededError:
-        pass
     return rv
 
   def get_primary_keys(self):
