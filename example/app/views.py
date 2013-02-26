@@ -5,7 +5,7 @@ from flasker import current_project
 
 import tasks as t
 
-app = current_project.app
+app = current_project.flask
 
 @app.route('/')
 def index():

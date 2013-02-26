@@ -208,7 +208,7 @@ class API(object):
     self.__project__ = project
     self.blueprint = Blueprint(
       'api',
-      project.config['PROJECT']['APP_FOLDER'] + '.api',
+      project.config['PROJECT']['FLASK_ROOT_FOLDER'] + '.api',
       template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
       url_prefix=self.config['URL_PREFIX']
     )
@@ -218,7 +218,7 @@ class API(object):
 
     @project.before_startup
     def handler(project):
-      project.app.register_blueprint(self.blueprint)
+      project.flask.register_blueprint(self.blueprint)
 
 # Views
 

@@ -98,32 +98,32 @@ Before running a command the ``flasker`` command line tool imports all the
 modules declared in the ``MODULES`` key of the configuration file (in the
 ``PROJECT`` section). Inside each of these you can use the
 ``flasker.current_project`` proxy to get access to the Flask application
-object, the Celery application object and the SQLAlchemy database sessions.
-Therefore a very simple pattern inside each module is to do:
+object, the Celery application object and the SQLAlchemy database session
+registry. Therefore a very simple pattern inside each module is to do:
 
 .. code:: python
 
   from flask import render_template
-  from flasker import current_project
+  from flasker import current_project as pj
 
   # the Flask application
-  app = current_project.app
+  flask_app = pj.flask
 
   # the Celery application
-  celery = current_project.cel
+  celery_app = pj.celery
 
   # the SQLAlchemy scoped session registry 
-  session = current_project.session
+  session = pj.session
 
   # normally you probably wouldn't need all three in a single file
   # but you get the idea - and now you can do stuff with each...
 
-  @app.route('/')
+  @flask_app.route('/')
   def index():
     """A random view."""
     return render_template('index.html')
 
-  @celery.task
+  @celery_app.task
   def task():
     """And a great task."""
     pass
@@ -151,11 +151,11 @@ file:
   default domain name for the Celery workers.
 * ``MODULES``: comma separated list of the project's modules. They must be
   importable from the configuration file's folder.
-* ``APP_FOLDER``: path to the Flask application's root folder relative to the 
-  configuration file (defaults to ``app``).
-* ``APP_STATIC_FOLDER``: the application's ``static_folder`` relative to the
+* ``FLASK_ROOT_FOLDER``: path to the Flask application's root folder relative
+  to the configuration file (defaults to ``app``).
+* ``FLASK_STATIC_FOLDER``: the application's ``static_folder`` relative to the
   application's root folder (defaults to ``static``).
-* ``APP_TEMPLATE_FOLDER``: the application's ``template_folder`` relative to
+* ``FLASK_TEMPLATE_FOLDER``: the application's ``template_folder`` relative to
   the application's root folder (defaults to ``templates``).
 * ``COMMIT_ON_TEARDOWN``: if ``True`` (default), all database transactions will
   be committed after each Flask app request and Celery task completion. If 
