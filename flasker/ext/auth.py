@@ -78,27 +78,27 @@ class Auth(object):
 
     return login_manager
 
-  def _before_register(self, project):
+  def on_register(self, project):
     """Will be called right before the blueprint is registered."""
 
     self.blueprint = self._create_blueprint(project)
     self.login_manager = self._create_login_manager()
 
-  def _after_register(self, project):
-    """Will be called right after the blueprint is registered."""
+    @project.before_startup
+    def handler(project):
+      project.flask.register_blueprint(self.blueprint)
+      self.login_manager.setup_app(project.flask)
 
-    self.login_manager.setup_app(project.app)
+      if self.config['PROTECT_ALL_VIEWS']:
 
-    if self.config['PROTECT_ALL_VIEWS']:
-
-      @project.app.before_request
-      def check_if_logged_in():
-        if (request.blueprint != 'auth'
-            and request.endpoint # favicon
-            and not request.endpoint == 'static' # static files
-            and not current_user.is_authenticated()):
-          return self.login_manager.unauthorized()
-        return None
+        @project.flask.before_request
+        def check_if_logged_in():
+          if (request.blueprint != 'auth'
+              and request.endpoint # favicon
+              and not request.endpoint == 'static' # static files
+              and not current_user.is_authenticated()):
+            return self.login_manager.unauthorized()
+          return None
 
 class GoogleAuth(Auth):
 
@@ -123,9 +123,9 @@ class GoogleAuth(Auth):
     'ACCESS_TYPE': "offline",
   }
 
-  def _before_register(self, project):
+  def on_register(self, project):
 
-    super(GoogleAuth, self)._before_register(project)
+    super(GoogleAuth, self).on_register(project)
 
     emails = self.config['AUTHORIZED_EMAILS']
     if isinstance(emails, list):

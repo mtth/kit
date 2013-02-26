@@ -9,9 +9,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Query, scoped_session, sessionmaker
 from sys import path
+from threading import local
 from werkzeug.local import LocalProxy
 
 from .util import convert
+
+
+class _LocalStorage(local):
+
+  """Thread local storage."""
+  
+  _current_project = None
+
+_local_storage = _LocalStorage()
 
 
 class ProjectImportError(Exception):
@@ -37,9 +47,9 @@ class Project(object):
       'DOMAIN': '',
       'SUBDOMAIN': '',
       'MODULES': '',
-      'APP_FOLDER': 'app',
-      'APP_STATIC_FOLDER': 'static',
-      'APP_TEMPLATE_FOLDER': 'templates',
+      'FLASK_ROOT_FOLDER': 'app',
+      'FLASK_STATIC_FOLDER': 'static',
+      'FLASK_TEMPLATE_FOLDER': 'templates',
       'COMMIT_ON_TEARDOWN': True,
     },
     'ENGINE': {
@@ -58,6 +68,7 @@ class Project(object):
   def __init__(self, config_path=None, make=True):
 
     self.__dict__ = self.__state
+    _local_storage._current_project = self
 
     if not self.__registered:
 
@@ -66,7 +77,6 @@ class Project(object):
                                  'command line tool requires a configuration '
                                  'file path.')
 
-      # configure project
       config = self._parse_config(config_path)
       for key in config:
         if key in self.config:
@@ -86,9 +96,10 @@ class Project(object):
 
       path.append(self.root_dir)
 
-      self.app = None
-      self.cel = None
+      self.flask = None
+      self.celery = None
       self.session = None
+
       self._engine = None
       self._query_class = Query
       self._extensions = []
@@ -122,20 +133,15 @@ class Project(object):
     for mod in project_modules:
       __import__(mod.strip())
 
-    # extensions first step
+    # extensions
     for extension, config_section in self._extensions or []:
       if config_section:
         for k, v in self.config[config_section].items():
           extension.config[k] = v
-      extension._before_register(self)
+      extension.on_register(self)
 
     # database
     self._setup_database_connection()
-
-    # extensions second step
-    for extension, config_section in self._extensions or []:
-      self.app.register_blueprint(extension.blueprint)
-      extension._after_register(self)
 
     # final hook
     for func in self._before_startup or []:
@@ -181,11 +187,13 @@ class Project(object):
       (s, dict((k, convert(v)) for (k, v) in parser.items(s)))
       for s in parser.sections()
     )
-    # some conf checking
     if not conf['PROJECT']['NAME']:
       raise ProjectImportError('Missing project name.')
     return conf
 
 
-current_project = LocalProxy(lambda: Project())
+def _get_current_project():
+  return _local_storage._current_project or Project()
+
+current_project = LocalProxy(_get_current_project)
 
