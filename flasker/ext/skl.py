@@ -97,12 +97,20 @@ class ClassifierFit(Model):
     backref=backref('fits')
   )
 
+  def __str__(self):
+    return 'Fit [P#%s, F#%s] %s' % (self.param.id, self.id, self.description)
+
   @property
   def filepath(self):
     return join(SKL().folder_path, 'fit', '%s.joblib.pkl' % self.id)
 
+  def get_fitted_engine(self):
+    return joblib.load(self.filepath)
+
   def get_fitted_classifier(self):
-    return Classifier(joblib.load(self.filepath))
+    clf = Classifier(self.get_fitted_engine())
+    clf.current_fit = self
+    return clf
 
 
 class ClassifierTest(Model):
@@ -120,6 +128,11 @@ class ClassifierTest(Model):
     backref=backref('tests')
   )
 
+  def __str__(self):
+    return 'Test [P#%s, F#%s, T#%s] %s' % (
+      self.fit.param.id, self.fit.id, self.id, self.description
+    )
+
   @property
   def filepath(self):
     return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
@@ -129,6 +142,30 @@ class ClassifierTest(Model):
     if self._results is None:
       self._results = DataFrame.load(self.filepath)
     return self._results
+
+  @property
+  def counts(self):
+    counts = self.results.groupby('truth')['prediction'].value_counts()
+    def _get_or_zero(series, key):
+      try:
+        return int(series.get_value(key))
+      except KeyError:
+        return 0.0
+    return {
+      'true_pos': _get_or_zero(counts, (1,1)),
+      'true_neg': _get_or_zero(counts, (0,0)),
+      'false_pos': _get_or_zero(counts, (0,1)),
+      'false_neg': _get_or_zero(counts, (1,0)),
+    }
+
+  @property
+  def scores(self):
+    c = self.counts
+    return {
+      'precision': float(c['true_pos']) / (c['true_pos'] + c['false_pos']),
+      'recall': float(c['true_pos']) / (c['true_pos'] + c['false_neg']),
+      'fpr': float(c['false_pos']) / (c['false_pos'] + c['true_neg']),
+    }
 
   def save(self):
     self._results.save(self.filepath)
@@ -156,10 +193,31 @@ class Classifier(object):
       self.param.flush()
     self.current_fit = None
 
+  def __repr__(self):
+    if self.is_fitted():
+      return '<Fitted %r>' % self.engine
+    else:
+      return '<Unfitted %r>' % self.engine
+
+  def set_description(self, description):
+    self.param.description = description
+
   def is_fitted(self):
     return self.current_fit is not None
 
-  def train(self, Xdf, ys, description=''):
+  def get_fits(self):
+    return self.param.fits
+
+  def set_fit(self, fit):
+    self.engine = fit.get_fitted_engine()
+    self.current_fit = fit
+
+  def get_tests(self, fit=None):
+    if fit is None:
+      fit = self.current_fit
+    return fit.tests
+
+  def train(self, Xdf, ys, description, test_in_sample=True):
     """Fit then test in sample.
 
     :param Xdf: features
@@ -169,9 +227,10 @@ class Classifier(object):
 
     """
     self._fit(Xdf.values, ys.values, description)
-    return self.test(Xdf, ys, 'in sample test')
+    if test_in_sample:
+      self.test(Xdf, ys, 'in sample test')
 
-  def test(self, Xdf, ys, description=''):
+  def test(self, Xdf, ys, description):
     """Test.
 
     :param Xdf:
@@ -190,9 +249,6 @@ class Classifier(object):
     test.flush()
     test.save()
     return test
-
-  def set_description(self, description):
-    self.param.description = description
 
   def _fit(self, X, y, description):
     now = time()
