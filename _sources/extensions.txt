@@ -1,15 +1,21 @@
 Extensions
 ==========
 
-Authentication
---------------
+ORM
+---
 
-.. automodule:: flasker.ext.auth
+.. automodule:: flasker.ext.orm
    :members:
 
 API
 ---
 
 .. automodule:: flasker.ext.api
+   :members:
+
+Authentication
+--------------
+
+.. automodule:: flasker.ext.auth
    :members:
 

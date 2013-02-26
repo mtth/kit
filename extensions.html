@@ -52,17 +52,174 @@
         
   <div class="section" id="extensions">
 <h1>Extensions<a class="headerlink" href="#extensions" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="module-flasker.ext.auth">
-<span id="authentication"></span><h2>Authentication<a class="headerlink" href="#module-flasker.ext.auth" title="Permalink to this headline">¶</a></h2>
-<p>Auth Extension.</p>
+<div class="section" id="module-flasker.ext.orm">
+<span id="orm"></span><h2>ORM<a class="headerlink" href="#module-flasker.ext.orm" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
-<dt id="flasker.ext.auth.User">
-<em class="property">class </em><tt class="descclassname">flasker.ext.auth.</tt><tt class="descname">User</tt><big>(</big><em>email</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/auth.html#User"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.auth.User" title="Permalink to this definition">¶</a></dt>
-<dd><p>Base user class.</p>
+<dt id="flasker.ext.orm.ORM">
+<em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">ORM</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#ORM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.ORM" title="Permalink to this definition">¶</a></dt>
+<dd><p>The main ORM extension.</p>
+<p>Responsible for adding the <tt class="docutils literal"><span class="pre">q</span></tt> and <tt class="docutils literal"><span class="pre">c</span></tt> query proxies on the model and
+configuring the project to use a custom <tt class="docutils literal"><span class="pre">Query</span></tt> class.</p>
+<p>There is currently a single option available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">CREATE_ALL</span></tt> to create tables for all models which don&#8217;t already have one
+(defaults to <tt class="docutils literal"><span class="pre">True</span></tt>).</li>
+</ul>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.ext.orm.Query">
+<em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">Query</tt><big>(</big><em>entities</em>, <em>session=None</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base query class.</p>
+<p>The first two methods are from Flask-SQLAlchemy.</p>
 <dl class="method">
-<dt id="flasker.ext.auth.User.get_id">
-<tt class="descname">get_id</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/auth.html#User.get_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.auth.User.get_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Necessary for Flask login extension.</p>
+<dt id="flasker.ext.orm.Query.get_or_404">
+<tt class="descname">get_or_404</tt><big>(</big><em>model_id</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Query.get_or_404"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Query.get_or_404" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like get but aborts with 404 if not found.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>model_id</strong> (<em>varies</em>) &#8211; the model&#8217;s primary key</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">model or HTTPError</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.orm.Query.first_or_404">
+<tt class="descname">first_or_404</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Query.first_or_404"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Query.first_or_404" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like first but aborts with 404 if not found.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>model_id</strong> (<em>varies</em>) &#8211; the model&#8217;s primary key</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">model or HTTPError</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.orm.Query.random">
+<tt class="descname">random</tt><big>(</big><em>n=1</em>, <em>dialect=None</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Query.random"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Query.random" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns n random model instances.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>n</strong> (<em>int</em>) &#8211; the number of instances to return</li>
+<li><strong>dialect</strong> (<em>str</em>) &#8211; the engine dialect (the implementation of random differs
+between MySQL and SQLite among others). By default will look up on the
+query for the dialect used. If no random function is available for the 
+chosen dialect, the fallback implementation uses total row count to 
+generate random offsets.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">model instances</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.orm.Query.dataframe">
+<tt class="descname">dataframe</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Query.dataframe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Query.dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads a dataframe with the records from the query and returns it.</p>
+<p>Accepts the same arguments as <tt class="docutils literal"><span class="pre">flasker.util.query_to_dataframe</span></tt>.
+Requires the <tt class="docutils literal"><span class="pre">pandas</span></tt> library to be installed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.ext.orm.Base">
+<em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">Base</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Base"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base" title="Permalink to this definition">¶</a></dt>
+<dd><p>The SQLAlchemy base model with multiple helpers.</p>
+<p>Along with the methods described below, the following conveniences are
+provided:</p>
+<ul class="simple">
+<li>the <tt class="docutils literal"><span class="pre">q</span></tt> query property</li>
+<li>the <tt class="docutils literal"><span class="pre">c</span></tt> count query property. This will be much faster than issuing
+<tt class="docutils literal"><span class="pre">count()</span></tt> on a normal query on MySQL as it will bypass the use of a
+subquery.</li>
+<li>Automatic table naming (to the model&#8217;s class name uncamelcased with an
+extra s appended for good measure).</li>
+<li><tt class="docutils literal"><span class="pre">__repr__</span></tt> implementation with model class and primary keys</li>
+<li>Caching (from <tt class="docutils literal"><span class="pre">flasker.util.Cacheable</span></tt>)</li>
+<li>Logging (from <tt class="docutils literal"><span class="pre">flasker.util.Loggable</span></tt>)</li>
+</ul>
+<dl class="method">
+<dt id="flasker.ext.orm.Base.jsonify">
+<tt class="descname">jsonify</tt><big>(</big><em>depth=1</em>, <em>expand=True</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Base.jsonify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base.jsonify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special implementation of jsonify for Model objects.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>depth</strong> (<em>int</em>) &#8211; </li>
+<li><strong>expand</strong> (<em>bool</em>) &#8211; whether or not to repeat keys when jsonifying nested
+objects (defaults to <tt class="docutils literal"><span class="pre">True</span></tt>). This is useful when the frontend
+has model support (e.g. using Backbone-Relational).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The following attributes are included in the returned JSON:</p>
+<ul class="simple">
+<li>all non private properties</li>
+<li>all non private columns</li>
+<li>all non private relationships which have their <tt class="docutils literal"><span class="pre">lazy</span></tt> attribute set to
+one of <tt class="docutils literal"><span class="pre">False,</span> <span class="pre">'joined',</span> <span class="pre">'immediate'</span></tt></li>
+</ul>
+<p>The consequence of this is that this method will never issue extra queries
+to populate the JSON. Furthermore, all the attribute names to be
+included are computed at class declaration so this method is very fast.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.orm.Base.get_primary_keys">
+<tt class="descname">get_primary_keys</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Base.get_primary_keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base.get_primary_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the dictionary of primary keys for a given model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="flasker.ext.orm.Base.find_or_create">
+<em class="property">classmethod </em><tt class="descname">find_or_create</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Base.find_or_create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base.find_or_create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given constructor arguments will return a match or create one.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kwargs</strong> &#8211; constructor arguments</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">tuple</td>
+</tr>
+</tbody>
+</table>
+<p>This method returns a tuple <tt class="docutils literal"><span class="pre">(model,</span> <span class="pre">flag)</span></tt> where <tt class="docutils literal"><span class="pre">model</span></tt> is of the
+corresponding class and <tt class="docutils literal"><span class="pre">flag</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt> if the model was just created
+and <tt class="docutils literal"><span class="pre">False</span></tt> otherwise.</p>
 </dd></dl>
 
 </dd></dl>
@@ -291,93 +448,25 @@ be unaware of them.</p>
 </dd></dl>
 
 <dl class="class">
-<dt id="flasker.ext.api.Query">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">Query</tt><big>(</big><em>entities</em>, <em>session=None</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Query" title="Permalink to this definition">¶</a></dt>
-<dd><p>Base query class.</p>
-<p>The first two methods are from Flask-SQLAlchemy.</p>
-<dl class="method">
-<dt id="flasker.ext.api.Query.get_or_404">
-<tt class="descname">get_or_404</tt><big>(</big><em>model_id</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Query.get_or_404" title="Permalink to this definition">¶</a></dt>
-<dd><p>Like get but aborts with 404 if not found.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="flasker.ext.api.Query.first_or_404">
-<tt class="descname">first_or_404</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.ext.api.Query.first_or_404" title="Permalink to this definition">¶</a></dt>
-<dd><p>Like first but aborts with 404 if not found.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="flasker.ext.api.Query.random">
-<tt class="descname">random</tt><big>(</big><em>n=1</em>, <em>dialect=None</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Query.random" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns n random model instances.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>n</strong> (<em>int</em>) &#8211; the number of instances to return</li>
-<li><strong>dialect</strong> (<em>str</em>) &#8211; the engine dialect (the implementation of random differs
-between MySQL and SQLite among others). By default will look up on the
-query for the dialect used. If no random function is available for the 
-chosen dialect, the fallback implementation uses total row count to 
-generate random offsets.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">model instances</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="flasker.ext.api.Query.dataframe">
-<tt class="descname">dataframe</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Query.dataframe" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads a dataframe with the records from the query and returns it.</p>
-<p>Accepts the same arguments as <tt class="docutils literal"><span class="pre">flasker.util.query_to_dataframe</span></tt>.
-Requires the <a href="#id1"><span class="problematic" id="id2">``</span></a>pandas``library to be installed.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.api.ExpandedBase">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">ExpandedBase</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#ExpandedBase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.ExpandedBase" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adding a few features to the declarative base.</p>
-<p>Currently:</p>
-<ul class="simple">
-<li>Automatic table naming</li>
-<li>Caching</li>
-<li>Jsonifying</li>
-<li>Logging</li>
-</ul>
-<dl class="method">
-<dt id="flasker.ext.api.ExpandedBase.jsonify">
-<tt class="descname">jsonify</tt><big>(</big><em>depth=1</em>, <em>expand=True</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#ExpandedBase.jsonify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.ExpandedBase.jsonify" title="Permalink to this definition">¶</a></dt>
-<dd><p>Special implementation of jsonify for Model objects.</p>
-<p>Overrides the basic jsonify method to specialize it for models.</p>
-<p>This function minimizes the number of lookups it does (no dynamic
-type checking on the properties for example) to maximize speed.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>depth</strong> (<em>int</em>) &#8211; </td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
 <dt id="flasker.ext.api.Parser">
 <em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">Parser</tt><big>(</big><em>allowed_keys</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#Parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.Parser" title="Permalink to this definition">¶</a></dt>
 <dd><p>The request parameter parser.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-flasker.ext.auth">
+<span id="authentication"></span><h2>Authentication<a class="headerlink" href="#module-flasker.ext.auth" title="Permalink to this headline">¶</a></h2>
+<p>Auth Extension.</p>
+<dl class="class">
+<dt id="flasker.ext.auth.User">
+<em class="property">class </em><tt class="descclassname">flasker.ext.auth.</tt><tt class="descname">User</tt><big>(</big><em>email</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/auth.html#User"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.auth.User" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base user class.</p>
+<dl class="method">
+<dt id="flasker.ext.auth.User.get_id">
+<tt class="descname">get_id</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/auth.html#User.get_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.auth.User.get_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Necessary for Flask login extension.</p>
+</dd></dl>
+
 </dd></dl>
 
 </div>
