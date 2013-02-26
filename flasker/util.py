@@ -159,6 +159,7 @@ def uncamelcase(name):
   s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
   return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
+
 class Dict(dict):
 
   """Expands the dictionary class with a few helper methods.
@@ -381,6 +382,7 @@ class SmartDictReader(DictReader):
 
 # Caching
 
+
 class Cacheable(object):
 
   """Mixin to support cacheable properties.
@@ -526,7 +528,7 @@ def _jsonify(value, depth=0):
   if hasattr(value, 'jsonify'):
     return value.jsonify(depth - 1)
   if isinstance(value, dict):
-    return {k: _jsonify(v, depth - 1) for k, v in value.items()}
+    return {k: _jsonify(v, depth) for k, v in value.items()}
   if isinstance(value, list):
     return [_jsonify(v, depth) for v in value]
   if isinstance(value, (float, int, long, str, unicode, tuple)):

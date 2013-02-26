@@ -14,6 +14,18 @@ from ..util import (Cacheable, _jsonify,
 
 class ORM(object):
 
+  """The main ORM extension.
+
+  Responsible for adding the ``q`` and ``c`` query proxies on the model and
+  configuring the project to use a custom ``Query`` class.
+
+  There is currently a single option available:
+
+  * ``CREATE_ALL`` to create tables for all models which don't already have one
+    (defaults to ``True``).
+
+  """
+
   config = {
     'CREATE_ALL': True
   }
@@ -42,14 +54,26 @@ class Query(_Query):
   """
 
   def get_or_404(self, model_id):
-    """Like get but aborts with 404 if not found."""
+    """Like get but aborts with 404 if not found.
+
+    :param model_id: the model's primary key
+    :type model_id: varies
+    :rtype: model or HTTPError
+    
+    """
     rv = self.get(model_id)
     if rv is None:
       abort(404)
     return rv
 
   def first_or_404(self):
-    """Like first but aborts with 404 if not found."""
+    """Like first but aborts with 404 if not found.
+    
+    :param model_id: the model's primary key
+    :type model_id: varies
+    :rtype: model or HTTPError
+    
+    """
     rv = self.first()
     if rv is None:
       abort(404)
@@ -95,6 +119,8 @@ class Query(_Query):
 
 class _QueryProperty(object):
 
+  """To make queries accessible directly on model classes."""
+
   def __init__(self, project):
     self.project = project
 
@@ -108,6 +134,8 @@ class _QueryProperty(object):
 
 
 class _CountProperty(object):
+
+  """To make count queries directly accessible on model classes."""
 
   def __init__(self, project):
     self.project = project
@@ -124,14 +152,25 @@ class _CountProperty(object):
 
 class Base(Cacheable, Loggable):
 
-  """Adding a few features to the declarative base.
+  """The SQLAlchemy base model with multiple helpers.
 
-  Currently:
+  Along with the methods described below, the following conveniences are
+  provided:
 
-  * Automatic table naming
-  * Caching
-  * Jsonifying
-  * Logging
+  * the ``q`` query property
+
+  * the ``c`` count query property. This will be much faster than issuing
+    ``count()`` on a normal query on MySQL as it will bypass the use of a
+    subquery.
+
+  * Automatic table naming (to the model's class name uncamelcased with an
+    extra s appended for good measure).
+
+  * ``__repr__`` implementation with model class and primary keys
+
+  * Caching (from ``flasker.util.Cacheable``)
+
+  * Logging (from ``flasker.util.Loggable``)
 
   """
 
@@ -194,11 +233,6 @@ class Base(Cacheable, Loggable):
 
   def jsonify(self, depth=1, expand=True):
     """Special implementation of jsonify for Model objects.
-    
-    Overrides the basic jsonify method to specialize it for models.
-
-    This function minimizes the number of lookups it does (no dynamic
-    type checking on the properties for example) to maximize speed.
 
     :param depth:
     :type depth: int
@@ -207,6 +241,17 @@ class Base(Cacheable, Loggable):
       has model support (e.g. using Backbone-Relational).
     :type expand: bool
     :rtype: dict
+
+    The following attributes are included in the returned JSON:
+
+    * all non private properties
+    * all non private columns
+    * all non private relationships which have their ``lazy`` attribute set to
+      one of ``False, 'joined', 'immediate'``
+
+    The consequence of this is that this method will never issue extra queries
+    to populate the JSON. Furthermore, all the attribute names to be
+    included are computed at class declaration so this method is very fast.
 
     """
     if not expand and depth <= self._json_depth:
@@ -223,6 +268,11 @@ class Base(Cacheable, Loggable):
     return rv
 
   def get_primary_keys(self):
+    """Returns the dictionary of primary keys for a given model.
+
+    :rtype: dict
+
+    """
     return dict(
       (k.name, getattr(self, k.name))
       for k in self.__class__._primary_keys()
@@ -230,6 +280,16 @@ class Base(Cacheable, Loggable):
 
   @classmethod
   def find_or_create(cls, **kwargs):
+    """Given constructor arguments will return a match or create one.
+
+    :param kwargs: constructor arguments
+    :rtype: tuple
+
+    This method returns a tuple ``(model, flag)`` where ``model`` is of the
+    corresponding class and ``flag`` is ``True`` if the model was just created
+    and ``False`` otherwise.
+
+    """
     instance = self.filter_by(**kwargs).first()
     if instance:
       return instance, False
