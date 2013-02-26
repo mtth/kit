@@ -56,7 +56,7 @@ class Auth(object):
 
     return Blueprint(
       'auth',
-      project.config['PROJECT']['APP_FOLDER'] + '.auth',
+      project.config['PROJECT']['FLASK_ROOT_FOLDER'] + '.auth',
       template_folder=abspath(join(dirname(__file__), 'templates', 'auth')),
       url_prefix=self.config['URL_PREFIX']
     )
