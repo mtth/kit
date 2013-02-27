@@ -141,7 +141,7 @@ Requires the <tt class="docutils literal"><span class="pre">pandas</span></tt> l
 
 <dl class="class">
 <dt id="flasker.ext.orm.Base">
-<em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">Base</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Base"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">Base</tt><a class="reference internal" href="_modules/flasker/ext/orm.html#Base"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base" title="Permalink to this definition">¶</a></dt>
 <dd><p>The SQLAlchemy base model with multiple helpers.</p>
 <p>Along with the methods described below, the following conveniences are
 provided:</p>
@@ -190,8 +190,8 @@ included are computed at class declaration so this method is very fast.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="flasker.ext.orm.Base.get_primary_keys">
-<tt class="descname">get_primary_keys</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Base.get_primary_keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base.get_primary_keys" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.ext.orm.Base.get_primary_key">
+<tt class="descname">get_primary_key</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.get_primary_key" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the dictionary of primary keys for a given model.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -204,8 +204,8 @@ included are computed at class declaration so this method is very fast.</p>
 </dd></dl>
 
 <dl class="classmethod">
-<dt id="flasker.ext.orm.Base.find_or_create">
-<em class="property">classmethod </em><tt class="descname">find_or_create</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Base.find_or_create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base.find_or_create" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.ext.orm.Base.retrieve">
+<em class="property">classmethod </em><tt class="descname">retrieve</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.retrieve" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given constructor arguments will return a match or create one.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -220,6 +220,261 @@ included are computed at class declaration so this method is very fast.</p>
 <p>This method returns a tuple <tt class="docutils literal"><span class="pre">(model,</span> <span class="pre">flag)</span></tt> where <tt class="docutils literal"><span class="pre">model</span></tt> is of the
 corresponding class and <tt class="docutils literal"><span class="pre">flag</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt> if the model was just created
 and <tt class="docutils literal"><span class="pre">False</span></tt> otherwise.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-flasker.ext.skl">
+<span id="skl"></span><h2>SKL<a class="headerlink" href="#module-flasker.ext.skl" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="flasker.ext.skl.ClassifierParam">
+<em class="property">class </em><tt class="descclassname">flasker.ext.skl.</tt><tt class="descname">ClassifierParam</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#ClassifierParam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.ClassifierParam" title="Permalink to this definition">¶</a></dt>
+<dd><p>The general model for sklearn classifier parameters.</p>
+<dl class="method">
+<dt id="flasker.ext.skl.ClassifierParam.describe_fits">
+<tt class="descname">describe_fits</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#ClassifierParam.describe_fits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.ClassifierParam.describe_fits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dataframe with information on each fit.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">pandas.DataFrame</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.skl.ClassifierParam.describe_tests">
+<tt class="descname">describe_tests</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#ClassifierParam.describe_tests"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.ClassifierParam.describe_tests" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dataframe with information on each test run.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">pandas.DataFrame</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.ext.skl.LogisticRegressionParam">
+<em class="property">class </em><tt class="descclassname">flasker.ext.skl.</tt><tt class="descname">LogisticRegressionParam</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#LogisticRegressionParam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.LogisticRegressionParam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model for <tt class="docutils literal"><span class="pre">sklearn.linear_model.logistic.LogisticRegression</span></tt>.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.ext.skl.ClassifierFit">
+<em class="property">class </em><tt class="descclassname">flasker.ext.skl.</tt><tt class="descname">ClassifierFit</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#ClassifierFit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.ClassifierFit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model to store a fitted classifier.</p>
+<dl class="method">
+<dt id="flasker.ext.skl.ClassifierFit.describe">
+<tt class="descname">describe</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#ClassifierFit.describe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.ClassifierFit.describe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a series with information on the fitted classifier.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">pandas.Series</td>
+</tr>
+</tbody>
+</table>
+<p>The following keys are currently available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">id</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">param_id</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">tests</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">description</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">duration</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">added</span></tt></li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.skl.ClassifierFit.describe_tests">
+<tt class="descname">describe_tests</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#ClassifierFit.describe_tests"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.ClassifierFit.describe_tests" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dataframe with information on each test run.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">pandas.DataFrame</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.ext.skl.Classifier">
+<em class="property">class </em><tt class="descclassname">flasker.ext.skl.</tt><tt class="descname">Classifier</tt><big>(</big><em>engine</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier" title="Permalink to this definition">¶</a></dt>
+<dd><p>The classifier method.</p>
+<p>A couple properties are of interest:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">engine</span></tt>, the underlying sklearn classifier.</li>
+<li><tt class="docutils literal"><span class="pre">current_fit</span></tt>, if the classifier has been trained, this contains the
+<tt class="docutils literal"><span class="pre">flasker.ext.skl.ClassifierFit</span></tt> instance used to store the coefficients.</li>
+</ul>
+<p>Parameters are not duplicated. If a classifier is initialized with the same
+values as those of a parameter found in the database, all new fits and tests
+will be attributed to the unique same parameter.</p>
+<dl class="classmethod">
+<dt id="flasker.ext.skl.Classifier.get_available_params">
+<em class="property">classmethod </em><tt class="descname">get_available_params</tt><big>(</big><em>engine_factory</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.get_available_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.get_available_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of all available params for this classifier class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>engine_factory</strong> (<em>varies</em>) &#8211; an sklearn compatible classifier class</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="flasker.ext.skl.Classifier.view_available_params">
+<em class="property">classmethod </em><tt class="descname">view_available_params</tt><big>(</big><em>engine_factory</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.view_available_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.view_available_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dataframe with information on the parameters available.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>engine_factory</strong> (<em>varies</em>) &#8211; an sklearn compatible classifier class</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">pandas.DataFrame</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="flasker.ext.skl.Classifier.from_param_id">
+<em class="property">classmethod </em><tt class="descname">from_param_id</tt><big>(</big><em>clf</em>, <em>param_id</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.from_param_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.from_param_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load an unfitted classifier from its parameter id.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>param_id</strong> (<em>int</em>) &#8211; the id of the parameter to use to load the engine</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">flasker.ext.skl.Classifier</td>
+</tr>
+</tbody>
+</table>
+<p>The parameter is persisted in the database and its kwargs are passed to 
+the classifier&#8217;s constructor.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="flasker.ext.skl.Classifier.get_available_fits">
+<em class="property">classmethod </em><tt class="descname">get_available_fits</tt><big>(</big><em>clf</em>, <em>engine_factory</em>, <em>param_id=None</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.get_available_fits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.get_available_fits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of available fits for this classifier class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>engine_factory</strong> (<em>varies</em>) &#8211; an sklearn compatible classifier class</li>
+<li><strong>param_id</strong> (<em>int</em>) &#8211; if specified, only fits corresponding to this parameter
+will be included</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="flasker.ext.skl.Classifier.view_available_fits">
+<em class="property">classmethod </em><tt class="descname">view_available_fits</tt><big>(</big><em>engine_factory</em>, <em>param_id=None</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.view_available_fits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.view_available_fits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dataframe with information on the fits available.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>engine_factory</strong> (<em>varies</em>) &#8211; an sklearn compatible classifier class</li>
+<li><strong>param_id</strong> (<em>int</em>) &#8211; if specified, only fits corresponding to this parameter
+will be included</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="flasker.ext.skl.Classifier.from_fit_id">
+<em class="property">classmethod </em><tt class="descname">from_fit_id</tt><big>(</big><em>clf</em>, <em>fit_id</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.from_fit_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.from_fit_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load an unfitted classifier from a fitted id.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>param_id</strong> (<em>int</em>) &#8211; the id of the parameter to use to load the engine</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">flasker.ext.skl.Classifier</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.skl.Classifier.train">
+<tt class="descname">train</tt><big>(</big><em>Xdf</em>, <em>ys</em>, <em>description</em>, <em>test_in_sample=True</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit then test in sample.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>Xdf</strong> (<em>pandas.DataFrame</em>) &#8211; features</li>
+<li><strong>ys</strong> (<em>pandas.Series</em>) &#8211; labels</li>
+<li><strong>description</strong> (<em>str</em>) &#8211; a description of the training set</li>
+<li><strong>test_in_sample</strong> (<em>bool</em>) &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, the classifier will be run on its
+training sample right after being fit</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>This method has to be called before running any tests if the classifier
+wasn&#8217;t loaded from an existing fit.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.skl.Classifier.test">
+<tt class="descname">test</tt><big>(</big><em>Xdf</em>, <em>ys</em>, <em>description</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>Xdf</strong> (<em>pandas.DataFrame</em>) &#8211; </li>
+<li><strong>ys</strong> (<em>pandas.Series</em>) &#8211; optional truth</li>
+<li><strong>description</strong> (<em>str</em>) &#8211; a description of the testing set</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The results of the test are automatically stored afterwards in a new
+<tt class="docutils literal"><span class="pre">flasker.ext.skl.ClassifierTest</span></tt> instance.</p>
 </dd></dl>
 
 </dd></dl>

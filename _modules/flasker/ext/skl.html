@@ -1,0 +1,577 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>flasker.ext.skl &mdash; Flasker 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/theme_extras.js"></script>
+    <link rel="top" title="Flasker 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="../../../index.html">
+          <span>Flasker 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>flasker.ext.skl</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="../../../index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <h1>Source code for flasker.ext.skl</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+<span class="kn">from</span> <span class="nn">flasker.ext.orm</span> <span class="kn">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">flasker.util</span> <span class="kn">import</span> <span class="n">JSONEncodedDict</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">join</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">concat</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">Series</span>
+<span class="kn">from</span> <span class="nn">sklearn.externals</span> <span class="kn">import</span> <span class="n">joblib</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Boolean</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span>
+  <span class="n">DateTime</span><span class="p">,</span> <span class="n">Numeric</span><span class="p">,</span> <span class="n">Text</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">backref</span><span class="p">,</span> <span class="n">relationship</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="kn">import</span> <span class="n">modules</span>
+
+
+<span class="k">class</span> <span class="nc">SKLErr</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+
+  <span class="k">pass</span>
+
+
+<span class="k">class</span> <span class="nc">SKL</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="n">__state</span> <span class="o">=</span> <span class="p">{}</span>
+  <span class="n">__registered</span> <span class="o">=</span> <span class="bp">False</span>
+
+  <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;FOLDER&#39;</span><span class="p">:</span> <span class="s">&#39;skl&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AUTOCOMMIT&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span>
+  <span class="p">}</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registered</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__state</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">__registered</span> <span class="o">=</span> <span class="bp">True</span>
+
+  <span class="k">def</span> <span class="nf">on_register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">folder_path</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">root_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;FOLDER&#39;</span><span class="p">])</span>
+
+
+<span class="c"># Models</span>
+
+<div class="viewcode-block" id="ClassifierParam"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.ClassifierParam">[docs]</a><span class="k">class</span> <span class="nc">ClassifierParam</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;The general model for sklearn classifier parameters.&quot;&quot;&quot;</span>
+
+  <span class="n">_cache</span> <span class="o">=</span> <span class="bp">None</span>
+  <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+  <span class="nb">type</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">64</span><span class="p">))</span>
+  <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
+  <span class="n">added</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">)</span>
+  <span class="n">penalty</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">32</span><span class="p">))</span>
+  <span class="n">dual</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Boolean</span><span class="p">)</span>
+  <span class="n">C</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Numeric</span><span class="p">(</span><span class="n">precision</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">30</span><span class="p">))</span>
+  <span class="n">fit_intercept</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Boolean</span><span class="p">)</span>
+  <span class="n">intercept_scaling</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Numeric</span><span class="p">(</span><span class="n">precision</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">30</span><span class="p">))</span>
+  <span class="n">random_state</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Boolean</span><span class="p">)</span>
+  <span class="n">class_weight</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedDict</span><span class="p">)</span>
+  <span class="n">tol</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Numeric</span><span class="p">(</span><span class="n">precision</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">30</span><span class="p">))</span>
+
+  <span class="n">__mapper_args__</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;polymorphic_on&#39;</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span>
+    <span class="s">&#39;polymorphic_identity&#39;</span><span class="p">:</span> <span class="s">&#39;param&#39;</span>
+  <span class="p">}</span>
+
+  <span class="n">valid</span> <span class="o">=</span> <span class="p">[]</span>
+
+  <span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">kwargs</span> <span class="o">=</span> <span class="n">Series</span><span class="p">({</span>
+      <span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonify</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid_kwargs</span>
+    <span class="p">})</span>
+    <span class="n">misc</span> <span class="o">=</span> <span class="n">Series</span><span class="p">({</span>
+      <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+      <span class="s">&#39;fits&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits</span><span class="p">),</span>
+      <span class="s">&#39;tests&#39;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">tests</span><span class="p">)</span> <span class="k">if</span> <span class="n">fit</span><span class="o">.</span><span class="n">tests</span> <span class="k">else</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">fit</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fits</span><span class="p">),</span>
+      <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+      <span class="s">&#39;added&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">added</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="k">return</span> <span class="n">concat</span><span class="p">(</span>
+      <span class="p">[</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">misc</span><span class="p">],</span>
+      <span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;kwargs&#39;</span><span class="p">,</span> <span class="s">&#39;misc&#39;</span><span class="p">]</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="ClassifierParam.describe_fits"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.ClassifierParam.describe_fits">[docs]</a>  <span class="k">def</span> <span class="nf">describe_fits</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a dataframe with information on each fit.</span>
+<span class="sd">    </span>
+<span class="sd">    :rtype: pandas.DataFrame</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">concat</span><span class="p">(</span>
+      <span class="p">[</span><span class="n">fit</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span> <span class="k">for</span> <span class="n">fit</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fits</span><span class="p">],</span>
+      <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">T</span>
+</div>
+<div class="viewcode-block" id="ClassifierParam.describe_tests"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.ClassifierParam.describe_tests">[docs]</a>  <span class="k">def</span> <span class="nf">describe_tests</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a dataframe with information on each test run.</span>
+<span class="sd">    </span>
+<span class="sd">    :rtype: pandas.DataFrame</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">concat</span><span class="p">(</span>
+      <span class="p">[</span><span class="n">fit</span><span class="o">.</span><span class="n">describe_tests</span><span class="p">()</span> <span class="k">for</span> <span class="n">fit</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fits</span><span class="p">],</span>
+      <span class="n">keys</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fits</span><span class="p">))</span>
+    <span class="p">)</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;param&#39;</span><span class="p">,</span> <span class="s">&#39;fit&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">df</span>
+</div>
+  <span class="k">def</span> <span class="nf">_get_classifier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">module</span><span class="p">,</span> <span class="n">cls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="nb">__import__</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
+    <span class="n">engine_factory</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">modules</span><span class="p">[</span><span class="n">module</span><span class="p">],</span> <span class="n">cls</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Classifier</span><span class="p">(</span>
+      <span class="n">engine_factory</span><span class="p">,</span>
+      <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jsonify</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid_kwargs</span><span class="p">}</span>
+    <span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="LogisticRegressionParam"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.LogisticRegressionParam">[docs]</a><span class="k">class</span> <span class="nc">LogisticRegressionParam</span><span class="p">(</span><span class="n">ClassifierParam</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Model for ``sklearn.linear_model.logistic.LogisticRegression``.&quot;&quot;&quot;</span>
+
+  <span class="n">__tablename__</span> <span class="o">=</span> <span class="bp">None</span>
+  <span class="n">__mapper_args__</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;polymorphic_identity&#39;</span><span class="p">:</span> <span class="s">&#39;sklearn.linear_model.logistic.LogisticRegression&#39;</span>
+  <span class="p">}</span>
+
+  <span class="n">valid_kwargs</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s">&#39;penalty&#39;</span><span class="p">,</span> <span class="s">&#39;dual&#39;</span><span class="p">,</span> <span class="s">&#39;C&#39;</span><span class="p">,</span> <span class="s">&#39;fit_intercept&#39;</span><span class="p">,</span> <span class="s">&#39;intercept_scaling&#39;</span><span class="p">,</span>
+    <span class="s">&#39;class_weight&#39;</span><span class="p">,</span> <span class="s">&#39;tol&#39;</span><span class="p">,</span> <span class="s">&#39;random_state&#39;</span>
+  <span class="p">]</span>
+
+</div>
+<div class="viewcode-block" id="ClassifierFit"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.ClassifierFit">[docs]</a><span class="k">class</span> <span class="nc">ClassifierFit</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Model to store a fitted classifier.&quot;&quot;&quot;</span>
+
+  <span class="n">_cache</span> <span class="o">=</span> <span class="bp">None</span>
+  <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+  <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
+  <span class="n">added</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">)</span>
+  <span class="n">duration</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Float</span><span class="p">)</span>
+  <span class="n">param_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;classifier_params.id&#39;</span><span class="p">))</span>
+
+  <span class="n">param</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span>
+    <span class="s">&#39;ClassifierParam&#39;</span><span class="p">,</span>
+    <span class="n">backref</span><span class="o">=</span><span class="n">backref</span><span class="p">(</span><span class="s">&#39;fits&#39;</span><span class="p">)</span>
+  <span class="p">)</span>
+
+<div class="viewcode-block" id="ClassifierFit.describe"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.ClassifierFit.describe">[docs]</a>  <span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a series with information on the fitted classifier.</span>
+
+<span class="sd">    :rtype: pandas.Series</span>
+
+<span class="sd">    The following keys are currently available:</span>
+
+<span class="sd">    * ``id``</span>
+<span class="sd">    * ``param_id``</span>
+<span class="sd">    * ``tests``</span>
+<span class="sd">    * ``description``</span>
+<span class="sd">    * ``duration``</span>
+<span class="sd">    * ``added``</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Series</span><span class="p">({</span>
+      <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+      <span class="s">&#39;param_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+      <span class="s">&#39;tests&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tests</span><span class="p">),</span>
+      <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+      <span class="s">&#39;duration&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span>
+      <span class="s">&#39;added&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">added</span><span class="p">,</span>
+    <span class="p">})</span>
+</div>
+<div class="viewcode-block" id="ClassifierFit.describe_tests"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.ClassifierFit.describe_tests">[docs]</a>  <span class="k">def</span> <span class="nf">describe_tests</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a dataframe with information on each test run.</span>
+
+<span class="sd">    :rtype: pandas.DataFrame</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">DataFrame</span><span class="p">({</span>
+      <span class="n">index</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tests</span><span class="p">)</span>
+    <span class="p">})</span><span class="o">.</span><span class="n">T</span>
+</div>
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">_filepath</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">join</span><span class="p">(</span><span class="n">SKL</span><span class="p">()</span><span class="o">.</span><span class="n">folder_path</span><span class="p">,</span> <span class="s">&#39;fit&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.joblib.pkl&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_get_fitted_classifier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span>
+    <span class="n">clf</span> <span class="o">=</span> <span class="n">Classifier</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+    <span class="n">clf</span><span class="o">.</span><span class="n">current_fit</span> <span class="o">=</span> <span class="bp">self</span>
+    <span class="k">return</span> <span class="n">clf</span>
+
+</div>
+<span class="k">class</span> <span class="nc">ClassifierTest</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+
+  <span class="n">_cache</span> <span class="o">=</span> <span class="bp">None</span>
+  <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+  <span class="n">fit_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;classifier_fits.id&#39;</span><span class="p">))</span>
+  <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
+  <span class="n">added</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">)</span>
+  <span class="n">duration</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Float</span><span class="p">)</span>
+  <span class="n">_results</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="n">fit</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span>
+    <span class="s">&#39;ClassifierFit&#39;</span><span class="p">,</span>
+    <span class="n">backref</span><span class="o">=</span><span class="n">backref</span><span class="p">(</span><span class="s">&#39;tests&#39;</span><span class="p">)</span>
+  <span class="p">)</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">results</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a dataframe with the true and predicted labels.</span>
+
+<span class="sd">    :rtype: pandas.DataFrame</span>
+
+<span class="sd">    The dataframe has two columns: ``&#39;truth&#39;`` and ``&#39;prediction&#39;``.</span>
+<span class="sd">    The dataframe is persisted in a ``.npy`` file and loaded the first time it</span>
+<span class="sd">    is accessed.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_results</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_results</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_results</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">misc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a series with miscellaneous information on this test.</span>
+
+<span class="sd">    :rtype: pandas.Series</span>
+
+<span class="sd">    The following keys are currently available:</span>
+
+<span class="sd">    * ``id``</span>
+<span class="sd">    * ``fit_id``</span>
+<span class="sd">    * ``param_id``</span>
+<span class="sd">    * ``description``</span>
+<span class="sd">    * ``duration``</span>
+<span class="sd">    * ``added``</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Series</span><span class="p">({</span>
+      <span class="s">&#39;id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+      <span class="s">&#39;fit_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+      <span class="s">&#39;param_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+      <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+      <span class="s">&#39;added&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">added</span><span class="p">,</span>
+      <span class="s">&#39;duration&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span>
+    <span class="p">})</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">counts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a series with the counts of true/false positive/negatives.</span>
+
+<span class="sd">    :rtype: pandas.Series</span>
+
+<span class="sd">    The following keys are currently available:</span>
+
+<span class="sd">    * ``true_neg``</span>
+<span class="sd">    * ``true_pos``</span>
+<span class="sd">    * ``false_neg``</span>
+<span class="sd">    * ``false_pos``</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">counts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s">&#39;truth&#39;</span><span class="p">)[</span><span class="s">&#39;prediction&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">_get_or_zero</span><span class="p">(</span><span class="n">series</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">series</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+      <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="n">Series</span><span class="p">({</span>
+      <span class="s">&#39;true_pos&#39;</span><span class="p">:</span> <span class="n">_get_or_zero</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span>
+      <span class="s">&#39;true_neg&#39;</span><span class="p">:</span> <span class="n">_get_or_zero</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span>
+      <span class="s">&#39;false_pos&#39;</span><span class="p">:</span> <span class="n">_get_or_zero</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span>
+      <span class="s">&#39;false_neg&#39;</span><span class="p">:</span> <span class="n">_get_or_zero</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span>
+    <span class="p">})</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">scores</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a series with a few scores on this test.</span>
+
+<span class="sd">    :rtype: pandas.Series</span>
+
+<span class="sd">    The following keys are currently available:</span>
+
+<span class="sd">    * ``precision``</span>
+<span class="sd">    * ``recall``</span>
+<span class="sd">    * ``fpr``</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">counts</span>
+    <span class="k">return</span> <span class="n">Series</span><span class="p">({</span>
+      <span class="s">&#39;precision&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s">&#39;true_pos&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s">&#39;true_pos&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">c</span><span class="p">[</span><span class="s">&#39;false_pos&#39;</span><span class="p">]),</span>
+      <span class="s">&#39;recall&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s">&#39;true_pos&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s">&#39;true_pos&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">c</span><span class="p">[</span><span class="s">&#39;false_neg&#39;</span><span class="p">]),</span>
+      <span class="s">&#39;fpr&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s">&#39;false_pos&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s">&#39;false_pos&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">c</span><span class="p">[</span><span class="s">&#39;true_neg&#39;</span><span class="p">]),</span>
+    <span class="p">})</span>
+
+  <span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a series with all the previous informations combined.</span>
+
+<span class="sd">    :rtype: pandas.Series</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">concat</span><span class="p">(</span>
+      <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">counts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">misc</span><span class="p">],</span>
+      <span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;counts&#39;</span><span class="p">,</span> <span class="s">&#39;scores&#39;</span><span class="p">,</span> <span class="s">&#39;misc&#39;</span><span class="p">]</span>
+    <span class="p">)</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">_filepath</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">join</span><span class="p">(</span><span class="n">SKL</span><span class="p">()</span><span class="o">.</span><span class="n">folder_path</span><span class="p">,</span> <span class="s">&#39;test&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.pkl&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_save</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_results</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span>
+
+
+<span class="c"># Classifiers</span>
+
+<div class="viewcode-block" id="Classifier"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.Classifier">[docs]</a><span class="k">class</span> <span class="nc">Classifier</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;The classifier method.</span>
+
+<span class="sd">  A couple properties are of interest:</span>
+
+<span class="sd">  * ``engine``, the underlying sklearn classifier.</span>
+<span class="sd">  * ``current_fit``, if the classifier has been trained, this contains the</span>
+<span class="sd">    ``flasker.ext.skl.ClassifierFit`` instance used to store the coefficients.</span>
+
+<span class="sd">  Parameters are not duplicated. If a classifier is initialized with the same</span>
+<span class="sd">  values as those of a parameter found in the database, all new fits and tests</span>
+<span class="sd">  will be attributed to the unique same parameter.</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Classifier.get_available_params"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.Classifier.get_available_params">[docs]</a>  <span class="k">def</span> <span class="nf">get_available_params</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">engine_factory</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the list of all available params for this classifier class.</span>
+
+<span class="sd">    :param engine_factory: an sklearn compatible classifier class</span>
+<span class="sd">    :type engine_factory: varies</span>
+<span class="sd">    :rtype: list</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+      <span class="n">p</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="n">p</span>
+      <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ClassifierParam</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span>
+        <span class="nb">type</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+          <span class="n">engine_factory</span><span class="o">.</span><span class="n">__module__</span><span class="p">,</span>
+          <span class="n">engine_factory</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="p">)</span>
+      <span class="p">)</span>
+    <span class="p">}</span>
+</div>
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Classifier.view_available_params"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.Classifier.view_available_params">[docs]</a>  <span class="k">def</span> <span class="nf">view_available_params</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">engine_factory</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a dataframe with information on the parameters available.</span>
+
+<span class="sd">    :param engine_factory: an sklearn compatible classifier class</span>
+<span class="sd">    :type engine_factory: varies</span>
+<span class="sd">    :rtype: pandas.DataFrame</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">get_available_params</span><span class="p">(</span><span class="n">engine_factory</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">concat</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+    <span class="k">return</span> <span class="bp">None</span>
+</div>
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Classifier.from_param_id"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.Classifier.from_param_id">[docs]</a>  <span class="k">def</span> <span class="nf">from_param_id</span><span class="p">(</span><span class="n">clf</span><span class="p">,</span> <span class="n">param_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Load an unfitted classifier from its parameter id.</span>
+
+<span class="sd">    :param param_id: the id of the parameter to use to load the engine</span>
+<span class="sd">    :type param_id: int</span>
+<span class="sd">    :rtype: flasker.ext.skl.Classifier</span>
+
+<span class="sd">    The parameter is persisted in the database and its kwargs are passed to </span>
+<span class="sd">    the classifier&#39;s constructor.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">param</span> <span class="o">=</span> <span class="n">ClassifierParam</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">param_id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">param</span><span class="o">.</span><span class="n">_get_classifier</span><span class="p">()</span>
+</div>
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Classifier.get_available_fits"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.Classifier.get_available_fits">[docs]</a>  <span class="k">def</span> <span class="nf">get_available_fits</span><span class="p">(</span><span class="n">clf</span><span class="p">,</span> <span class="n">engine_factory</span><span class="p">,</span> <span class="n">param_id</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a list of available fits for this classifier class.</span>
+
+<span class="sd">    :param engine_factory: an sklearn compatible classifier class</span>
+<span class="sd">    :type engine_factory: varies</span>
+<span class="sd">    :param param_id: if specified, only fits corresponding to this parameter</span>
+<span class="sd">      will be included</span>
+<span class="sd">    :type param_id: int</span>
+<span class="sd">    :rtype: list</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">param_id</span><span class="p">:</span>
+      <span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="n">ClassifierParam</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">param_id</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">params</span> <span class="o">=</span> <span class="n">ClassifierParam</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span>
+        <span class="nb">type</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+          <span class="n">engine_factory</span><span class="o">.</span><span class="n">__module__</span><span class="p">,</span>
+          <span class="n">engine_factory</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="p">)</span>
+      <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+      <span class="n">fit</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="n">fit</span>
+      <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span> <span class="k">for</span> <span class="n">fit</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">fits</span>
+    <span class="p">}</span>
+</div>
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Classifier.view_available_fits"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.Classifier.view_available_fits">[docs]</a>  <span class="k">def</span> <span class="nf">view_available_fits</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">engine_factory</span><span class="p">,</span> <span class="n">param_id</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a dataframe with information on the fits available.</span>
+
+<span class="sd">    :param engine_factory: an sklearn compatible classifier class</span>
+<span class="sd">    :type engine_factory: varies</span>
+<span class="sd">    :param param_id: if specified, only fits corresponding to this parameter</span>
+<span class="sd">      will be included</span>
+<span class="sd">    :type param_id: int</span>
+<span class="sd">    :rtype: pandas.DataFrame</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fits</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">get_available_fits</span><span class="p">(</span><span class="n">engine_factory</span><span class="p">,</span> <span class="n">param_id</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">fits</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">concat</span><span class="p">([</span><span class="n">fit</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span> <span class="k">for</span> <span class="n">fit</span> <span class="ow">in</span> <span class="n">fits</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+    <span class="k">return</span> <span class="bp">None</span>
+</div>
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Classifier.from_fit_id"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.Classifier.from_fit_id">[docs]</a>  <span class="k">def</span> <span class="nf">from_fit_id</span><span class="p">(</span><span class="n">clf</span><span class="p">,</span> <span class="n">fit_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Load an unfitted classifier from a fitted id.</span>
+
+<span class="sd">    :param param_id: the id of the parameter to use to load the engine</span>
+<span class="sd">    :type param_id: int</span>
+<span class="sd">    :rtype: flasker.ext.skl.Classifier</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fit</span> <span class="o">=</span> <span class="n">ClassifierFit</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">fit_id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fit</span><span class="o">.</span><span class="n">_get_fitted_classifier</span><span class="p">()</span>
+</div>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">engine</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">engine</span><span class="p">):</span> <span class="c"># this is a factory</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">engine</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">engine</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">flag</span> <span class="o">=</span> <span class="n">ClassifierParam</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span>
+      <span class="nb">type</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">__module__</span><span class="p">,</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+      <span class="p">),</span>
+      <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">flag</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_fit</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_fit</span><span class="p">:</span>
+      <span class="k">return</span> <span class="s">&#39;&lt;Fitted </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="s">&#39;&lt;Unfitted </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span>
+
+<div class="viewcode-block" id="Classifier.train"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.Classifier.train">[docs]</a>  <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xdf</span><span class="p">,</span> <span class="n">ys</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">test_in_sample</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Fit then test in sample.</span>
+
+<span class="sd">    :param Xdf: features</span>
+<span class="sd">    :type Xdf: pandas.DataFrame</span>
+<span class="sd">    :param ys: labels</span>
+<span class="sd">    :type ys: pandas.Series</span>
+<span class="sd">    :param description: a description of the training set</span>
+<span class="sd">    :type description: str</span>
+<span class="sd">    :param test_in_sample: if ``True``, the classifier will be run on its</span>
+<span class="sd">      training sample right after being fit</span>
+<span class="sd">    :type test_in_sample: bool</span>
+
+<span class="sd">    This method has to be called before running any tests if the classifier</span>
+<span class="sd">    wasn&#39;t loaded from an existing fit.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">Xdf</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">ys</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">description</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">test_in_sample</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">test</span><span class="p">(</span><span class="n">Xdf</span><span class="p">,</span> <span class="n">ys</span><span class="p">,</span> <span class="s">&#39;in sample test&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Classifier.test"><a class="viewcode-back" href="../../../extensions.html#flasker.ext.skl.Classifier.test">[docs]</a>  <span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xdf</span><span class="p">,</span> <span class="n">ys</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Test.</span>
+
+<span class="sd">    :param Xdf:</span>
+<span class="sd">    :type Xdf: pandas.DataFrame</span>
+<span class="sd">    :param ys: optional truth</span>
+<span class="sd">    :type ys: pandas.Series</span>
+<span class="sd">    :param description: a description of the testing set</span>
+<span class="sd">    :type description: str</span>
+
+<span class="sd">    The results of the test are automatically stored afterwards in a new</span>
+<span class="sd">    ``flasker.ext.skl.ClassifierTest`` instance.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_fit</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">SKLError</span><span class="p">(</span><span class="s">&#39;Classifier must be trained before testing.&#39;</span><span class="p">)</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">test</span> <span class="o">=</span> <span class="n">ClassifierTest</span><span class="p">(</span><span class="n">fit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_fit</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
+    <span class="n">prediction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">Xdf</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">test</span><span class="o">.</span><span class="n">duration</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">now</span>
+    <span class="n">test</span><span class="o">.</span><span class="n">_results</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">({</span><span class="s">&#39;truth&#39;</span><span class="p">:</span> <span class="n">ys</span><span class="p">,</span> <span class="s">&#39;prediction&#39;</span><span class="p">:</span> <span class="n">prediction</span><span class="p">})</span>
+    <span class="n">test</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">test</span><span class="o">.</span><span class="n">_save</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">test</span>
+</div>
+  <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">fit</span> <span class="o">=</span> <span class="n">ClassifierFit</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">fit</span><span class="o">.</span><span class="n">duration</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">now</span>
+    <span class="n">fit</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">_filepath</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_fit</span> <span class="o">=</span> <span class="n">fit</span>
+    </div>
+</pre></div>
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="../../../index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

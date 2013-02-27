@@ -5,7 +5,13 @@ ORM
 ---
 
 .. automodule:: flasker.ext.orm
-   :members:
+       :members:
+
+SKL
+---
+
+.. automodule:: flasker.ext.skl
+       :members:
 
 API
 ---
