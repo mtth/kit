@@ -60,6 +60,9 @@ class ClassifierParam(Model):
 
   __valid = []
 
+  def __repr__(self):
+    return '<Param (id=%r, description=%r)>' % (self.id, self.description)
+
   def get_classifier(self):
     module, cls = self.type.rsplit('.', 1)
     __import__(module)
@@ -97,12 +100,23 @@ class ClassifierFit(Model):
     backref=backref('fits')
   )
 
-  def __str__(self):
-    return 'Fit [P#%s, F#%s] %s' % (self.param.id, self.id, self.description)
+  def __repr__(self):
+    return '<Fit (id=%r, description=%r)>' % (self.id, self.description)
 
   @property
   def filepath(self):
     return join(SKL().folder_path, 'fit', '%s.joblib.pkl' % self.id)
+
+  def test_results(self):
+    d = {}
+    for index, test in enumerate(self.tests):
+      d[index] = {
+        'id': test.id,
+        'description': test.description
+      }
+      d[index].update(test.counts)
+      d[index].update(test.scores)
+    return DataFrame(d).T
 
   def get_fitted_engine(self):
     return joblib.load(self.filepath)
@@ -128,10 +142,8 @@ class ClassifierTest(Model):
     backref=backref('tests')
   )
 
-  def __str__(self):
-    return 'Test [P#%s, F#%s, T#%s] %s' % (
-      self.fit.param.id, self.fit.id, self.id, self.description
-    )
+  def __repr__(self):
+    return '<Test (id=%r, description=%r)>' % (self.id, self.description)
 
   @property
   def filepath(self):
@@ -179,9 +191,46 @@ class Classifier(object):
 
   def __init__(self, engine, **kwargs):
     if callable(engine): # this is a factory
-      self.engine = engine(**kwargs)
+      self.engine = engine()
     else:
       self.engine = engine
+    self.set_param(**kwargs)
+
+  def __repr__(self):
+    if self.is_fitted():
+      return '<Fitted %r>' % self.engine
+    else:
+      return '<Unfitted %r>' % self.engine
+
+  def is_fitted(self):
+    return self.current_fit is not None
+
+  @property
+  def available_params(self):
+    return {
+      index: p
+      for index, p in enumerate(self._get_params(offset=0, limit=0))
+    }
+
+  @property
+  def available_fits(self):
+    return {
+      index: fit
+      for index, fit in enumerate(self.param.fits)
+    }
+
+  @property
+  def available_tests(self):
+    return {
+      index: test
+      for index, test in enumerate(
+        self.current_fit.tests if self.is_fitted() else []
+      )
+    }
+
+  def set_param(self, **kwargs):
+    """Either reuse old param or create new one."""
+    self.engine.set_params(**kwargs)
     self.param, self.flag = ClassifierParam.retrieve(
       type='%s.%s' % (
         self.engine.__module__,
@@ -193,29 +242,13 @@ class Classifier(object):
       self.param.flush()
     self.current_fit = None
 
-  def __repr__(self):
-    if self.is_fitted():
-      return '<Fitted %r>' % self.engine
-    else:
-      return '<Unfitted %r>' % self.engine
+  def use_param(self, param):
+    self.engine.set_params(**param.get_valid_params())
+    self.current_fit = None
 
-  def set_description(self, description):
-    self.param.description = description
-
-  def is_fitted(self):
-    return self.current_fit is not None
-
-  def get_fits(self):
-    return self.param.fits
-
-  def set_fit(self, fit):
+  def use_fit(self, fit):
     self.engine = fit.get_fitted_engine()
     self.current_fit = fit
-
-  def get_tests(self, fit=None):
-    if fit is None:
-      fit = self.current_fit
-    return fit.tests
 
   def train(self, Xdf, ys, description, test_in_sample=True):
     """Fit then test in sample.
@@ -259,4 +292,10 @@ class Classifier(object):
     joblib.dump(self.engine, fit.filepath)
     self.current_fit = fit
     
+  def _get_params(self, offset=0, limit=0):
+    param_cls = self.param.__class__
+    q = param_cls.q.offset(offset)
+    if limit:
+      q = q.limit(limit)
+    return q.all()
 
