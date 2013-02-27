@@ -30,7 +30,8 @@ from datetime import datetime
 from time import time
 from flasker.ext.orm import Model
 from flasker.util import JSONEncodedDict
-from os.path import join
+from os import makedirs
+from os.path import exists, join
 from pandas import concat, DataFrame, Series
 from sklearn.externals import joblib
 from sqlalchemy import (Boolean, Column, Float, ForeignKey, Integer, String,
@@ -95,8 +96,14 @@ class Param(Model):
     module, cls = self.type.rsplit('.', 1)
     __import__(module)
     engine_factory = getattr(modules[module], cls)
-    return UnfittedClassifier(
-      **{k: v for k, v in self.jsonify().items() if k in self.valid_kwargs}
+    # dic keys are transformed to unicode by json, need to convert em back
+    kwargs = self.jsonify()
+    if 'class_weight' in kwargs:
+      kwargs['class_weight'] = {
+        int(k): v for k, v in kwargs['class_weight'].items()
+      }
+    return engine_factory(
+      **{k: v for k, v in kwargs.items() if k in self.valid_kwargs}
     )
 
 
@@ -134,11 +141,18 @@ class Fit(Model):
   )
 
   @property
-  def _filepath(self):
-    return join(SKL().folder_path, 'fit', '%s.joblib.pkl' % self.id)
+  def coefs(self):
+    return DataFrame.load(join(self._folderpath, 'coefs.pkl'))
+
+  @property
+  def _folderpath(self):
+    path = join(SKL().folder_path, 'fit')
+    if not exists(path):
+      makedirs(path)
+    return path
 
   def _get_fitted_engine(self):
-    return joblib.load(self._filepath)
+    return joblib.load(join(self._folderpath, 'engine.joblib.pkl'))
 
 
 class Test(Model):
@@ -180,7 +194,6 @@ class Test(Model):
   @property
   def _filepath(self):
     return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
-
 
   def _set_results(self, results):
     # counts
@@ -301,10 +314,14 @@ class UnfittedClassifier(Classifier):
     self.engine.fit(Xdf.values, ys.values)
     fit.duration = time() - now
     fit.flush()
-    joblib.dump(self.engine, fit._filepath)
+    coefs = DataFrame(self.engine.coef_, columns=Xdf.keys())
+    if self.engine.intercept_:
+      coefs['intercept'] = Series(self.engine.intercept_)
+    coefs.save(join(fit._folderpath, 'coefs.pkl'))
+    joblib.dump(self.engine, join(fit._folderpath, 'engine.joblib.pkl'))
     fclf = FittedClassifier(fit, engine=self.engine)
     if test_in_sample:
-      fclf.test(Xdf, ys, 'in sample test')
+      fclf.test(Xdf, ys, 'in sample')
     return fclf
 
 

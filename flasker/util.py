@@ -17,6 +17,11 @@ from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
 
+try:
+  from pandas import DataFrame, Series
+except ImportError:
+  pass
+
 
 # ===
 #
@@ -538,6 +543,11 @@ def _jsonify(value, depth=0):
     return str(value)
   if isinstance(value, Decimal):
     return float(value)
+  if isinstance(value, DataFrame):
+    return [ 
+      {str(colname): row[i] for i, colname in enumerate(value.columns)}
+      for row in value.values
+    ]
   if value is None:
     return None
   raise ValueError('not jsonifiable')
@@ -816,7 +826,6 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
   :rtype: pandas.DataFrame
   
   """
-  from pandas import DataFrame
   connection = connection or query._connection_from_session()
   exclude = exclude or []
   result = connection.execute(query.statement)
