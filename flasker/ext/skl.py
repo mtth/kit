@@ -5,9 +5,24 @@
 Allows for automatic parameter saving and recovery. Saving fitted algorithms
 for later reuse (convenient for parallel computing).
 
+Exposes two methods: train and test that accept pandas dataframes and series
+as input.
+
+Test results are persisted along with a few metrics.
+
 Currently supported:
 
 * ``sklearn.linear_model.logistic.LogisticRegression``
+
+Example usage:
+
+.. code:: python
+
+  >>> clf = Classifier.from_engine(LogisticRegression, C=3)
+  >>> fitted_clf = clf.train(X_train, y_train)
+  >>> test = fitted_clf.test(X_test, y_test)
+  >>> test.precision
+  0.9576324
 
 """
 
