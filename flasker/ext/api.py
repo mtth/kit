@@ -188,13 +188,13 @@ class API(object):
     CollectionView.attach_view(Model, **options)
     ModelView.attach_view(Model, **options)
     if relationships == True:
-      rels = Model._relationships()
+      rels = Model._get_relationships()
     elif relationships == False:
       rels = []
     else:
       rels = filter(
         lambda r: r.key in relationships,
-        Model._relationships()
+        Model._get_relationships()
       )
     for rel in rels:
       if rel.lazy == 'dynamic' and rel.uselist:
@@ -393,7 +393,7 @@ class ModelView(APIView):
 
   def get_rule(self):
     url = '/%s' % self.Model.__tablename__
-    url += ''.join('/<%s>' % k.name for k in self.Model._primary_keys())
+    url += ''.join('/<%s>' % k.name for k in self.Model._get_primary_key())
     return url
 
   def get(self, parser, **kwargs):
@@ -449,7 +449,7 @@ class RelationshipView(APIView):
   def get_rule(self):
     url = '/%s' % self.parent_Model.__tablename__
     url += ''.join(
-      '/<%s>' % k.name for k in self.parent_Model._primary_keys()
+      '/<%s>' % k.name for k in self.parent_Model._get_primary_key()
     )
     url += '/%s' % self.rel.key
     return url
@@ -539,7 +539,7 @@ class RelationshipModelView(RelationshipView):
   def get_rule(self):
     url = '/%s' % self.parent_Model.__tablename__
     url += ''.join(
-      '/<%s>' % k.name for k in self.parent_Model._primary_keys()
+      '/<%s>' % k.name for k in self.parent_Model._get_primary_key()
     )
     url += '/%s/<key>' % self.rel.key
     return url

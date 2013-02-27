@@ -41,6 +41,7 @@ class ORM(object):
     def handler(project):
       if self.config['CREATE_ALL']:
         Model.metadata.create_all(project._engine, checkfirst=True)
+      Model.m = _MapperProperty()
       Model.q = _QueryProperty(project)
       Model.c = _CountProperty(project)
 
@@ -117,6 +118,17 @@ class Query(_Query):
     return query_to_dataframe(self, *args, **kwargs)
 
 
+class _MapperProperty(object):
+
+  """To make queries accessible directly on model classes."""
+
+  def __get__(self, obj, cls):
+    try:
+      return class_mapper(cls)
+    except UnmappedClassError:
+      return None
+
+
 class _QueryProperty(object):
 
   """To make queries accessible directly on model classes."""
@@ -177,13 +189,14 @@ class Base(Cacheable, Loggable):
   _cache = Column(JSONEncodedDict)
   _json_depth = 0
 
+  m = None
   c = None
   q = None
 
   def __repr__(self):
     primary_keys = ', '.join(
       '%s=%r' % (k, getattr(self, k))
-      for k in self.__class__.get_primary_key_names()
+      for k, v in self.get_primary_key().items()
     )
     return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
 
@@ -220,17 +233,6 @@ class Base(Cacheable, Loggable):
     """
     return '%ss' % uncamelcase(cls.__name__)
 
-  def __init__(self, **kwargs):
-    for k, v in kwargs.items():
-      setattr(self, k, v)
-
-  def __repr__(self):
-    primary_keys = ', '.join(
-      '%s=%r' % (k, v)
-      for k, v in self.get_primary_keys().items()
-    )
-    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
-
   def jsonify(self, depth=1, expand=True):
     """Special implementation of jsonify for Model objects.
 
@@ -257,7 +259,7 @@ class Base(Cacheable, Loggable):
     if not expand and depth <= self._json_depth:
       # this instance has already been jsonified at a greater or
       # equal depth, so we simply return its key
-      return self.get_primary_keys()
+      return self.get_primary_key()
     self._json_depth = depth
     rv = {}
     for varname in self.__json__:
@@ -267,7 +269,7 @@ class Base(Cacheable, Loggable):
         rv[varname] = e.message
     return rv
 
-  def get_primary_keys(self):
+  def get_primary_key(self):
     """Returns the dictionary of primary keys for a given model.
 
     :rtype: dict
@@ -275,11 +277,16 @@ class Base(Cacheable, Loggable):
     """
     return dict(
       (k.name, getattr(self, k.name))
-      for k in self.__class__._primary_keys()
+      for k in self.m.primary_key
     )
 
+  def flush(self):
+    session = self.q.session
+    session.add(self)
+    session.flush([self])
+
   @classmethod
-  def find_or_create(cls, **kwargs):
+  def retrieve(cls, **kwargs):
     """Given constructor arguments will return a match or create one.
 
     :param kwargs: constructor arguments
@@ -290,35 +297,33 @@ class Base(Cacheable, Loggable):
     and ``False`` otherwise.
 
     """
-    instance = self.filter_by(**kwargs).first()
+    instance = cls.q.filter_by(**kwargs).first()
     if instance:
       return instance, False
     instance = cls(**kwargs)
-    session = cls.q.db.session
-    session.add(instance)
-    session.flush()
+    instance.flush()
     return instance, True
 
   @classmethod
-  def _columns(cls, show_private=False):
+  def _get_columns(cls, show_private=False):
     columns = class_mapper(cls).columns
     if not show_private:
       columns = [c for c in columns if not c.key.startswith('_')]
     return columns
 
   @classmethod
-  def _primary_keys(cls):
+  def _get_primary_key(cls):
     return class_mapper(cls).primary_key
 
   @classmethod
-  def _related_models(cls, show_private=False):
+  def _get_related_models(cls, show_private=False):
     return [
       (r.key, r.mapper.class_)
-      for r in cls._relationships(show_private)
+      for r in cls.get_relationships(show_private)
     ]
 
   @classmethod
-  def _relationships(cls, show_private=False):
+  def _get_relationships(cls, show_private=False):
     rels =  class_mapper(cls).relationships.values()
     if not show_private:
       rels = [rel for rel in rels if not rel.key.startswith('_')]

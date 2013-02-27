@@ -5,6 +5,7 @@
 from collections import defaultdict, namedtuple
 from csv import DictReader
 from datetime import datetime
+from decimal import Decimal
 from itertools import islice
 from json import dumps, loads
 from functools import partial, wraps
@@ -535,6 +536,8 @@ def _jsonify(value, depth=0):
     return value
   if isinstance(value, datetime):
     return str(value)
+  if isinstance(value, Decimal):
+    return float(value)
   if value is None:
     return None
   raise ValueError('not jsonifiable')
