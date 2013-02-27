@@ -23,7 +23,8 @@ class SKL(object):
   __registered = False
 
   config = {
-    'FOLDER': 'skl'
+    'FOLDER': 'skl',
+    'AUTOCOMMIT': True,
   }
 
   def __init__(self):
@@ -58,14 +59,33 @@ class ClassifierParam(Model):
     'polymorphic_identity': 'param'
   }
 
-  __valid = []
-
-  def __repr__(self):
-    return '<Param (id=%r, description=%r)>' % (self.id, self.description)
+  valid = []
 
   def describe(self):
+    kwargs = Series({
+      k: v for k, v in self.jsonify().items() if k in self.valid_kwargs
+    })
+    misc = Series({
+      'id': self.id,
+      'fits': len(self.fits),
+      'tests': sum(len(fit.tests) if fit.tests else 0 for fit in self.fits),
+      'description': self.description,
+      'added': self.added,
+    })
+    return concat(
+      [kwargs, misc],
+      keys=['kwargs', 'misc']
+    )
+
+  def describe_fits(self):
     return concat(
       [fit.describe() for fit in self.fits],
+      keys=range(len(self.fits))
+    )
+
+  def describe_tests(self):
+    return concat(
+      [fit.describe_tests() for fit in self.fits],
       keys=range(len(self.fits))
     )
 
@@ -73,10 +93,10 @@ class ClassifierParam(Model):
     module, cls = self.type.rsplit('.', 1)
     __import__(module)
     engine_factory = getattr(modules[module], cls)
-    return Classifier(engine_factory, **self.get_valid_params())
-
-  def get_valid_params(self):
-    return {k: v for k, v in self.jsonify().items() if k in self.__valid}
+    return Classifier(
+      engine_factory,
+      **{k: v for k, v in self.jsonify().items() if k in self.valid_kwargs}
+    )
 
 
 class LogisticRegressionParam(ClassifierParam):
@@ -86,7 +106,7 @@ class LogisticRegressionParam(ClassifierParam):
     'polymorphic_identity': 'sklearn.linear_model.logistic.LogisticRegression'
   }
 
-  __valid = [
+  valid_kwargs = [
     'penalty', 'dual', 'C', 'fit_intercept', 'intercept_scaling',
     'class_weight', 'tol', 'random_state'
   ]
@@ -106,23 +126,28 @@ class ClassifierFit(Model):
     backref=backref('fits')
   )
 
-  def __repr__(self):
-    return '<Fit (id=%r, description=%r)>' % (self.id, self.description)
+  def describe(self):
+    return Series({
+      'id': self.id,
+      'param_id': self.param.id,
+      'tests': len(self.tests),
+      'description': self.description,
+      'duration': self.duration,
+      'added': self.added,
+    })
+
+  def describe_tests(self):
+    return DataFrame({
+      index: t.describe() for index, t in enumerate(self.tests)
+    }).T
 
   @property
   def _filepath(self):
     return join(SKL().folder_path, 'fit', '%s.joblib.pkl' % self.id)
 
-  def describe(self):
-    return DataFrame({
-      index: t.describe() for index, t in enumerate(self.tests)
-    }).T
-
-  def _get_fitted_engine(self):
-    return joblib.load(self._filepath)
-
   def _get_fitted_classifier(self):
-    clf = Classifier(self._get_fitted_engine())
+    engine = joblib.load(self._filepath)
+    clf = Classifier(engine)
     clf.current_fit = self
     return clf
 
@@ -141,13 +166,6 @@ class ClassifierTest(Model):
     'ClassifierFit',
     backref=backref('tests')
   )
-
-  def __repr__(self):
-    return '<Test (id=%r, description=%r)>' % (self.id, self.description)
-
-  @property
-  def _filepath(self):
-    return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
 
   @property
   def results(self):
@@ -196,6 +214,10 @@ class ClassifierTest(Model):
       keys=['counts', 'scores', 'misc']
     )
 
+  @property
+  def _filepath(self):
+    return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
+
   def _save(self):
     self._results.save(self._filepath)
 
@@ -207,11 +229,57 @@ class Classifier(object):
   """Adds tracking to classifier methods."""
 
   @classmethod
-  def from_param(clf, param):
+  def get_available_params(cls, engine_factory):
+    return {
+      p.id: p
+      for p in ClassifierParam.q.filter_by(
+        type='%s.%s' % (
+          engine_factory.__module__,
+          engine_factory.__name__
+        )
+      )
+    }
+
+  @classmethod
+  def view_available_params(cls, engine_factory):
+    """Maybe change index to a + if current param. Should also
+    probably return a dataframe to show all the parameters."""
+    params = cls.get_available_params(engine_factory).values()
+    if params:
+      return concat([p.describe() for p in params], axis=1).T
+    return None
+
+  @classmethod
+  def from_param_id(clf, param_id):
+    param = ClassifierParam.q.get(param_id)
     return param._get_classifier()
 
   @classmethod
-  def from_fit(clf, fit):
+  def get_available_fits(clf, engine_factory, param_id=None):
+    if param_id:
+      params = [ClassifierParam.q.get(param_id)]
+    else:
+      params = ClassifierParam.q.filter_by(
+        type='%s.%s' % (
+          engine_factory.__module__,
+          engine_factory.__name__
+        )
+      )
+    return {
+      fit.id: fit
+      for p in params for fit in p.fits
+    }
+
+  @classmethod
+  def view_available_fits(cls, engine_factory, param_id=None):
+    fits = cls.get_available_fits(engine_factory, param_id).values()
+    if fits:
+      return concat([fit.describe() for fit in fits], axis=1).T
+    return None
+
+  @classmethod
+  def from_fit_id(clf, fit_id):
+    fit = ClassifierFit.q.get(fit_id)
     return fit._get_fitted_classifier()
 
   def __init__(self, engine, **kwargs):
@@ -219,7 +287,17 @@ class Classifier(object):
       self.engine = engine()
     else:
       self.engine = engine
-    self._set_param(**kwargs)
+    self.engine.set_params(**kwargs)
+    self.param, self.flag = ClassifierParam.retrieve(
+      type='%s.%s' % (
+        self.engine.__module__,
+        self.engine.__class__.__name__
+      ),
+      **self.engine.get_params()
+    )
+    if self.flag:
+      self.param.flush()
+    self.current_fit = None
 
   def __repr__(self):
     if self.is_fitted():
@@ -229,35 +307,6 @@ class Classifier(object):
 
   def is_fitted(self):
     return self.current_fit is not None
-
-  @property
-  def available_params(self):
-    """Maybe change index to a + if current param. Should also
-    probably return a dataframe to show all the parameters."""
-    return {
-      index: p
-      for index, p in enumerate(self._get_params(offset=0, limit=0))
-    }
-
-  @property
-  def available_fits(self):
-    return {
-      index: fit
-      for index, fit in enumerate(self.param.fits)
-    }
-
-  @property
-  def available_tests(self):
-    return {
-      index: test
-      for index, test in enumerate(
-        self.current_fit.tests if self.is_fitted() else []
-      )
-    }
-
-  def use_fit(self, fit):
-    self.engine = fit._get_fitted_engine()
-    self.current_fit = fit
 
   def train(self, Xdf, ys, description, test_in_sample=True):
     """Fit then test in sample.
@@ -301,24 +350,3 @@ class Classifier(object):
     joblib.dump(self.engine, fit._filepath)
     self.current_fit = fit
     
-  def _get_params(self, offset=0, limit=0):
-    param_cls = self.param.__class__
-    q = param_cls.q.offset(offset)
-    if limit:
-      q = q.limit(limit)
-    return q.all()
-
-  def _set_param(self, **kwargs):
-    """Either reuse old param or create new one."""
-    self.engine.set_params(**kwargs)
-    self.param, self.flag = ClassifierParam.retrieve(
-      type='%s.%s' % (
-        self.engine.__module__,
-        self.engine.__class__.__name__
-      ),
-      **self.engine.get_params()
-    )
-    if self.flag:
-      self.param.flush()
-    self.current_fit = None
-
