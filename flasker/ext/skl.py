@@ -5,7 +5,7 @@ from time import time
 from flasker.ext.orm import Model
 from flasker.util import JSONEncodedDict
 from os.path import join
-from pandas import DataFrame, Series
+from pandas import concat, DataFrame, Series
 from sklearn.externals import joblib
 from sqlalchemy import (Boolean, Column, Float, ForeignKey, Integer, String,
   DateTime, Numeric, Text)
@@ -63,7 +63,13 @@ class ClassifierParam(Model):
   def __repr__(self):
     return '<Param (id=%r, description=%r)>' % (self.id, self.description)
 
-  def get_classifier(self):
+  def describe(self):
+    return concat(
+      [fit.describe() for fit in self.fits],
+      keys=range(len(self.fits))
+    )
+
+  def _get_classifier(self):
     module, cls = self.type.rsplit('.', 1)
     __import__(module)
     engine_factory = getattr(modules[module], cls)
@@ -104,25 +110,19 @@ class ClassifierFit(Model):
     return '<Fit (id=%r, description=%r)>' % (self.id, self.description)
 
   @property
-  def filepath(self):
+  def _filepath(self):
     return join(SKL().folder_path, 'fit', '%s.joblib.pkl' % self.id)
 
-  def test_results(self):
-    d = {}
-    for index, test in enumerate(self.tests):
-      d[index] = {
-        'id': test.id,
-        'description': test.description
-      }
-      d[index].update(test.counts)
-      d[index].update(test.scores)
-    return DataFrame(d).T
+  def describe(self):
+    return DataFrame({
+      index: t.describe() for index, t in enumerate(self.tests)
+    }).T
 
-  def get_fitted_engine(self):
-    return joblib.load(self.filepath)
+  def _get_fitted_engine(self):
+    return joblib.load(self._filepath)
 
-  def get_fitted_classifier(self):
-    clf = Classifier(self.get_fitted_engine())
+  def _get_fitted_classifier(self):
+    clf = Classifier(self._get_fitted_engine())
     clf.current_fit = self
     return clf
 
@@ -146,14 +146,25 @@ class ClassifierTest(Model):
     return '<Test (id=%r, description=%r)>' % (self.id, self.description)
 
   @property
-  def filepath(self):
+  def _filepath(self):
     return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
 
   @property
   def results(self):
     if self._results is None:
-      self._results = DataFrame.load(self.filepath)
+      self._results = DataFrame.load(self._filepath)
     return self._results
+
+  @property
+  def misc(self):
+    return Series({
+      'id': self.id,
+      'fit_id': self.fit.id,
+      'param_id': self.fit.param.id,
+      'description': self.description,
+      'added': self.added,
+      'duration': self.duration,
+    })
 
   @property
   def counts(self):
@@ -163,24 +174,30 @@ class ClassifierTest(Model):
         return int(series.get_value(key))
       except KeyError:
         return 0.0
-    return {
+    return Series({
       'true_pos': _get_or_zero(counts, (1,1)),
       'true_neg': _get_or_zero(counts, (0,0)),
       'false_pos': _get_or_zero(counts, (0,1)),
       'false_neg': _get_or_zero(counts, (1,0)),
-    }
+    })
 
   @property
   def scores(self):
     c = self.counts
-    return {
+    return Series({
       'precision': float(c['true_pos']) / (c['true_pos'] + c['false_pos']),
       'recall': float(c['true_pos']) / (c['true_pos'] + c['false_neg']),
       'fpr': float(c['false_pos']) / (c['false_pos'] + c['true_neg']),
-    }
+    })
 
-  def save(self):
-    self._results.save(self.filepath)
+  def describe(self):
+    return concat(
+      [self.counts, self.scores, self.misc],
+      keys=['counts', 'scores', 'misc']
+    )
+
+  def _save(self):
+    self._results.save(self._filepath)
 
 
 # Classifiers
@@ -189,12 +206,20 @@ class Classifier(object):
 
   """Adds tracking to classifier methods."""
 
+  @classmethod
+  def from_param(clf, param):
+    return param._get_classifier()
+
+  @classmethod
+  def from_fit(clf, fit):
+    return fit._get_fitted_classifier()
+
   def __init__(self, engine, **kwargs):
     if callable(engine): # this is a factory
       self.engine = engine()
     else:
       self.engine = engine
-    self.set_param(**kwargs)
+    self._set_param(**kwargs)
 
   def __repr__(self):
     if self.is_fitted():
@@ -207,6 +232,8 @@ class Classifier(object):
 
   @property
   def available_params(self):
+    """Maybe change index to a + if current param. Should also
+    probably return a dataframe to show all the parameters."""
     return {
       index: p
       for index, p in enumerate(self._get_params(offset=0, limit=0))
@@ -228,26 +255,8 @@ class Classifier(object):
       )
     }
 
-  def set_param(self, **kwargs):
-    """Either reuse old param or create new one."""
-    self.engine.set_params(**kwargs)
-    self.param, self.flag = ClassifierParam.retrieve(
-      type='%s.%s' % (
-        self.engine.__module__,
-        self.engine.__class__.__name__
-      ),
-      **self.engine.get_params()
-    )
-    if self.flag:
-      self.param.flush()
-    self.current_fit = None
-
-  def use_param(self, param):
-    self.engine.set_params(**param.get_valid_params())
-    self.current_fit = None
-
   def use_fit(self, fit):
-    self.engine = fit.get_fitted_engine()
+    self.engine = fit._get_fitted_engine()
     self.current_fit = fit
 
   def train(self, Xdf, ys, description, test_in_sample=True):
@@ -280,7 +289,7 @@ class Classifier(object):
     test.duration = time() - now
     test._results = DataFrame({'truth': ys, 'prediction': prediction})
     test.flush()
-    test.save()
+    test._save()
     return test
 
   def _fit(self, X, y, description):
@@ -289,7 +298,7 @@ class Classifier(object):
     self.engine.fit(X, y)
     fit.duration = time() - now
     fit.flush()
-    joblib.dump(self.engine, fit.filepath)
+    joblib.dump(self.engine, fit._filepath)
     self.current_fit = fit
     
   def _get_params(self, offset=0, limit=0):
@@ -298,4 +307,18 @@ class Classifier(object):
     if limit:
       q = q.limit(limit)
     return q.all()
+
+  def _set_param(self, **kwargs):
+    """Either reuse old param or create new one."""
+    self.engine.set_params(**kwargs)
+    self.param, self.flag = ClassifierParam.retrieve(
+      type='%s.%s' % (
+        self.engine.__module__,
+        self.engine.__class__.__name__
+      ),
+      **self.engine.get_params()
+    )
+    if self.flag:
+      self.param.flush()
+    self.current_fit = None
 
