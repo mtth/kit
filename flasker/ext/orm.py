@@ -120,7 +120,7 @@ class Query(_Query):
 
 class _MapperProperty(object):
 
-  """To make queries accessible directly on model classes."""
+  """To make the mapper accessible directly on model classes."""
 
   def __get__(self, obj, cls):
     try:

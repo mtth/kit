@@ -39,9 +39,11 @@ class SKL(object):
 
 # Models
 
-class ClassifierParam(Model):
+class Param(Model):
 
   """The general model for sklearn classifier parameters."""
+
+  __tablename__ = 'classifier_params'
 
   _cache = None
   id = Column(Integer, primary_key=True)
@@ -56,65 +58,23 @@ class ClassifierParam(Model):
   random_state = Column(Boolean)
   class_weight = Column(JSONEncodedDict)
   tol = Column(Numeric(precision=64, scale=30))
+  valid = []
 
   __mapper_args__ = {
     'polymorphic_on': type,
     'polymorphic_identity': 'param'
   }
 
-  valid = []
-
-  def describe(self):
-    kwargs = Series({
-      k: v for k, v in self.jsonify().items() if k in self.valid_kwargs
-    })
-    misc = Series({
-      'id': self.id,
-      'fits': len(self.fits),
-      'tests': sum(len(fit.tests) if fit.tests else 0 for fit in self.fits),
-      'description': self.description,
-      'added': self.added,
-    })
-    return concat(
-      [kwargs, misc],
-      keys=['kwargs', 'misc']
-    )
-
-  def describe_fits(self):
-    """Returns a dataframe with information on each fit.
-    
-    :rtype: pandas.DataFrame
-    
-    """
-    return concat(
-      [fit.describe() for fit in self.fits],
-      axis=1,
-    ).T
-
-  def describe_tests(self):
-    """Returns a dataframe with information on each test run.
-    
-    :rtype: pandas.DataFrame
-    
-    """
-    df = concat(
-      [fit.describe_tests() for fit in self.fits],
-      keys=range(len(self.fits))
-    )
-    df.index.names = ['param', 'fit']
-    return df
-
-  def _get_classifier(self):
+  def _get_unfitted_engine(self):
     module, cls = self.type.rsplit('.', 1)
     __import__(module)
     engine_factory = getattr(modules[module], cls)
-    return Classifier(
-      engine_factory,
+    return UnfittedClassifier(
       **{k: v for k, v in self.jsonify().items() if k in self.valid_kwargs}
     )
 
 
-class LogisticRegressionParam(ClassifierParam):
+class LogisticRegressionParam(Param):
 
   """Model for ``sklearn.linear_model.logistic.LogisticRegression``."""
 
@@ -129,9 +89,11 @@ class LogisticRegressionParam(ClassifierParam):
   ]
 
 
-class ClassifierFit(Model):
+class Fit(Model):
 
   """Model to store a fitted classifier."""
+
+  __tablename__ = 'classifier_fits'
 
   _cache = None
   id = Column(Integer, primary_key=True)
@@ -141,56 +103,21 @@ class ClassifierFit(Model):
   param_id = Column(ForeignKey('classifier_params.id'))
 
   param = relationship(
-    'ClassifierParam',
+    'Param',
     backref=backref('fits')
   )
-
-  def describe(self):
-    """Returns a series with information on the fitted classifier.
-
-    :rtype: pandas.Series
-
-    The following keys are currently available:
-
-    * ``id``
-    * ``param_id``
-    * ``tests``
-    * ``description``
-    * ``duration``
-    * ``added``
-
-    """
-    return Series({
-      'id': self.id,
-      'param_id': self.param.id,
-      'tests': len(self.tests),
-      'description': self.description,
-      'duration': self.duration,
-      'added': self.added,
-    })
-
-  def describe_tests(self):
-    """Returns a dataframe with information on each test run.
-
-    :rtype: pandas.DataFrame
-
-    """
-    return DataFrame({
-      index: t.describe() for index, t in enumerate(self.tests)
-    }).T
 
   @property
   def _filepath(self):
     return join(SKL().folder_path, 'fit', '%s.joblib.pkl' % self.id)
 
-  def _get_fitted_classifier(self):
-    engine = joblib.load(self._filepath)
-    clf = Classifier(engine)
-    clf.current_fit = self
-    return clf
+  def _get_fitted_engine(self):
+    return joblib.load(self._filepath)
 
 
-class ClassifierTest(Model):
+class Test(Model):
+
+  __tablename__ = 'classifier_tests'
 
   _cache = None
   id = Column(Integer, primary_key=True)
@@ -198,15 +125,21 @@ class ClassifierTest(Model):
   description = Column(Text)
   added = Column(DateTime, default=datetime.now)
   duration = Column(Float)
+  true_neg = Column(Integer)
+  false_neg = Column(Integer)
+  true_pos = Column(Integer)
+  false_pos = Column(Integer)
+  precision = Column(Float)
+  recall = Column(Float)
+  fpr = Column(Float)
   _results = None
 
   fit = relationship(
-    'ClassifierFit',
+    'Fit',
     backref=backref('tests')
   )
 
-  @property
-  def results(self):
+  def get_results(self):
     """Returns a dataframe with the true and predicted labels.
 
     :rtype: pandas.DataFrame
@@ -216,98 +149,32 @@ class ClassifierTest(Model):
     is accessed.
 
     """
-    if self._results is None:
-      self._results = DataFrame.load(self._filepath)
-    return self._results
-
-  @property
-  def misc(self):
-    """Returns a series with miscellaneous information on this test.
-
-    :rtype: pandas.Series
-
-    The following keys are currently available:
-
-    * ``id``
-    * ``fit_id``
-    * ``param_id``
-    * ``description``
-    * ``duration``
-    * ``added``
-
-    """
-    return Series({
-      'id': self.id,
-      'fit_id': self.fit.id,
-      'param_id': self.fit.param.id,
-      'description': self.description,
-      'added': self.added,
-      'duration': self.duration,
-    })
-
-  @property
-  def counts(self):
-    """Returns a series with the counts of true/false positive/negatives.
-
-    :rtype: pandas.Series
-
-    The following keys are currently available:
-
-    * ``true_neg``
-    * ``true_pos``
-    * ``false_neg``
-    * ``false_pos``
-
-    """
-    counts = self.results.groupby('truth')['prediction'].value_counts()
-    def _get_or_zero(series, key):
-      try:
-        return int(series.get_value(key))
-      except KeyError:
-        return 0.0
-    return Series({
-      'true_pos': _get_or_zero(counts, (1,1)),
-      'true_neg': _get_or_zero(counts, (0,0)),
-      'false_pos': _get_or_zero(counts, (0,1)),
-      'false_neg': _get_or_zero(counts, (1,0)),
-    })
-
-  @property
-  def scores(self):
-    """Returns a series with a few scores on this test.
-
-    :rtype: pandas.Series
-
-    The following keys are currently available:
-
-    * ``precision``
-    * ``recall``
-    * ``fpr``
-
-    """
-    c = self.counts
-    return Series({
-      'precision': float(c['true_pos']) / (c['true_pos'] + c['false_pos']),
-      'recall': float(c['true_pos']) / (c['true_pos'] + c['false_neg']),
-      'fpr': float(c['false_pos']) / (c['false_pos'] + c['true_neg']),
-    })
-
-  def describe(self):
-    """Returns a series with all the previous informations combined.
-
-    :rtype: pandas.Series
-
-    """
-    return concat(
-      [self.counts, self.scores, self.misc],
-      keys=['counts', 'scores', 'misc']
-    )
+    return DataFrame.load(self._filepath)
 
   @property
   def _filepath(self):
     return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
 
-  def _save(self):
+
+  def _set_results(self, results):
+    # counts
+    c = results.groupby('truth')['prediction'].value_counts()
+    def _get_or_zero(series, key):
+      try:
+        return int(series.get_value(key))
+      except KeyError:
+        return 0.0
+    self.true_pos = _get_or_zero(c, (1,1))
+    self.true_neg = _get_or_zero(c, (0,0))
+    self.false_pos = _get_or_zero(c, (0,1))
+    self.false_neg = _get_or_zero(c, (1,0))
+    # metrics
+    self.precision = float(self.true_pos) / (self.true_pos + self.false_pos)
+    self.recall = float(self.true_pos) / (self.true_pos + self.false_neg)
+    self.fpr = float(self.false_pos) / (self.false_pos + self.true_neg)
+    # saving original series
+    self._results = results
+    self.flush()
     self._results.save(self._filepath)
 
 
@@ -321,7 +188,7 @@ class Classifier(object):
 
   * ``engine``, the underlying sklearn classifier.
   * ``current_fit``, if the classifier has been trained, this contains the
-    ``flasker.ext.skl.ClassifierFit`` instance used to store the coefficients.
+    ``flasker.ext.skl.Fit`` instance used to store the coefficients.
 
   Parameters are not duplicated. If a classifier is initialized with the same
   values as those of a parameter found in the database, all new fits and tests
@@ -330,37 +197,20 @@ class Classifier(object):
   """
 
   @classmethod
-  def get_available_params(cls, engine_factory):
-    """Returns the list of all available params for this classifier class.
-
-    :param engine_factory: an sklearn compatible classifier class
-    :type engine_factory: varies
-    :rtype: list
-
-    """
-    return {
-      p.id: p
-      for p in ClassifierParam.q.filter_by(
-        type='%s.%s' % (
-          engine_factory.__module__,
-          engine_factory.__name__
-        )
-      )
-    }
-
-  @classmethod
-  def view_available_params(cls, engine_factory):
-    """Returns a dataframe with information on the parameters available.
-
-    :param engine_factory: an sklearn compatible classifier class
-    :type engine_factory: varies
-    :rtype: pandas.DataFrame
-
-    """
-    params = cls.get_available_params(engine_factory).values()
-    if params:
-      return concat([p.describe() for p in params], axis=1).T
-    return None
+  def from_engine(self, engine, **kwargs):
+    if callable(engine): # this is a factory
+      engine = engine()
+    engine.set_params(**kwargs)
+    param, flag = Param.retrieve(
+      type='%s.%s' % (
+        engine.__module__,
+        engine.__class__.__name__
+      ),
+      **engine.get_params()
+    )
+    if flag:
+      param.flush()
+    return UnfittedClassifier(param, engine)
 
   @classmethod
   def from_param_id(clf, param_id):
@@ -374,51 +224,8 @@ class Classifier(object):
     the classifier's constructor.
 
     """
-    param = ClassifierParam.q.get(param_id)
-    return param._get_classifier()
-
-  @classmethod
-  def get_available_fits(clf, engine_factory, param_id=None):
-    """Returns a list of available fits for this classifier class.
-
-    :param engine_factory: an sklearn compatible classifier class
-    :type engine_factory: varies
-    :param param_id: if specified, only fits corresponding to this parameter
-      will be included
-    :type param_id: int
-    :rtype: list
-
-    """
-    if param_id:
-      params = [ClassifierParam.q.get(param_id)]
-    else:
-      params = ClassifierParam.q.filter_by(
-        type='%s.%s' % (
-          engine_factory.__module__,
-          engine_factory.__name__
-        )
-      )
-    return {
-      fit.id: fit
-      for p in params for fit in p.fits
-    }
-
-  @classmethod
-  def view_available_fits(cls, engine_factory, param_id=None):
-    """Returns a dataframe with information on the fits available.
-
-    :param engine_factory: an sklearn compatible classifier class
-    :type engine_factory: varies
-    :param param_id: if specified, only fits corresponding to this parameter
-      will be included
-    :type param_id: int
-    :rtype: pandas.DataFrame
-
-    """
-    fits = cls.get_available_fits(engine_factory, param_id).values()
-    if fits:
-      return concat([fit.describe() for fit in fits], axis=1).T
-    return None
+    param = Param.q.get(param_id)
+    return UnfittedClassifier(param)
 
   @classmethod
   def from_fit_id(clf, fit_id):
@@ -429,31 +236,18 @@ class Classifier(object):
     :rtype: flasker.ext.skl.Classifier
 
     """
-    fit = ClassifierFit.q.get(fit_id)
-    return fit._get_fitted_classifier()
+    fit = Fit.q.get(fit_id)
+    return FittedClassifier(fit)
 
-  def __init__(self, engine, **kwargs):
-    if callable(engine): # this is a factory
-      self.engine = engine()
-    else:
+
+class UnfittedClassifier(Classifier):
+
+  def __init__(self, param, engine=None):
+    self.param = param
+    if engine:
       self.engine = engine
-    self.engine.set_params(**kwargs)
-    self.param, self.flag = ClassifierParam.retrieve(
-      type='%s.%s' % (
-        self.engine.__module__,
-        self.engine.__class__.__name__
-      ),
-      **self.engine.get_params()
-    )
-    if self.flag:
-      self.param.flush()
-    self.current_fit = None
-
-  def __repr__(self):
-    if self.current_fit:
-      return '<Fitted %r>' % self.engine
     else:
-      return '<Unfitted %r>' % self.engine
+      self.engine = param._get_unfitted_engine()
 
   def train(self, Xdf, ys, description, test_in_sample=True):
     """Fit then test in sample.
@@ -472,9 +266,27 @@ class Classifier(object):
     wasn't loaded from an existing fit.
 
     """
-    self._fit(Xdf.values, ys.values, description)
+    now = time()
+    fit = Fit(param=self.param, description=description)
+    self.engine.fit(Xdf.values, ys.values)
+    fit.duration = time() - now
+    fit.flush()
+    joblib.dump(self.engine, fit._filepath)
+    fclf = FittedClassifier(fit, engine=self.engine)
     if test_in_sample:
-      self.test(Xdf, ys, 'in sample test')
+      fclf.test(Xdf, ys, 'in sample test')
+    return fclf
+
+
+class FittedClassifier(Classifier):
+
+  def __init__(self, fit, engine=None):
+    self.param = fit.param
+    self.fit = fit
+    if engine:
+      self.engine = engine
+    else:
+      self.engine = fit._get_fitted_engine()
 
   def test(self, Xdf, ys, description):
     """Test.
@@ -487,26 +299,13 @@ class Classifier(object):
     :type description: str
 
     The results of the test are automatically stored afterwards in a new
-    ``flasker.ext.skl.ClassifierTest`` instance.
+    ``flasker.ext.skl.Test`` instance.
 
     """
-    if not self.current_fit:
-      raise SKLError('Classifier must be trained before testing.')
     now = time()
-    test = ClassifierTest(fit=self.current_fit, description=description)
+    test = Test(fit=self.fit, description=description)
     prediction = self.engine.predict(Xdf.values)
     test.duration = time() - now
-    test._results = DataFrame({'truth': ys, 'prediction': prediction})
-    test.flush()
-    test._save()
+    test._set_results(DataFrame({'truth': ys, 'prediction': prediction}))
     return test
-
-  def _fit(self, X, y, description):
-    now = time()
-    fit = ClassifierFit(param=self.param, description=description)
-    self.engine.fit(X, y)
-    fit.duration = time() - now
-    fit.flush()
-    joblib.dump(self.engine, fit._filepath)
-    self.current_fit = fit
     
