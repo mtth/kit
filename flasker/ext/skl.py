@@ -1,5 +1,16 @@
 #!/usr/bin/env python
 
+"""Thin wrapper around some sklearn algorithms.
+
+Allows for automatic parameter saving and recovery. Saving fitted algorithms
+for later reuse (convenient for parallel computing).
+
+Currently supported:
+
+* ``sklearn.linear_model.logistic.LogisticRegression``
+
+"""
+
 from datetime import datetime
 from time import time
 from flasker.ext.orm import Model
@@ -182,13 +193,10 @@ class Test(Model):
 
 class Classifier(object):
 
-  """The classifier method.
+  """The general classifier method.
 
-  A couple properties are of interest:
-
-  * ``engine``, the underlying sklearn classifier.
-  * ``current_fit``, if the classifier has been trained, this contains the
-    ``flasker.ext.skl.Fit`` instance used to store the coefficients.
+  It shouldn't be instantiated directly, the 3 classmethods should be used
+  instead.
 
   Parameters are not duplicated. If a classifier is initialized with the same
   values as those of a parameter found in the database, all new fits and tests
@@ -198,6 +206,13 @@ class Classifier(object):
 
   @classmethod
   def from_engine(self, engine, **kwargs):
+    """Wrap an sklearn algorithm.
+
+    :param engine: sklearn algorithm or algorithm factory
+    :type engine: varies
+    :rtype: flasker.ext.skl.UnfittedClassifier
+
+    """
     if callable(engine): # this is a factory
       engine = engine()
     engine.set_params(**kwargs)
@@ -218,7 +233,7 @@ class Classifier(object):
 
     :param param_id: the id of the parameter to use to load the engine
     :type param_id: int
-    :rtype: flasker.ext.skl.Classifier
+    :rtype: flasker.ext.skl.UnfittedClassifier
 
     The parameter is persisted in the database and its kwargs are passed to 
     the classifier's constructor.
@@ -233,7 +248,7 @@ class Classifier(object):
 
     :param param_id: the id of the parameter to use to load the engine
     :type param_id: int
-    :rtype: flasker.ext.skl.Classifier
+    :rtype: flasker.ext.skl.FittedClassifier
 
     """
     fit = Fit.q.get(fit_id)
