@@ -11,7 +11,7 @@ from sqlalchemy.orm.collections import InstrumentedList
 from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 
-from ..util import (Cacheable, _jsonify, 
+from ..util import (Cacheable, to_json, 
   JSONEncodedDict, Loggable, uncamelcase, query_to_dataframe)
 
 
@@ -30,7 +30,7 @@ class ORM(object):
   """
 
   config = {
-    'CREATE_ALL': True
+    'CREATE_ALL': True,
   }
 
   def __init__(self, **kwargs):
@@ -44,7 +44,6 @@ class ORM(object):
     def handler(project):
       if self.config['CREATE_ALL']:
         Model.metadata.create_all(project._engine, checkfirst=True)
-      Model.m = _MapperProperty()
       Model.q = _QueryProperty(project)
       Model.c = _CountProperty(project)
 
@@ -111,7 +110,7 @@ class Query(_Query):
       return rv[0]
     return rv
 
-  def dataframe(self, *args, **kwargs):
+  def to_dataframe(self, *args, **kwargs):
     """Loads a dataframe with the records from the query and returns it.
 
     Accepts the same arguments as ``flasker.util.query_to_dataframe``.
@@ -192,7 +191,6 @@ class Base(Cacheable, Loggable):
   _cache = Column(JSONEncodedDict)
   _json_depth = 0
 
-  m = None
   c = None
   q = None
 
@@ -236,8 +234,8 @@ class Base(Cacheable, Loggable):
     """
     return '%ss' % uncamelcase(cls.__name__)
 
-  def jsonify(self, depth=1, expand=True):
-    """Special implementation of jsonify for Model objects.
+  def to_json(self, depth=1, expand=True):
+    """Special implementation of to_json for Model objects.
 
     :param depth:
     :type depth: int
@@ -267,7 +265,7 @@ class Base(Cacheable, Loggable):
     rv = {}
     for varname in self.__json__:
       try:
-        rv[varname] = _jsonify(getattr(self, varname), depth - 1)
+        rv[varname] = to_json(getattr(self, varname), depth - 1)
       except ValueError as e:
         rv[varname] = e.message
     return rv
@@ -332,6 +330,8 @@ class Base(Cacheable, Loggable):
       rels = [rel for rel in rels if not rel.key.startswith('_')]
     return rels
 
+
 Model = declarative_base(cls=Base)
 backref = partial(_backref, query_class=Query)
 relationship = partial(_relationship, query_class=Query)
+

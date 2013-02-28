@@ -351,7 +351,7 @@ class CollectionView(APIView):
     timers['count'] = time() - now
     now = time()
     content = [
-      e.jsonify(**parser.get_jsonify_kwargs())
+      e.to_json(**parser.get_jsonify_kwargs())
       for e in parser.offset_and_limit(filtered_query)
     ]
     timers['jsonification'] = time() - now
@@ -375,7 +375,7 @@ class CollectionView(APIView):
       model = self.Model(**request.json)
       pj.session.add(model)
       pj.session.commit() # generate an ID
-      return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+      return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
     else:
       raise APIError(400, 'Failed validation')
 
@@ -400,7 +400,7 @@ class ModelView(APIView):
     model = self.Model.q.get(kwargs.values())
     if not model:
       raise APIError(404, 'No resource found')
-    return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+    return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
 
   def put(self, parser, **kwargs):
     model = self.Model.q.get(kwargs.values())
@@ -408,7 +408,7 @@ class ModelView(APIView):
       if self._is_valid(model.__class__, request.json):
         for k, v in request.json.items():
           setattr(model, k, v)
-        return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+        return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
       else:
         raise APIError(400, 'Failed validation')
     else:
@@ -475,7 +475,7 @@ class DynamicRelationshipView(RelationshipView):
     timers['count'] = time() - now
     now = time()
     content = [
-      e.jsonify(**parser.get_jsonify_kwargs())
+      e.to_json(**parser.get_jsonify_kwargs())
       for e in parser.offset_and_limit(query)
     ]
     timers['jsonification'] = time() - now
@@ -504,7 +504,7 @@ class LazyRelationshipView(RelationshipView):
     timers = {}
     now = time()
     content = [
-      e.jsonify(**parser.get_jsonify_kwargs())
+      e.to_json(**parser.get_jsonify_kwargs())
       for e in self.get_collection(**kwargs)
     ]
     count = len(content)
@@ -566,7 +566,7 @@ class RelationshipModelView(RelationshipView):
     # TODO: support attribute mapped collections
     if not model:
       raise APIError(404, 'No resource found')
-    return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+    return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
 
   def put(self, parser, **kwargs):
     pass

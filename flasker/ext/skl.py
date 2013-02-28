@@ -97,7 +97,7 @@ class Param(Model):
     __import__(module)
     engine_factory = getattr(modules[module], cls)
     # dic keys are transformed to unicode by json, need to convert em back
-    kwargs = self.jsonify()
+    kwargs = self.to_json()
     if 'class_weight' in kwargs:
       kwargs['class_weight'] = {
         int(k): v for k, v in kwargs['class_weight'].items()

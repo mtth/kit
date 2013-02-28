@@ -530,13 +530,13 @@ class _CachedProperty(property):
 
 # Jsonifying
 
-def _jsonify(value, depth=0):
-  if hasattr(value, 'jsonify'):
-    return value.jsonify(depth - 1)
+def to_json(value, depth=0):
+  if hasattr(value, 'to_json'):
+    return value.to_json(depth - 1)
   if isinstance(value, dict):
-    return {k: _jsonify(v, depth) for k, v in value.items()}
+    return {k: to_json(v, depth) for k, v in value.items()}
   if isinstance(value, list):
-    return [_jsonify(v, depth) for v in value]
+    return [to_json(v, depth) for v in value]
   if isinstance(value, (float, int, long, str, unicode, tuple)):
     return value
   if isinstance(value, datetime):
@@ -571,13 +571,8 @@ class Jsonifiable(object):
       if not callable(getattr(self, varname))
     ]
 
-  def jsonify(self, depth=0):
+  def to_json(self, depth=0):
     """Returns all keys and properties of an instance in a dictionary.
-
-    Overrides the basic jsonify method to specialize it for models.
-
-    This function minimizes the number of lookups it does (no dynamic
-    type checking on the properties for example) to maximize speed.
 
     :param depth:
     :type depth: int
@@ -585,9 +580,11 @@ class Jsonifiable(object):
 
     """
     rv = {}
+    if depth == 0:
+      return rv
     for varname in self.__json__:
       try:
-        rv[varname] = _jsonify(getattr(self, varname), depth - 1)
+        rv[varname] = to_json(getattr(self, varname), depth - 1)
       except ValueError as e:
         rv[varname] = e.message
     return rv
@@ -846,67 +843,6 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
 #
 # ===
 
-class RunningStat(object):
-
-  """ To compute running means and variances efficiently.
-
-  Usage::
-
-    rs = RunningStat()
-    for i in range(10):
-      rs.push(i)
-    rs.var
-
-  """
-
-  def __init__(self):
-    self.count = 0
-    self._mean = float(0)
-    self.unweighted_variance = float(0)
-
-  def __repr__(self):
-    return '<RunningStat (count=%s, avg=%s, sdv=%s)>' % (
-      self.count, self.avg, self.sdv
-  )
-
-  @property
-  def avg(self):
-    """Current mean."""
-    if self.count > 0:
-      return self._mean
-    return 0
-
-  @property
-  def var(self):
-    """Current variance."""
-    if self.count > 1:
-      return self.unweighted_variance/(self.count-1)
-    return 0
-
-  @property
-  def sdv(self):
-    """Current standard deviation."""
-    return self.var ** 0.5
-
-  def push(self, n):
-    """Add a new element to the statistic.
-
-    :param n: number to add
-    :type n: int, float
-
-    """
-    if n == None:
-      return
-    self.count += 1
-    if self.count == 1:
-      self._mean = float(n)
-      self.unweighted_variance = float(0)
-    else:
-      mean = self._mean
-      s = self.unweighted_variance
-      self._mean = mean + (n - mean) / self.count
-      self.unweighted_variance = s + (n - self._mean) * (n - mean)
-
 def exponential_smoothing(data, alpha=0.5):
   """Smoothing data.
 
@@ -1008,4 +944,65 @@ def histogram(data, key=None, bins=50, restrict=None, categories=None,
           for key in keys
       )
     return data_histogram
+
+class RunningStat(object):
+
+  """ To compute running means and variances efficiently.
+
+  Usage::
+
+    rs = RunningStat()
+    for i in range(10):
+      rs.push(i)
+    rs.var
+
+  """
+
+  def __init__(self):
+    self.count = 0
+    self._mean = float(0)
+    self.unweighted_variance = float(0)
+
+  def __repr__(self):
+    return '<RunningStat (count=%s, avg=%s, sdv=%s)>' % (
+      self.count, self.avg, self.sdv
+  )
+
+  @property
+  def avg(self):
+    """Current mean."""
+    if self.count > 0:
+      return self._mean
+    return 0
+
+  @property
+  def var(self):
+    """Current variance."""
+    if self.count > 1:
+      return self.unweighted_variance/(self.count-1)
+    return 0
+
+  @property
+  def sdv(self):
+    """Current standard deviation."""
+    return self.var ** 0.5
+
+  def push(self, n):
+    """Add a new element to the statistic.
+
+    :param n: number to add
+    :type n: int, float
+
+    """
+    if n == None:
+      return
+    self.count += 1
+    if self.count == 1:
+      self._mean = float(n)
+      self.unweighted_variance = float(0)
+    else:
+      mean = self._mean
+      s = self.unweighted_variance
+      self._mean = mean + (n - mean) / self.count
+      self.unweighted_variance = s + (n - self._mean) * (n - mean)
 
