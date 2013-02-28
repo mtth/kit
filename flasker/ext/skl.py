@@ -140,13 +140,12 @@ class Fit(Model):
     backref=backref('fits')
   )
 
-  @property
-  def coefs(self):
+  def get_coefs(self):
     return DataFrame.load(join(self._folderpath, 'coefs.pkl'))
 
   @property
   def _folderpath(self):
-    path = join(SKL().folder_path, 'fit')
+    path = join(SKL().folder_path, 'fit', str(self.id))
     if not exists(path):
       makedirs(path)
     return path

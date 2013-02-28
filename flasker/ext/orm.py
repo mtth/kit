@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
+from functools import partial
 from random import randint
 from sqlalchemy import Column, func
 from sqlalchemy.ext.declarative import declarative_base, declared_attr 
-from sqlalchemy.orm import class_mapper, Query as _Query
+from sqlalchemy.orm import (backref as _backref, class_mapper, Query as _Query,
+  relationship as _relationship)
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.collections import InstrumentedList
+from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 
 from ..util import (Cacheable, _jsonify, 
@@ -330,4 +333,5 @@ class Base(Cacheable, Loggable):
     return rels
 
 Model = declarative_base(cls=Base)
-
+backref = partial(_backref, query_class=Query)
+relationship = partial(_relationship, query_class=Query)
