@@ -29,29 +29,20 @@ class ORM(object):
 
   """
 
-  __state = {}
-  __registered = False
+  def __init__(self, project, create_all=True):
 
-  config = {
-    'CREATE_ALL': True,
-  }
-
-  def __init__(self, project, **kwargs):
-
-    self.__dict__ = self.__state
-    if self.__registered: return
-
-    self.__registered = True
     project._query_class = Query
-    for k, v in kwargs.items():
-      self.config[k.upper()] = v
+
+    self.Model = declarative_base(cls=Base)
+    self.backref = partial(_backref, query_class=Query)
+    self.relationship = partial(_relationship, query_class=Query)
 
     @project.before_startup
     def handler(project):
-      if self.config['CREATE_ALL']:
-        Model.metadata.create_all(project._engine, checkfirst=True)
-      Model.q = _QueryProperty(project)
-      Model.c = _CountProperty(project)
+      self.Model.q = _QueryProperty(project)
+      self.Model.c = _CountProperty(project)
+      if create_all:
+        self.Model.metadata.create_all(project._engine, checkfirst=True)
 
 
 class Query(_Query):
@@ -336,7 +327,4 @@ class Base(Cacheable, Loggable):
       rels = [rel for rel in rels if not rel.key.startswith('_')]
     return rels
 
-Model = declarative_base(cls=Base)
-backref = partial(_backref, query_class=Query)
-relationship = partial(_relationship, query_class=Query)
 
