@@ -102,7 +102,6 @@ class Project(object):
 
       self._engine = None
       self._query_class = Query
-      self._extensions = []
       self._before_startup = []
 
       self.__registered = True

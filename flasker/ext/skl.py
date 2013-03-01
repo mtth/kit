@@ -28,7 +28,7 @@ Example usage:
 
 from datetime import datetime
 from time import time
-from flasker.ext.orm import Model
+from flasker.ext.orm import backref, Model, relationship
 from flasker.util import JSONEncodedDict
 from os import makedirs
 from os.path import exists, join
@@ -36,7 +36,6 @@ from pandas import concat, DataFrame, Series
 from sklearn.externals import joblib
 from sqlalchemy import (Boolean, Column, Float, ForeignKey, Integer, String,
   DateTime, Numeric, Text)
-from sqlalchemy.orm import backref, relationship
 from sys import modules
 
 
@@ -61,102 +60,30 @@ class SKL(object):
     if self.__registered: return
 
     self.__registered = True
+
     self.folder_path = join(project.root_dir, self.config['FOLDER'])
+    if not exists(self.folder_path): makedirs(self.folder_path)
 
-    class Fit(fit_class or Model):
+    fit_class = fit_class or Model
 
-      """Model to store a fitted classifier."""
+    class Fit(fit_class, BaseFit):
 
-      __tablename__ = 'classifier_fits'
-
-      id = Column(Integer, primary_key=True)
-      description = Column(Text)
-      added = Column(DateTime, default=datetime.now)
-      duration = Column(Float)
       param_id = Column(ForeignKey('classifier_params.id'))
+      param = relationship('Param', backref=backref('fits', lazy='dynamic'))
 
-      param = relationship(
-        'Param',
-        backref=backref('fits')
-      )
 
-      def get_coefs(self):
-        return DataFrame.load(join(self._folderpath, 'coefs.pkl'))
+    test_class = test_class or Model
+    fit_tablename = BaseFit.__tablename__
 
-      @property
-      def _folderpath(self):
-        path = join(SKL().folder_path, 'fit', str(self.id))
-        if not exists(path):
-          makedirs(path)
-        return path
+    class Test(test_class, BaseTest):
 
-      def _get_fitted_engine(self):
-        return joblib.load(join(self._folderpath, 'engine.joblib.pkl'))
+      fit_id = Column(ForeignKey('%s.id' % fit_tablename))
+      fit = relationship('Fit', backref=backref('tests', lazy='dynamic'))
 
-    class Test(test_class or Model):
-
-      __tablename__ = 'classifier_tests'
-
-      id = Column(Integer, primary_key=True)
-      fit_id = Column(ForeignKey('classifier_fits.id'))
-      description = Column(Text)
-      added = Column(DateTime, default=datetime.now)
-      duration = Column(Float)
-      true_neg = Column(Integer)
-      false_neg = Column(Integer)
-      true_pos = Column(Integer)
-      false_pos = Column(Integer)
-      precision = Column(Float)
-      recall = Column(Float)
-      fpr = Column(Float)
-      _results = None
-
-      fit = relationship(
-        'Fit',
-        backref=backref('tests')
-      )
-
-      def get_results(self):
-        """Returns a dataframe with the true and predicted labels.
-
-        :rtype: pandas.DataFrame
-
-        The dataframe has two columns: ``'truth'`` and ``'prediction'``.
-        The dataframe is persisted in a ``.npy`` file and loaded the first time it
-        is accessed.
-
-        """
-        return DataFrame.load(self._filepath)
-
-      @property
-      def _filepath(self):
-        return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
-
-      def _set_results(self, results):
-        # counts
-        c = results.groupby('truth')['prediction'].value_counts()
-        def _get_or_zero(series, key):
-          try:
-            return int(series.get_value(key))
-          except KeyError:
-            return 0.0
-        self.true_pos = _get_or_zero(c, (1,1))
-        self.true_neg = _get_or_zero(c, (0,0))
-        self.false_pos = _get_or_zero(c, (0,1))
-        self.false_neg = _get_or_zero(c, (1,0))
-        # metrics
-        self.precision = float(self.true_pos) / (self.true_pos + self.false_pos)
-        self.recall = float(self.true_pos) / (self.true_pos + self.false_neg)
-        self.fpr = float(self.false_pos) / (self.false_pos + self.true_neg)
-        # saving original series
-        self._results = results
-        self.flush()
-        self._results.save(self._filepath)
 
     self.Param = Param
     self.Fit = Fit
     self.Test = Test
-
 
 
 # Models
@@ -216,6 +143,89 @@ class LogisticRegressionParam(Param):
     'class_weight', 'tol', 'random_state'
   ]
 
+
+class BaseFit(Model):
+
+  """Model to store a fitted classifier."""
+
+  __abstract__ = True
+
+  __tablename__ = 'classifier_fits'
+
+  id = Column(Integer, primary_key=True)
+  description = Column(Text)
+  added = Column(DateTime, default=datetime.now)
+  duration = Column(Float)
+
+  def get_coefs(self):
+    return DataFrame.load(join(self._folderpath, 'coefs.pkl'))
+
+  @property
+  def _folderpath(self):
+    path = join(SKL().folderpath, 'fit', str(self.id))
+    if not exists(path):
+      makedirs(path)
+    return path
+
+  def _get_fitted_engine(self):
+    return joblib.load(join(self._folderpath, 'engine.joblib.pkl'))
+
+
+class BaseTest(Model):
+
+  __abstract__ = True
+
+  __tablename__ = 'classifier_tests'
+
+  id = Column(Integer, primary_key=True)
+  description = Column(Text)
+  added = Column(DateTime, default=datetime.now)
+  duration = Column(Float)
+  true_neg = Column(Integer)
+  false_neg = Column(Integer)
+  true_pos = Column(Integer)
+  false_pos = Column(Integer)
+  precision = Column(Float)
+  recall = Column(Float)
+  fpr = Column(Float)
+  _results = None
+
+  def get_results(self):
+    """Returns a dataframe with the true and predicted labels.
+
+    :rtype: pandas.DataFrame
+
+    The dataframe has two columns: ``'truth'`` and ``'prediction'``.
+    The dataframe is persisted in a ``.npy`` file and loaded the first time it
+    is accessed.
+
+    """
+    return DataFrame.load(self._filepath)
+
+  @property
+  def _filepath(self):
+    return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
+
+  def _set_results(self, results):
+    # counts
+    c = results.groupby('truth')['prediction'].value_counts()
+    def _get_or_zero(series, key):
+      try:
+        return int(series.get_value(key))
+      except KeyError:
+        return 0.0
+    self.true_pos = _get_or_zero(c, (1,1))
+    self.true_neg = _get_or_zero(c, (0,0))
+    self.false_pos = _get_or_zero(c, (0,1))
+    self.false_neg = _get_or_zero(c, (1,0))
+    # metrics
+    self.precision = float(self.true_pos) / (self.true_pos + self.false_pos)
+    self.recall = float(self.true_pos) / (self.true_pos + self.false_neg)
+    self.fpr = float(self.false_pos) / (self.false_pos + self.true_neg)
+    # saving original series
+    self._results = results
+    self.flush()
+    self._results.save(self._filepath)
 
 
 # Classifiers
