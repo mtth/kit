@@ -100,11 +100,28 @@ class API(object):
     'EXPAND': True,
   }
 
-  def __init__(self, **kwargs):
+  def __init__(self, project, config_section=None, **kwargs):
+
+    if config_section:
+      for k, v in project.config[config_section].items():
+        self.config[k] = v
     for k, v in kwargs.items():
       self.config[k.upper()] = v
     APIView.__extension__ = self
     self.Models = {}
+
+    @project.before_startup
+    def handler(project):
+      self.blueprint = Blueprint(
+        'api',
+        project.config['PROJECT']['FLASK_ROOT_FOLDER'] + '.api',
+        template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
+        url_prefix=self.config['URL_PREFIX']
+      )
+      for model_class, options in self.Models.values():
+        self._create_model_views(model_class, options)
+      IndexView.attach_view()
+      project.flask.register_blueprint(self.blueprint)
 
   def authorize(self, func):
     """Decorator to set the authorization function.
@@ -204,21 +221,6 @@ class API(object):
         RelationshipModelView.attach_view(rel, **options)
         LazyRelationshipView.attach_view(rel, **options)
 
-  def on_register(self, project):
-    self.__project__ = project
-    self.blueprint = Blueprint(
-      'api',
-      project.config['PROJECT']['FLASK_ROOT_FOLDER'] + '.api',
-      template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
-      url_prefix=self.config['URL_PREFIX']
-    )
-    for model_class, options in self.Models.values():
-      self._create_model_views(model_class, options)
-    IndexView.attach_view()
-
-    @project.before_startup
-    def handler(project):
-      project.flask.register_blueprint(self.blueprint)
 
 # Views
 

@@ -421,18 +421,21 @@ class Cacheable(object):
     :type remove_deleted: bool
 
     """
+    cached_properties = set(self._get_cached_properties())
     if names:
       for name in names:
-        setattr(self, name, _CacheRefresh(expiration))
+        if name in cached_properties:
+          setattr(self, name, _CacheRefresh(expiration))
+        else:
+          raise AttributeError('No cached property %r on %r.' % (name, self))
       if remove_deleted:
-        cached_properties = set(self._get_cached_properties())
         for varname in self._cache.keys():
           if not varname in cached_properties:
             del self._cache[varname]
     else:
       if remove_deleted:
         self._cache = {}
-      for varname in self._get_cached_properties():
+      for varname in cached_properties:
         setattr(self, varname, _CacheRefresh(expiration))
     try:
       self._cache.changed()
@@ -571,7 +574,7 @@ class Jsonifiable(object):
       if not callable(getattr(self, varname))
     ]
 
-  def to_json(self, depth=0):
+  def to_json(self, depth=1):
     """Returns all keys and properties of an instance in a dictionary.
 
     :param depth:

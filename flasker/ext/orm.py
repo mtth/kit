@@ -29,16 +29,22 @@ class ORM(object):
 
   """
 
+  __state = {}
+  __registered = False
+
   config = {
     'CREATE_ALL': True,
   }
 
-  def __init__(self, **kwargs):
+  def __init__(self, project, **kwargs):
+
+    self.__dict__ = self.__state
+    if self.__registered: return
+
+    self.__registered = True
+    project._query_class = Query
     for k, v in kwargs.items():
       self.config[k.upper()] = v
-
-  def on_register(self, project):
-    project._query_class = Query
 
     @project.before_startup
     def handler(project):
@@ -278,7 +284,7 @@ class Base(Cacheable, Loggable):
     """
     return dict(
       (k.name, getattr(self, k.name))
-      for k in self.m.primary_key
+      for k in self.__class__._get_primary_key()
     )
 
   def flush(self):
@@ -329,7 +335,6 @@ class Base(Cacheable, Loggable):
     if not show_private:
       rels = [rel for rel in rels if not rel.key.startswith('_')]
     return rels
-
 
 Model = declarative_base(cls=Base)
 backref = partial(_backref, query_class=Query)

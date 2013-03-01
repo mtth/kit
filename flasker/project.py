@@ -113,10 +113,6 @@ class Project(object):
   def __repr__(self):
     return '<Project %r, %r>' % (self.config['PROJECT']['NAME'], self.root_dir)
 
-  def register_extension(self, extension, config_section=None):
-    """Register an extension."""
-    self._extensions.append((extension, config_section))
-
   def before_startup(self, func):
     """Decorator, hook to run a function right before project starts."""
     self._before_startup.append(func)
@@ -132,13 +128,6 @@ class Project(object):
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
-
-    # extensions
-    for extension, config_section in self._extensions or []:
-      if config_section:
-        for k, v in self.config[config_section].items():
-          extension.config[k] = v
-      extension.on_register(self)
 
     # database
     self._setup_database_connection()

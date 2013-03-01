@@ -55,13 +55,108 @@ class SKL(object):
     'AUTOCOMMIT': True,
   }
 
-  def __init__(self):
-    if not self.__registered:
-      self.__dict__ = self.__state
-      self.__registered = True
+  def __init__(self, project, fit_class=None, test_class=None, **kwargs):
 
-  def on_register(self, project):
+    self.__dict__ = self.__state
+    if self.__registered: return
+
+    self.__registered = True
     self.folder_path = join(project.root_dir, self.config['FOLDER'])
+
+    class Fit(fit_class or Model):
+
+      """Model to store a fitted classifier."""
+
+      __tablename__ = 'classifier_fits'
+
+      id = Column(Integer, primary_key=True)
+      description = Column(Text)
+      added = Column(DateTime, default=datetime.now)
+      duration = Column(Float)
+      param_id = Column(ForeignKey('classifier_params.id'))
+
+      param = relationship(
+        'Param',
+        backref=backref('fits')
+      )
+
+      def get_coefs(self):
+        return DataFrame.load(join(self._folderpath, 'coefs.pkl'))
+
+      @property
+      def _folderpath(self):
+        path = join(SKL().folder_path, 'fit', str(self.id))
+        if not exists(path):
+          makedirs(path)
+        return path
+
+      def _get_fitted_engine(self):
+        return joblib.load(join(self._folderpath, 'engine.joblib.pkl'))
+
+    class Test(test_class or Model):
+
+      __tablename__ = 'classifier_tests'
+
+      id = Column(Integer, primary_key=True)
+      fit_id = Column(ForeignKey('classifier_fits.id'))
+      description = Column(Text)
+      added = Column(DateTime, default=datetime.now)
+      duration = Column(Float)
+      true_neg = Column(Integer)
+      false_neg = Column(Integer)
+      true_pos = Column(Integer)
+      false_pos = Column(Integer)
+      precision = Column(Float)
+      recall = Column(Float)
+      fpr = Column(Float)
+      _results = None
+
+      fit = relationship(
+        'Fit',
+        backref=backref('tests')
+      )
+
+      def get_results(self):
+        """Returns a dataframe with the true and predicted labels.
+
+        :rtype: pandas.DataFrame
+
+        The dataframe has two columns: ``'truth'`` and ``'prediction'``.
+        The dataframe is persisted in a ``.npy`` file and loaded the first time it
+        is accessed.
+
+        """
+        return DataFrame.load(self._filepath)
+
+      @property
+      def _filepath(self):
+        return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
+
+      def _set_results(self, results):
+        # counts
+        c = results.groupby('truth')['prediction'].value_counts()
+        def _get_or_zero(series, key):
+          try:
+            return int(series.get_value(key))
+          except KeyError:
+            return 0.0
+        self.true_pos = _get_or_zero(c, (1,1))
+        self.true_neg = _get_or_zero(c, (0,0))
+        self.false_pos = _get_or_zero(c, (0,1))
+        self.false_neg = _get_or_zero(c, (1,0))
+        # metrics
+        self.precision = float(self.true_pos) / (self.true_pos + self.false_pos)
+        self.recall = float(self.true_pos) / (self.true_pos + self.false_neg)
+        self.fpr = float(self.false_pos) / (self.false_pos + self.true_neg)
+        # saving original series
+        self._results = results
+        self.flush()
+        self._results.save(self._filepath)
+
+    self.Param = Param
+    self.Fit = Fit
+    self.Test = Test
+
 
 
 # Models
@@ -121,99 +216,6 @@ class LogisticRegressionParam(Param):
     'class_weight', 'tol', 'random_state'
   ]
 
-
-class Fit(Model):
-
-  """Model to store a fitted classifier."""
-
-  __tablename__ = 'classifier_fits'
-
-  _cache = None
-  id = Column(Integer, primary_key=True)
-  description = Column(Text)
-  added = Column(DateTime, default=datetime.now)
-  duration = Column(Float)
-  param_id = Column(ForeignKey('classifier_params.id'))
-
-  param = relationship(
-    'Param',
-    backref=backref('fits')
-  )
-
-  def get_coefs(self):
-    return DataFrame.load(join(self._folderpath, 'coefs.pkl'))
-
-  @property
-  def _folderpath(self):
-    path = join(SKL().folder_path, 'fit', str(self.id))
-    if not exists(path):
-      makedirs(path)
-    return path
-
-  def _get_fitted_engine(self):
-    return joblib.load(join(self._folderpath, 'engine.joblib.pkl'))
-
-
-class Test(Model):
-
-  __tablename__ = 'classifier_tests'
-
-  _cache = None
-  id = Column(Integer, primary_key=True)
-  fit_id = Column(ForeignKey('classifier_fits.id'))
-  description = Column(Text)
-  added = Column(DateTime, default=datetime.now)
-  duration = Column(Float)
-  true_neg = Column(Integer)
-  false_neg = Column(Integer)
-  true_pos = Column(Integer)
-  false_pos = Column(Integer)
-  precision = Column(Float)
-  recall = Column(Float)
-  fpr = Column(Float)
-  _results = None
-
-  fit = relationship(
-    'Fit',
-    backref=backref('tests')
-  )
-
-  def get_results(self):
-    """Returns a dataframe with the true and predicted labels.
-
-    :rtype: pandas.DataFrame
-
-    The dataframe has two columns: ``'truth'`` and ``'prediction'``.
-    The dataframe is persisted in a ``.npy`` file and loaded the first time it
-    is accessed.
-
-    """
-    return DataFrame.load(self._filepath)
-
-  @property
-  def _filepath(self):
-    return join(SKL().folder_path, 'test', '%s.pkl' % self.id)
-
-  def _set_results(self, results):
-    # counts
-    c = results.groupby('truth')['prediction'].value_counts()
-    def _get_or_zero(series, key):
-      try:
-        return int(series.get_value(key))
-      except KeyError:
-        return 0.0
-    self.true_pos = _get_or_zero(c, (1,1))
-    self.true_neg = _get_or_zero(c, (0,0))
-    self.false_pos = _get_or_zero(c, (0,1))
-    self.false_neg = _get_or_zero(c, (1,0))
-    # metrics
-    self.precision = float(self.true_pos) / (self.true_pos + self.false_pos)
-    self.recall = float(self.true_pos) / (self.true_pos + self.false_neg)
-    self.fpr = float(self.false_pos) / (self.false_pos + self.true_neg)
-    # saving original series
-    self._results = results
-    self.flush()
-    self._results.save(self._filepath)
 
 
 # Classifiers
