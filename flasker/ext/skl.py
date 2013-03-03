@@ -69,6 +69,37 @@ class SKL(object):
       random_state = Column(Boolean)
       class_weight = Column(JSONEncodedDict)
       tol = Column(Numeric(precision=64, scale=30))
+      n_estimators = Column(Integer)
+      criterion = Column(String(32))
+      max_features = Column(String(32))
+      max_depth = Column(Integer)
+      min_samples_split = Column(Integer)
+      min_samples_leaf = Column(Integer)
+      min_density = Column(Numeric(precision=64, scale=30))
+      bootstrap = Column(Boolean)
+      oob_score = Column(Boolean)
+      n_jobs = Column(Integer)
+      verbose = Column(Boolean)
+      compute_importances = Column(Boolean)
+
+      @classmethod
+      def _serialize_params(cls, **kwargs):
+        if 'max_features' in kwargs:
+          kwargs['max_features'] = str(kwargs['max_features'])
+        return kwargs
+
+      @classmethod
+      def _unserialize_params(cls, **kwargs):
+        if 'class_weight' in kwargs and kwargs['class_weight']:
+          kwargs['class_weight'] = {
+            int(k): v for k, v in kwargs['class_weight'].items()
+          }
+        if 'max_features' in kwargs and kwargs['max_features']:
+          try:
+            kwargs['max_features'] = int(kwargs['max_features'])
+          except ValueError:
+            pass
+        return kwargs
 
       def _get_unfitted_engine(self):
         module, cls = self.type.rsplit('.', 1)
@@ -76,11 +107,7 @@ class SKL(object):
         engine_factory = getattr(modules[module], cls)
         valid_kwargs = engine_factory._get_param_names()
         # dict keys are transformed to unicode by json, need to convert them back
-        kwargs = self.to_json()
-        if 'class_weight' in kwargs:
-          kwargs['class_weight'] = {
-            int(k): v for k, v in kwargs['class_weight'].items()
-          }
+        kwargs = self._unserialize_params(**self.to_json())
         return engine_factory(
           **{k: v for k, v in kwargs.items() if k in valid_kwargs}
         )
@@ -163,9 +190,18 @@ class SKL(object):
         self.false_pos = _get_or_zero(c, (0,1))
         self.false_neg = _get_or_zero(c, (1,0))
         # metrics
-        self.precision = float(self.true_pos) / (self.true_pos + self.false_pos)
-        self.recall = float(self.true_pos) / (self.true_pos + self.false_neg)
-        self.fpr = float(self.false_pos) / (self.false_pos + self.true_neg)
+        try:
+          self.precision = float(self.true_pos) / (self.true_pos + self.false_pos)
+        except ZeroDivisionError:
+          self.precision = 0.0
+        try:
+          self.recall = float(self.true_pos) / (self.true_pos + self.false_neg)
+        except ZeroDivisionError:
+          self.recall = 1.0
+        try:
+          self.fpr = float(self.false_pos) / (self.false_pos + self.true_neg)
+        except ZeroDivisionError:
+          self.fpr = 0.0
         # saving original series
         self._results = results
         self.flush()
@@ -202,7 +238,7 @@ class SKL(object):
             engine.__module__,
             engine.__class__.__name__
           ),
-          **engine.get_params()
+          **Param._serialize_params(**engine.get_params())
         )
         if flag:
           param.flush()
@@ -267,10 +303,11 @@ class SKL(object):
         self.engine.fit(Xdf.values, ys.values)
         fit.duration = time() - now
         fit.flush()
-        coefs = DataFrame(self.engine.coef_, columns=Xdf.keys())
-        if self.engine.intercept_:
-          coefs['intercept'] = Series(self.engine.intercept_)
-        coefs.save(join(fit._folderpath, 'coefs.pkl'))
+        if hasattr(self.engine, 'coef_'):
+          coefs = DataFrame(self.engine.coef_, columns=Xdf.keys())
+          if self.engine.intercept_:
+            coefs['intercept'] = Series(self.engine.intercept_)
+          coefs.save(join(fit._folderpath, 'coefs.pkl'))
         joblib.dump(self.engine, join(fit._folderpath, 'engine.joblib.pkl'))
         fclf = FittedClassifier(fit, engine=self.engine)
         if test_in_sample:
