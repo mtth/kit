@@ -107,6 +107,15 @@ class Query(_Query):
       return rv[0]
     return rv
 
+  def to_records(self, connection=None, exclude=None):
+    """Raw execute of the query into a generator."""
+    connection = connection or self._connection_from_session()
+    exclude = exclude or []
+    result = connection.execute(self.statement)
+    keys = result.keys()
+    for record in result:
+      yield {k:v for k, v in zip(keys, record) if not k in exclude}
+
   def to_dataframe(self, *args, **kwargs):
     """Loads a dataframe with the records from the query and returns it.
 
@@ -254,11 +263,12 @@ class Base(Cacheable, Loggable):
     included are computed at class declaration so this method is very fast.
 
     """
-    if not expand and depth <= self._json_depth:
+    if depth <= self._json_depth:
       # this instance has already been jsonified at a greater or
       # equal depth, so we simply return its key
       return self.get_primary_key()
-    self._json_depth = depth
+    if not expand:
+      self._json_depth = depth
     rv = {}
     for varname in self.__json__:
       try:
@@ -326,5 +336,4 @@ class Base(Cacheable, Loggable):
     if not show_private:
       rels = [rel for rel in rels if not rel.key.startswith('_')]
     return rels
-
 
