@@ -364,12 +364,9 @@ refresh several or all cached properties, use the <tt class="docutils literal"><
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Jsonifiable</tt><a class="reference internal" href="_modules/flasker/util.html#Jsonifiable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Jsonifiable" title="Permalink to this definition">¶</a></dt>
 <dd><p>JSONification mixin.</p>
 <dl class="method">
-<dt id="flasker.util.Jsonifiable.jsonify">
-<tt class="descname">jsonify</tt><big>(</big><em>depth=0</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Jsonifiable.jsonify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Jsonifiable.jsonify" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.util.Jsonifiable.to_json">
+<tt class="descname">to_json</tt><big>(</big><em>depth=1</em><big>)</big><a class="headerlink" href="#flasker.util.Jsonifiable.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns all keys and properties of an instance in a dictionary.</p>
-<p>Overrides the basic jsonify method to specialize it for models.</p>
-<p>This function minimizes the number of lookups it does (no dynamic
-type checking on the properties for example) to maximize speed.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -499,49 +496,37 @@ objects (like decimal.Decimal) to floating point.</li>
 </table>
 </dd></dl>
 
-<dl class="class">
-<dt id="flasker.util.RunningStat">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">RunningStat</tt><a class="headerlink" href="#flasker.util.RunningStat" title="Permalink to this definition">¶</a></dt>
-<dd><p>To compute running means and variances efficiently.</p>
-<p>Usage:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">rs</span> <span class="o">=</span> <span class="n">RunningStat</span><span class="p">()</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
-  <span class="n">rs</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-<span class="n">rs</span><span class="o">.</span><span class="n">var</span>
-</pre></div>
-</div>
-<dl class="attribute">
-<dt id="flasker.util.RunningStat.avg">
-<tt class="descname">avg</tt><a class="headerlink" href="#flasker.util.RunningStat.avg" title="Permalink to this definition">¶</a></dt>
-<dd><p>Current mean.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.util.RunningStat.var">
-<tt class="descname">var</tt><a class="headerlink" href="#flasker.util.RunningStat.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Current variance.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.util.RunningStat.sdv">
-<tt class="descname">sdv</tt><a class="headerlink" href="#flasker.util.RunningStat.sdv" title="Permalink to this definition">¶</a></dt>
-<dd><p>Current standard deviation.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="flasker.util.RunningStat.push">
-<tt class="descname">push</tt><big>(</big><em>n</em><big>)</big><a class="headerlink" href="#flasker.util.RunningStat.push" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add a new element to the statistic.</p>
+<dl class="function">
+<dt id="flasker.util.query_to_records">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_records</tt><big>(</big><em>query</em>, <em>connection=None</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_records" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raw execute of the query into a generator.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int, float</em>) &#8211; number to add</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</li>
+<li><strong>connection</strong> (<em>sqlalchemy.engine.base.Connection</em>) &#8211; the connection to use to execute the query. By default
+the method will use the query&#8217;s session&#8217;s current connection. Note that
+connection is left open afterwards.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">generator</p>
+</td>
 </tr>
 </tbody>
 </table>
-</dd></dl>
-
+<p>About 5 times faster than loading the objects. Useful if only interested in
+raw columns of the model:</p>
+<div class="highlight-python"><pre># for ~300k models
+In [1]: %time [m.id for s in Model.q]
+CPU times: user 48.22 s, sys: 2.62 s, total: 50.84 s
+Wall time: 52.19 s
+In [2]: %time [m['id'] for s in query_to_records(Model.q)]
+CPU times: user 9.12 s, sys: 0.20 s, total: 9.32 s
+Wall time: 10.32 s</pre>
+</div>
 </dd></dl>
 
 <dl class="function">
@@ -597,6 +582,51 @@ sorted in descending order.</li>
 </table>
 <p>Possible extension: allow categories to return a list of keys, which would
 allow elements to be included in several counts.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.RunningStat">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">RunningStat</tt><a class="headerlink" href="#flasker.util.RunningStat" title="Permalink to this definition">¶</a></dt>
+<dd><p>To compute running means and variances efficiently.</p>
+<p>Usage:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">rs</span> <span class="o">=</span> <span class="n">RunningStat</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+  <span class="n">rs</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+<span class="n">rs</span><span class="o">.</span><span class="n">var</span>
+</pre></div>
+</div>
+<dl class="attribute">
+<dt id="flasker.util.RunningStat.avg">
+<tt class="descname">avg</tt><a class="headerlink" href="#flasker.util.RunningStat.avg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current mean.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.util.RunningStat.var">
+<tt class="descname">var</tt><a class="headerlink" href="#flasker.util.RunningStat.var" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current variance.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.util.RunningStat.sdv">
+<tt class="descname">sdv</tt><a class="headerlink" href="#flasker.util.RunningStat.sdv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current standard deviation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.RunningStat.push">
+<tt class="descname">push</tt><big>(</big><em>n</em><big>)</big><a class="headerlink" href="#flasker.util.RunningStat.push" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new element to the statistic.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int, float</em>) &#8211; number to add</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </dd></dl>
 
 </div>

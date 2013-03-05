@@ -56,7 +56,7 @@
 <span id="orm"></span><h2>ORM<a class="headerlink" href="#module-flasker.ext.orm" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="flasker.ext.orm.ORM">
-<em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">ORM</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#ORM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.ORM" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">ORM</tt><big>(</big><em>project</em>, <em>create_all=True</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#ORM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.ORM" title="Permalink to this definition">¶</a></dt>
 <dd><p>The main ORM extension.</p>
 <p>Responsible for adding the <tt class="docutils literal"><span class="pre">q</span></tt> and <tt class="docutils literal"><span class="pre">c</span></tt> query proxies on the model and
 configuring the project to use a custom <tt class="docutils literal"><span class="pre">Query</span></tt> class.</p>
@@ -130,11 +130,17 @@ generate random offsets.</li>
 </dd></dl>
 
 <dl class="method">
-<dt id="flasker.ext.orm.Query.dataframe">
-<tt class="descname">dataframe</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Query.dataframe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Query.dataframe" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.ext.orm.Query.to_dataframe">
+<tt class="descname">to_dataframe</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Query.to_dataframe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Loads a dataframe with the records from the query and returns it.</p>
 <p>Accepts the same arguments as <tt class="docutils literal"><span class="pre">flasker.util.query_to_dataframe</span></tt>.
 Requires the <tt class="docutils literal"><span class="pre">pandas</span></tt> library to be installed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.orm.Query.to_records">
+<tt class="descname">to_records</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Query.to_records" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raw execute of the query into a generator.</p>
 </dd></dl>
 
 </dd></dl>
@@ -156,10 +162,43 @@ extra s appended for good measure).</li>
 <li>Caching (from <tt class="docutils literal"><span class="pre">flasker.util.Cacheable</span></tt>)</li>
 <li>Logging (from <tt class="docutils literal"><span class="pre">flasker.util.Loggable</span></tt>)</li>
 </ul>
+<dl class="classmethod">
+<dt id="flasker.ext.orm.Base.retrieve">
+<em class="property">classmethod </em><tt class="descname">retrieve</tt><big>(</big><em>flush_if_new=True</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.retrieve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given constructor arguments will return a match or create one.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kwargs</strong> &#8211; constructor arguments</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">tuple</td>
+</tr>
+</tbody>
+</table>
+<p>This method returns a tuple <tt class="docutils literal"><span class="pre">(model,</span> <span class="pre">flag)</span></tt> where <tt class="docutils literal"><span class="pre">model</span></tt> is of the
+corresponding class and <tt class="docutils literal"><span class="pre">flag</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt> if the model was just created
+and <tt class="docutils literal"><span class="pre">False</span></tt> otherwise.</p>
+</dd></dl>
+
 <dl class="method">
-<dt id="flasker.ext.orm.Base.jsonify">
-<tt class="descname">jsonify</tt><big>(</big><em>depth=1</em>, <em>expand=True</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Base.jsonify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base.jsonify" title="Permalink to this definition">¶</a></dt>
-<dd><p>Special implementation of jsonify for Model objects.</p>
+<dt id="flasker.ext.orm.Base.get_primary_key">
+<tt class="descname">get_primary_key</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.get_primary_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the dictionary of primary keys for a given model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.orm.Base.to_json">
+<tt class="descname">to_json</tt><big>(</big><em>depth=1</em>, <em>expand=True</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special implementation of to_json for Model objects.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -189,39 +228,6 @@ to populate the JSON. Furthermore, all the attribute names to be
 included are computed at class declaration so this method is very fast.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="flasker.ext.orm.Base.get_primary_key">
-<tt class="descname">get_primary_key</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.get_primary_key" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the dictionary of primary keys for a given model.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="flasker.ext.orm.Base.retrieve">
-<em class="property">classmethod </em><tt class="descname">retrieve</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.retrieve" title="Permalink to this definition">¶</a></dt>
-<dd><p>Given constructor arguments will return a match or create one.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kwargs</strong> &#8211; constructor arguments</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">tuple</td>
-</tr>
-</tbody>
-</table>
-<p>This method returns a tuple <tt class="docutils literal"><span class="pre">(model,</span> <span class="pre">flag)</span></tt> where <tt class="docutils literal"><span class="pre">model</span></tt> is of the
-corresponding class and <tt class="docutils literal"><span class="pre">flag</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt> if the model was just created
-and <tt class="docutils literal"><span class="pre">False</span></tt> otherwise.</p>
-</dd></dl>
-
 </dd></dl>
 
 </div>
@@ -230,8 +236,6 @@ and <tt class="docutils literal"><span class="pre">False</span></tt> otherwise.<
 <p>Thin wrapper around some sklearn algorithms.</p>
 <p>Allows for automatic parameter saving and recovery. Saving fitted algorithms
 for later reuse (convenient for parallel computing).</p>
-<p>Exposes two methods: train and test that accept pandas dataframes and series
-as input.</p>
 <p>Test results are persisted along with a few metrics.</p>
 <p>Currently supported:</p>
 <ul class="simple">
@@ -245,85 +249,6 @@ as input.</p>
 <span class="go">0.9576324</span>
 </pre></div>
 </div>
-<dl class="class">
-<dt id="flasker.ext.skl.Param">
-<em class="property">class </em><tt class="descclassname">flasker.ext.skl.</tt><tt class="descname">Param</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.skl.Param" title="Permalink to this definition">¶</a></dt>
-<dd><p>The general model for sklearn classifier parameters.</p>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.skl.LogisticRegressionParam">
-<em class="property">class </em><tt class="descclassname">flasker.ext.skl.</tt><tt class="descname">LogisticRegressionParam</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#LogisticRegressionParam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.LogisticRegressionParam" title="Permalink to this definition">¶</a></dt>
-<dd><p>Model for <tt class="docutils literal"><span class="pre">sklearn.linear_model.logistic.LogisticRegression</span></tt>.</p>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.skl.Fit">
-<em class="property">class </em><tt class="descclassname">flasker.ext.skl.</tt><tt class="descname">Fit</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.skl.Fit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Model to store a fitted classifier.</p>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.skl.Classifier">
-<em class="property">class </em><tt class="descclassname">flasker.ext.skl.</tt><tt class="descname">Classifier</tt><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier" title="Permalink to this definition">¶</a></dt>
-<dd><p>The general classifier method.</p>
-<p>It shouldn&#8217;t be instantiated directly, the 3 classmethods should be used
-instead.</p>
-<p>Parameters are not duplicated. If a classifier is initialized with the same
-values as those of a parameter found in the database, all new fits and tests
-will be attributed to the unique same parameter.</p>
-<dl class="classmethod">
-<dt id="flasker.ext.skl.Classifier.from_engine">
-<em class="property">classmethod </em><tt class="descname">from_engine</tt><big>(</big><em>engine</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.skl.Classifier.from_engine" title="Permalink to this definition">¶</a></dt>
-<dd><p>Wrap an sklearn algorithm.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>engine</strong> (<em>varies</em>) &#8211; sklearn algorithm or algorithm factory</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">flasker.ext.skl.UnfittedClassifier</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="flasker.ext.skl.Classifier.from_param_id">
-<em class="property">classmethod </em><tt class="descname">from_param_id</tt><big>(</big><em>clf</em>, <em>param_id</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.from_param_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.from_param_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Load an unfitted classifier from its parameter id.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>param_id</strong> (<em>int</em>) &#8211; the id of the parameter to use to load the engine</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">flasker.ext.skl.UnfittedClassifier</td>
-</tr>
-</tbody>
-</table>
-<p>The parameter is persisted in the database and its kwargs are passed to 
-the classifier&#8217;s constructor.</p>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="flasker.ext.skl.Classifier.from_fit_id">
-<em class="property">classmethod </em><tt class="descname">from_fit_id</tt><big>(</big><em>clf</em>, <em>fit_id</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/skl.html#Classifier.from_fit_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.skl.Classifier.from_fit_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Load an unfitted classifier from a fitted id.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>param_id</strong> (<em>int</em>) &#8211; the id of the parameter to use to load the engine</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">flasker.ext.skl.FittedClassifier</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 <div class="section" id="module-flasker.ext.api">
 <span id="api"></span><h2>API<a class="headerlink" href="#module-flasker.ext.api" title="Permalink to this headline">¶</a></h2>
@@ -361,7 +286,7 @@ parameters, invalid form data, etc.)</li>
 
 <dl class="class">
 <dt id="flasker.ext.api.API">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">API</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#API"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.API" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">API</tt><big>(</big><em>project</em>, <em>config_section=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#API"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.API" title="Permalink to this definition">¶</a></dt>
 <dd><p>Main API extension.</p>
 <p>Handles the creation and registration of all API views. The following
 configuration options are available:</p>
