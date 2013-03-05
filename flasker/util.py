@@ -839,6 +839,13 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
   )
   return dataframe
 
+def query_to_records(query, connection=None):
+  """Raw execute of the query into a generator."""
+  connection = connection or query._connection_from_session()
+  result = connection.execute(query.statement)
+  keys = result.keys()
+  for record in result:
+    yield {k:v for k, v in zip(keys, record)}
 
 # ===
 #

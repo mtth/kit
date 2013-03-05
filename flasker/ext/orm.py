@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 
 from ..util import (Cacheable, to_json, 
-  JSONEncodedDict, Loggable, uncamelcase, query_to_dataframe)
+  JSONEncodedDict, Loggable, uncamelcase, query_to_dataframe, query_to_records)
 
 
 class ORM(object):
@@ -107,15 +107,6 @@ class Query(_Query):
       return rv[0]
     return rv
 
-  def to_records(self, connection=None, exclude=None):
-    """Raw execute of the query into a generator."""
-    connection = connection or self._connection_from_session()
-    exclude = exclude or []
-    result = connection.execute(self.statement)
-    keys = result.keys()
-    for record in result:
-      yield {k:v for k, v in zip(keys, record) if not k in exclude}
-
   def to_dataframe(self, *args, **kwargs):
     """Loads a dataframe with the records from the query and returns it.
 
@@ -125,16 +116,9 @@ class Query(_Query):
     """
     return query_to_dataframe(self, *args, **kwargs)
 
-
-class _MapperProperty(object):
-
-  """To make the mapper accessible directly on model classes."""
-
-  def __get__(self, obj, cls):
-    try:
-      return class_mapper(cls)
-    except UnmappedClassError:
-      return None
+  def to_records(self, *args, **kwargs):
+    """Raw execute of the query into a generator."""
+    return query_to_records(self, *args, **kwargs)
 
 
 class _QueryProperty(object):
@@ -200,12 +184,49 @@ class Base(Cacheable, Loggable):
   c = None
   q = None
 
-  def __repr__(self):
-    primary_keys = ', '.join(
-      '%s=%r' % (k, getattr(self, k))
-      for k, v in self.get_primary_key().items()
-    )
-    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
+  @classmethod
+  def _get_columns(cls, show_private=False):
+    columns = class_mapper(cls).columns
+    if not show_private:
+      columns = [c for c in columns if not c.key.startswith('_')]
+    return columns
+
+  @classmethod
+  def _get_primary_key(cls):
+    return class_mapper(cls).primary_key
+
+  @classmethod
+  def _get_related_models(cls, show_private=False):
+    return [
+      (r.key, r.mapper.class_)
+      for r in cls.get_relationships(show_private)
+    ]
+
+  @classmethod
+  def _get_relationships(cls, show_private=False):
+    rels =  class_mapper(cls).relationships.values()
+    if not show_private:
+      rels = [rel for rel in rels if not rel.key.startswith('_')]
+    return rels
+
+  @classmethod
+  def retrieve(cls, **kwargs):
+    """Given constructor arguments will return a match or create one.
+
+    :param kwargs: constructor arguments
+    :rtype: tuple
+
+    This method returns a tuple ``(model, flag)`` where ``model`` is of the
+    corresponding class and ``flag`` is ``True`` if the model was just created
+    and ``False`` otherwise.
+
+    """
+    instance = cls.q.filter_by(**kwargs).first()
+    if instance:
+      return instance, False
+    instance = cls(**kwargs)
+    instance.flush()
+    return instance, True
 
   @declared_attr
   def __json__(cls):
@@ -239,6 +260,24 @@ class Base(Cacheable, Loggable):
 
     """
     return '%ss' % uncamelcase(cls.__name__)
+
+  def __repr__(self):
+    primary_keys = ', '.join(
+      '%s=%r' % (k, getattr(self, k))
+      for k, v in self.get_primary_key().items()
+    )
+    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
+
+  def get_primary_key(self):
+    """Returns the dictionary of primary keys for a given model.
+
+    :rtype: dict
+
+    """
+    return dict(
+      (k.name, getattr(self, k.name))
+      for k in self.__class__._get_primary_key()
+    )
 
   def to_json(self, depth=1, expand=True):
     """Special implementation of to_json for Model objects.
@@ -277,63 +316,8 @@ class Base(Cacheable, Loggable):
         rv[varname] = e.message
     return rv
 
-  def get_primary_key(self):
-    """Returns the dictionary of primary keys for a given model.
-
-    :rtype: dict
-
-    """
-    return dict(
-      (k.name, getattr(self, k.name))
-      for k in self.__class__._get_primary_key()
-    )
-
   def flush(self):
     session = self.q.session
     session.add(self)
     session.flush([self])
-
-  @classmethod
-  def retrieve(cls, **kwargs):
-    """Given constructor arguments will return a match or create one.
-
-    :param kwargs: constructor arguments
-    :rtype: tuple
-
-    This method returns a tuple ``(model, flag)`` where ``model`` is of the
-    corresponding class and ``flag`` is ``True`` if the model was just created
-    and ``False`` otherwise.
-
-    """
-    instance = cls.q.filter_by(**kwargs).first()
-    if instance:
-      return instance, False
-    instance = cls(**kwargs)
-    instance.flush()
-    return instance, True
-
-  @classmethod
-  def _get_columns(cls, show_private=False):
-    columns = class_mapper(cls).columns
-    if not show_private:
-      columns = [c for c in columns if not c.key.startswith('_')]
-    return columns
-
-  @classmethod
-  def _get_primary_key(cls):
-    return class_mapper(cls).primary_key
-
-  @classmethod
-  def _get_related_models(cls, show_private=False):
-    return [
-      (r.key, r.mapper.class_)
-      for r in cls.get_relationships(show_private)
-    ]
-
-  @classmethod
-  def _get_relationships(cls, show_private=False):
-    rels =  class_mapper(cls).relationships.values()
-    if not show_private:
-      rels = [rel for rel in rels if not rel.key.startswith('_')]
-    return rels
 
