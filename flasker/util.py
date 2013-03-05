@@ -840,7 +840,28 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
   return dataframe
 
 def query_to_records(query, connection=None):
-  """Raw execute of the query into a generator."""
+  """Raw execute of the query into a generator.
+
+  :param query: the query to be executed
+  :type query: sqlalchemy.orm.query.Query
+  :param connection: the connection to use to execute the query. By default
+    the method will use the query's session's current connection. Note that
+    connection is left open afterwards.
+  :type connection: sqlalchemy.engine.base.Connection
+  :rtype: generator
+
+  About 5 times faster than loading the objects. Useful if only interested in
+  raw columns of the model::
+
+    # for ~300k models
+    In [1]: %time [m.id for s in Model.q]
+    CPU times: user 48.22 s, sys: 2.62 s, total: 50.84 s
+    Wall time: 52.19 s
+    In [2]: %time [m['id'] for s in query_to_records(Model.q)]
+    CPU times: user 9.12 s, sys: 0.20 s, total: 9.32 s
+    Wall time: 10.32 s
+  
+  """
   connection = connection or query._connection_from_session()
   result = connection.execute(query.statement)
   keys = result.keys()
