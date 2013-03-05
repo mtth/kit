@@ -206,7 +206,7 @@ class Base(Cacheable, Loggable):
     return rels
 
   @classmethod
-  def retrieve(cls, **kwargs):
+  def retrieve(cls, flush_if_new=True, **kwargs):
     """Given constructor arguments will return a match or create one.
 
     :param kwargs: constructor arguments
@@ -221,7 +221,8 @@ class Base(Cacheable, Loggable):
     if instance:
       return instance, False
     instance = cls(**kwargs)
-    instance.flush()
+    if flush_if_new:
+      instance.flush()
     return instance, True
 
   @declared_attr

@@ -83,8 +83,6 @@ class SKL(object):
       ),
       **self.Param._serialize_params(**engine.get_params())
     )
-    if flag:
-      param.flush()
     _engine = self.Engine(
       description=description,
       param=param
