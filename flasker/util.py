@@ -17,6 +17,11 @@ from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.types import TypeDecorator, UnicodeText
 from time import time
 
+try:
+  from pandas import DataFrame, Series
+except ImportError:
+  pass
+
 
 # ===
 #
@@ -416,18 +421,21 @@ class Cacheable(object):
     :type remove_deleted: bool
 
     """
+    cached_properties = set(self._get_cached_properties())
     if names:
       for name in names:
-        setattr(self, name, _CacheRefresh(expiration))
+        if name in cached_properties:
+          setattr(self, name, _CacheRefresh(expiration))
+        else:
+          raise AttributeError('No cached property %r on %r.' % (name, self))
       if remove_deleted:
-        cached_properties = set(self._get_cached_properties())
         for varname in self._cache.keys():
           if not varname in cached_properties:
             del self._cache[varname]
     else:
       if remove_deleted:
         self._cache = {}
-      for varname in self._get_cached_properties():
+      for varname in cached_properties:
         setattr(self, varname, _CacheRefresh(expiration))
     try:
       self._cache.changed()
@@ -525,19 +533,24 @@ class _CachedProperty(property):
 
 # Jsonifying
 
-def _jsonify(value, depth=0):
-  if hasattr(value, 'jsonify'):
-    return value.jsonify(depth - 1)
+def to_json(value, depth=0):
+  if hasattr(value, 'to_json'):
+    return value.to_json(depth - 1)
   if isinstance(value, dict):
-    return {k: _jsonify(v, depth) for k, v in value.items()}
+    return {k: to_json(v, depth) for k, v in value.items()}
   if isinstance(value, list):
-    return [_jsonify(v, depth) for v in value]
+    return [to_json(v, depth) for v in value]
   if isinstance(value, (float, int, long, str, unicode, tuple)):
     return value
   if isinstance(value, datetime):
     return str(value)
   if isinstance(value, Decimal):
     return float(value)
+  if isinstance(value, DataFrame):
+    return [ 
+      {str(colname): row[i] for i, colname in enumerate(value.columns)}
+      for row in value.values
+    ]
   if value is None:
     return None
   raise ValueError('not jsonifiable')
@@ -561,13 +574,8 @@ class Jsonifiable(object):
       if not callable(getattr(self, varname))
     ]
 
-  def jsonify(self, depth=0):
+  def to_json(self, depth=1):
     """Returns all keys and properties of an instance in a dictionary.
-
-    Overrides the basic jsonify method to specialize it for models.
-
-    This function minimizes the number of lookups it does (no dynamic
-    type checking on the properties for example) to maximize speed.
 
     :param depth:
     :type depth: int
@@ -575,9 +583,11 @@ class Jsonifiable(object):
 
     """
     rv = {}
+    if depth == 0:
+      return rv
     for varname in self.__json__:
       try:
-        rv[varname] = _jsonify(getattr(self, varname), depth - 1)
+        rv[varname] = to_json(getattr(self, varname), depth - 1)
       except ValueError as e:
         rv[varname] = e.message
     return rv
@@ -816,7 +826,6 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
   :rtype: pandas.DataFrame
   
   """
-  from pandas import DataFrame
   connection = connection or query._connection_from_session()
   exclude = exclude or []
   result = connection.execute(query.statement)
@@ -830,73 +839,40 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
   )
   return dataframe
 
+def query_to_records(query, connection=None):
+  """Raw execute of the query into a generator.
+
+  :param query: the query to be executed
+  :type query: sqlalchemy.orm.query.Query
+  :param connection: the connection to use to execute the query. By default
+    the method will use the query's session's current connection. Note that
+    connection is left open afterwards.
+  :type connection: sqlalchemy.engine.base.Connection
+  :rtype: generator
+
+  About 5 times faster than loading the objects. Useful if only interested in
+  raw columns of the model::
+
+    # for ~300k models
+    In [1]: %time [m.id for s in Model.q]
+    CPU times: user 48.22 s, sys: 2.62 s, total: 50.84 s
+    Wall time: 52.19 s
+    In [2]: %time [m['id'] for s in query_to_records(Model.q)]
+    CPU times: user 9.12 s, sys: 0.20 s, total: 9.32 s
+    Wall time: 10.32 s
+  
+  """
+  connection = connection or query._connection_from_session()
+  result = connection.execute(query.statement)
+  keys = result.keys()
+  for record in result:
+    yield {k:v for k, v in zip(keys, record)}
 
 # ===
 #
 # Computations
 #
 # ===
-
-class RunningStat(object):
-
-  """ To compute running means and variances efficiently.
-
-  Usage::
-
-    rs = RunningStat()
-    for i in range(10):
-      rs.push(i)
-    rs.var
-
-  """
-
-  def __init__(self):
-    self.count = 0
-    self._mean = float(0)
-    self.unweighted_variance = float(0)
-
-  def __repr__(self):
-    return '<RunningStat (count=%s, avg=%s, sdv=%s)>' % (
-      self.count, self.avg, self.sdv
-  )
-
-  @property
-  def avg(self):
-    """Current mean."""
-    if self.count > 0:
-      return self._mean
-    return 0
-
-  @property
-  def var(self):
-    """Current variance."""
-    if self.count > 1:
-      return self.unweighted_variance/(self.count-1)
-    return 0
-
-  @property
-  def sdv(self):
-    """Current standard deviation."""
-    return self.var ** 0.5
-
-  def push(self, n):
-    """Add a new element to the statistic.
-
-    :param n: number to add
-    :type n: int, float
-
-    """
-    if n == None:
-      return
-    self.count += 1
-    if self.count == 1:
-      self._mean = float(n)
-      self.unweighted_variance = float(0)
-    else:
-      mean = self._mean
-      s = self.unweighted_variance
-      self._mean = mean + (n - mean) / self.count
-      self.unweighted_variance = s + (n - self._mean) * (n - mean)
 
 def exponential_smoothing(data, alpha=0.5):
   """Smoothing data.
@@ -999,4 +975,65 @@ def histogram(data, key=None, bins=50, restrict=None, categories=None,
           for key in keys
       )
     return data_histogram
+
+class RunningStat(object):
+
+  """ To compute running means and variances efficiently.
+
+  Usage::
+
+    rs = RunningStat()
+    for i in range(10):
+      rs.push(i)
+    rs.var
+
+  """
+
+  def __init__(self):
+    self.count = 0
+    self._mean = float(0)
+    self.unweighted_variance = float(0)
+
+  def __repr__(self):
+    return '<RunningStat (count=%s, avg=%s, sdv=%s)>' % (
+      self.count, self.avg, self.sdv
+  )
+
+  @property
+  def avg(self):
+    """Current mean."""
+    if self.count > 0:
+      return self._mean
+    return 0
+
+  @property
+  def var(self):
+    """Current variance."""
+    if self.count > 1:
+      return self.unweighted_variance/(self.count-1)
+    return 0
+
+  @property
+  def sdv(self):
+    """Current standard deviation."""
+    return self.var ** 0.5
+
+  def push(self, n):
+    """Add a new element to the statistic.
+
+    :param n: number to add
+    :type n: int, float
+
+    """
+    if n == None:
+      return
+    self.count += 1
+    if self.count == 1:
+      self._mean = float(n)
+      self.unweighted_variance = float(0)
+    else:
+      mean = self._mean
+      s = self.unweighted_variance
+      self._mean = mean + (n - mean) / self.count
+      self.unweighted_variance = s + (n - self._mean) * (n - mean)
 

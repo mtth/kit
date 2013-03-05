@@ -28,7 +28,7 @@ the ``__view__`` attribute and insert your custom API views there.
 
 from flask import Blueprint, jsonify, request
 from os.path import abspath, dirname, join
-from sqlalchemy.orm import mapperlib
+from sqlalchemy.orm import class_mapper, mapperlib
 from time import time
 from werkzeug.exceptions import HTTPException
 
@@ -100,11 +100,28 @@ class API(object):
     'EXPAND': True,
   }
 
-  def __init__(self, **kwargs):
+  def __init__(self, project, config_section=None, **kwargs):
+
+    if config_section:
+      for k, v in project.config[config_section].items():
+        self.config[k] = v
     for k, v in kwargs.items():
       self.config[k.upper()] = v
     APIView.__extension__ = self
     self.Models = {}
+
+    @project.before_startup
+    def handler(project):
+      self.blueprint = Blueprint(
+        'api',
+        project.config['PROJECT']['FLASK_ROOT_FOLDER'] + '.api',
+        template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
+        url_prefix=self.config['URL_PREFIX']
+      )
+      for model_class, options in self.Models.values():
+        self._create_model_views(model_class, options)
+      IndexView.attach_view()
+      project.flask.register_blueprint(self.blueprint)
 
   def authorize(self, func):
     """Decorator to set the authorization function.
@@ -204,21 +221,6 @@ class API(object):
         RelationshipModelView.attach_view(rel, **options)
         LazyRelationshipView.attach_view(rel, **options)
 
-  def on_register(self, project):
-    self.__project__ = project
-    self.blueprint = Blueprint(
-      'api',
-      project.config['PROJECT']['FLASK_ROOT_FOLDER'] + '.api',
-      template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
-      url_prefix=self.config['URL_PREFIX']
-    )
-    for model_class, options in self.Models.values():
-      self._create_model_views(model_class, options)
-    IndexView.attach_view()
-
-    @project.before_startup
-    def handler(project):
-      project.flask.register_blueprint(self.blueprint)
 
 # Views
 
@@ -351,7 +353,7 @@ class CollectionView(APIView):
     timers['count'] = time() - now
     now = time()
     content = [
-      e.jsonify(**parser.get_jsonify_kwargs())
+      e.to_json(**parser.get_jsonify_kwargs())
       for e in parser.offset_and_limit(filtered_query)
     ]
     timers['jsonification'] = time() - now
@@ -375,7 +377,7 @@ class CollectionView(APIView):
       model = self.Model(**request.json)
       pj.session.add(model)
       pj.session.commit() # generate an ID
-      return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+      return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
     else:
       raise APIError(400, 'Failed validation')
 
@@ -393,14 +395,14 @@ class ModelView(APIView):
 
   def get_rule(self):
     url = '/%s' % self.Model.__tablename__
-    url += ''.join('/<%s>' % k.name for k in self.Model._get_primary_key())
+    url += ''.join('/<%s>' % k.name for k in class_mapper(self.Model).primary_key)
     return url
 
   def get(self, parser, **kwargs):
     model = self.Model.q.get(kwargs.values())
     if not model:
       raise APIError(404, 'No resource found')
-    return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+    return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
 
   def put(self, parser, **kwargs):
     model = self.Model.q.get(kwargs.values())
@@ -408,7 +410,7 @@ class ModelView(APIView):
       if self._is_valid(model.__class__, request.json):
         for k, v in request.json.items():
           setattr(model, k, v)
-        return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+        return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
       else:
         raise APIError(400, 'Failed validation')
     else:
@@ -449,7 +451,7 @@ class RelationshipView(APIView):
   def get_rule(self):
     url = '/%s' % self.parent_Model.__tablename__
     url += ''.join(
-      '/<%s>' % k.name for k in self.parent_Model._get_primary_key()
+      '/<%s>' % k.name for k in class_mapper(self.parent_Model).primary_key
     )
     url += '/%s' % self.rel.key
     return url
@@ -475,7 +477,7 @@ class DynamicRelationshipView(RelationshipView):
     timers['count'] = time() - now
     now = time()
     content = [
-      e.jsonify(**parser.get_jsonify_kwargs())
+      e.to_json(**parser.get_jsonify_kwargs())
       for e in parser.offset_and_limit(query)
     ]
     timers['jsonification'] = time() - now
@@ -504,7 +506,7 @@ class LazyRelationshipView(RelationshipView):
     timers = {}
     now = time()
     content = [
-      e.jsonify(**parser.get_jsonify_kwargs())
+      e.to_json(**parser.get_jsonify_kwargs())
       for e in self.get_collection(**kwargs)
     ]
     count = len(content)
@@ -539,7 +541,7 @@ class RelationshipModelView(RelationshipView):
   def get_rule(self):
     url = '/%s' % self.parent_Model.__tablename__
     url += ''.join(
-      '/<%s>' % k.name for k in self.parent_Model._get_primary_key()
+      '/<%s>' % k.name for k in class_mapper(self.parent_Model).primary_key
     )
     url += '/%s/<key>' % self.rel.key
     return url
@@ -566,7 +568,7 @@ class RelationshipModelView(RelationshipView):
     # TODO: support attribute mapped collections
     if not model:
       raise APIError(404, 'No resource found')
-    return jsonify(model.jsonify(**parser.get_jsonify_kwargs()))
+    return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
 
   def put(self, parser, **kwargs):
     pass

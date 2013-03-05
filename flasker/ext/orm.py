@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 
+from functools import partial
 from random import randint
 from sqlalchemy import Column, func
 from sqlalchemy.ext.declarative import declarative_base, declared_attr 
-from sqlalchemy.orm import class_mapper, Query as _Query
+from sqlalchemy.orm import (backref as _backref, class_mapper, Query as _Query,
+  relationship as _relationship)
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.collections import InstrumentedList
+from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 
-from ..util import (Cacheable, _jsonify, 
-  JSONEncodedDict, Loggable, uncamelcase, query_to_dataframe)
+from ..util import (Cacheable, to_json, 
+  JSONEncodedDict, Loggable, uncamelcase, query_to_dataframe, query_to_records)
 
 
 class ORM(object):
@@ -26,24 +29,20 @@ class ORM(object):
 
   """
 
-  config = {
-    'CREATE_ALL': True
-  }
+  def __init__(self, project, create_all=True):
 
-  def __init__(self, **kwargs):
-    for k, v in kwargs.items():
-      self.config[k.upper()] = v
-
-  def on_register(self, project):
     project._query_class = Query
+
+    self.Model = declarative_base(cls=Base)
+    self.backref = partial(_backref, query_class=Query)
+    self.relationship = partial(_relationship, query_class=Query)
 
     @project.before_startup
     def handler(project):
-      if self.config['CREATE_ALL']:
-        Model.metadata.create_all(project._engine, checkfirst=True)
-      Model.m = _MapperProperty()
-      Model.q = _QueryProperty(project)
-      Model.c = _CountProperty(project)
+      self.Model.q = _QueryProperty(project)
+      self.Model.c = _CountProperty(project)
+      if create_all:
+        self.Model.metadata.create_all(project._engine, checkfirst=True)
 
 
 class Query(_Query):
@@ -108,7 +107,7 @@ class Query(_Query):
       return rv[0]
     return rv
 
-  def dataframe(self, *args, **kwargs):
+  def to_dataframe(self, *args, **kwargs):
     """Loads a dataframe with the records from the query and returns it.
 
     Accepts the same arguments as ``flasker.util.query_to_dataframe``.
@@ -117,16 +116,9 @@ class Query(_Query):
     """
     return query_to_dataframe(self, *args, **kwargs)
 
-
-class _MapperProperty(object):
-
-  """To make the mapper accessible directly on model classes."""
-
-  def __get__(self, obj, cls):
-    try:
-      return class_mapper(cls)
-    except UnmappedClassError:
-      return None
+  def to_records(self, *args, **kwargs):
+    """Raw execute of the query into a generator."""
+    return query_to_records(self, *args, **kwargs)
 
 
 class _QueryProperty(object):
@@ -189,16 +181,49 @@ class Base(Cacheable, Loggable):
   _cache = Column(JSONEncodedDict)
   _json_depth = 0
 
-  m = None
   c = None
   q = None
 
-  def __repr__(self):
-    primary_keys = ', '.join(
-      '%s=%r' % (k, getattr(self, k))
-      for k, v in self.get_primary_key().items()
-    )
-    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
+  @classmethod
+  def _get_columns(cls, show_private=False):
+    columns = class_mapper(cls).columns
+    if not show_private:
+      columns = [c for c in columns if not c.key.startswith('_')]
+    return columns
+
+  @classmethod
+  def _get_related_models(cls, show_private=False):
+    return [
+      (r.key, r.mapper.class_)
+      for r in cls._get_relationships(show_private)
+    ]
+
+  @classmethod
+  def _get_relationships(cls, show_private=False):
+    rels =  class_mapper(cls).relationships.values()
+    if not show_private:
+      rels = [rel for rel in rels if not rel.key.startswith('_')]
+    return rels
+
+  @classmethod
+  def retrieve(cls, flush_if_new=True, **kwargs):
+    """Given constructor arguments will return a match or create one.
+
+    :param kwargs: constructor arguments
+    :rtype: tuple
+
+    This method returns a tuple ``(model, flag)`` where ``model`` is of the
+    corresponding class and ``flag`` is ``True`` if the model was just created
+    and ``False`` otherwise.
+
+    """
+    instance = cls.q.filter_by(**kwargs).first()
+    if instance:
+      return instance, False
+    instance = cls(**kwargs)
+    if flush_if_new:
+      instance.flush()
+    return instance, True
 
   @declared_attr
   def __json__(cls):
@@ -233,8 +258,26 @@ class Base(Cacheable, Loggable):
     """
     return '%ss' % uncamelcase(cls.__name__)
 
-  def jsonify(self, depth=1, expand=True):
-    """Special implementation of jsonify for Model objects.
+  def __repr__(self):
+    primary_keys = ', '.join(
+      '%s=%r' % (k, getattr(self, k))
+      for k, v in self.get_primary_key().items()
+    )
+    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
+
+  def get_primary_key(self):
+    """Returns the dictionary of primary keys for a given model.
+
+    :rtype: dict
+
+    """
+    return dict(
+      (k.name, getattr(self, k.name))
+      for k in class_mapper(self.__class__).primary_key
+    )
+
+  def to_json(self, depth=1, expand=True):
+    """Special implementation of to_json for Model objects.
 
     :param depth:
     :type depth: int
@@ -256,78 +299,22 @@ class Base(Cacheable, Loggable):
     included are computed at class declaration so this method is very fast.
 
     """
-    if not expand and depth <= self._json_depth:
+    if depth <= self._json_depth:
       # this instance has already been jsonified at a greater or
       # equal depth, so we simply return its key
       return self.get_primary_key()
-    self._json_depth = depth
+    if not expand:
+      self._json_depth = depth
     rv = {}
     for varname in self.__json__:
       try:
-        rv[varname] = _jsonify(getattr(self, varname), depth - 1)
+        rv[varname] = to_json(getattr(self, varname), depth - 1)
       except ValueError as e:
         rv[varname] = e.message
     return rv
-
-  def get_primary_key(self):
-    """Returns the dictionary of primary keys for a given model.
-
-    :rtype: dict
-
-    """
-    return dict(
-      (k.name, getattr(self, k.name))
-      for k in self.m.primary_key
-    )
 
   def flush(self):
     session = self.q.session
     session.add(self)
     session.flush([self])
-
-  @classmethod
-  def retrieve(cls, **kwargs):
-    """Given constructor arguments will return a match or create one.
-
-    :param kwargs: constructor arguments
-    :rtype: tuple
-
-    This method returns a tuple ``(model, flag)`` where ``model`` is of the
-    corresponding class and ``flag`` is ``True`` if the model was just created
-    and ``False`` otherwise.
-
-    """
-    instance = cls.q.filter_by(**kwargs).first()
-    if instance:
-      return instance, False
-    instance = cls(**kwargs)
-    instance.flush()
-    return instance, True
-
-  @classmethod
-  def _get_columns(cls, show_private=False):
-    columns = class_mapper(cls).columns
-    if not show_private:
-      columns = [c for c in columns if not c.key.startswith('_')]
-    return columns
-
-  @classmethod
-  def _get_primary_key(cls):
-    return class_mapper(cls).primary_key
-
-  @classmethod
-  def _get_related_models(cls, show_private=False):
-    return [
-      (r.key, r.mapper.class_)
-      for r in cls.get_relationships(show_private)
-    ]
-
-  @classmethod
-  def _get_relationships(cls, show_private=False):
-    rels =  class_mapper(cls).relationships.values()
-    if not show_private:
-      rels = [rel for rel in rels if not rel.key.startswith('_')]
-    return rels
-
-Model = declarative_base(cls=Base)
 
