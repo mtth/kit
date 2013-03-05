@@ -28,7 +28,7 @@ the ``__view__`` attribute and insert your custom API views there.
 
 from flask import Blueprint, jsonify, request
 from os.path import abspath, dirname, join
-from sqlalchemy.orm import mapperlib
+from sqlalchemy.orm import class_mapper, mapperlib
 from time import time
 from werkzeug.exceptions import HTTPException
 
@@ -395,7 +395,7 @@ class ModelView(APIView):
 
   def get_rule(self):
     url = '/%s' % self.Model.__tablename__
-    url += ''.join('/<%s>' % k.name for k in self.Model._get_primary_key())
+    url += ''.join('/<%s>' % k.name for k in class_mapper(self.Model).primary_key)
     return url
 
   def get(self, parser, **kwargs):
@@ -451,7 +451,7 @@ class RelationshipView(APIView):
   def get_rule(self):
     url = '/%s' % self.parent_Model.__tablename__
     url += ''.join(
-      '/<%s>' % k.name for k in self.parent_Model._get_primary_key()
+      '/<%s>' % k.name for k in class_mapper(self.parent_Model).primary_key
     )
     url += '/%s' % self.rel.key
     return url
@@ -541,7 +541,7 @@ class RelationshipModelView(RelationshipView):
   def get_rule(self):
     url = '/%s' % self.parent_Model.__tablename__
     url += ''.join(
-      '/<%s>' % k.name for k in self.parent_Model._get_primary_key()
+      '/<%s>' % k.name for k in class_mapper(self.parent_Model).primary_key
     )
     url += '/%s/<key>' % self.rel.key
     return url

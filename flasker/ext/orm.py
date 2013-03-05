@@ -192,14 +192,10 @@ class Base(Cacheable, Loggable):
     return columns
 
   @classmethod
-  def _get_primary_key(cls):
-    return class_mapper(cls).primary_key
-
-  @classmethod
   def _get_related_models(cls, show_private=False):
     return [
       (r.key, r.mapper.class_)
-      for r in cls.get_relationships(show_private)
+      for r in cls._get_relationships(show_private)
     ]
 
   @classmethod
@@ -276,7 +272,7 @@ class Base(Cacheable, Loggable):
     """
     return dict(
       (k.name, getattr(self, k.name))
-      for k in self.__class__._get_primary_key()
+      for k in class_mapper(self.__class__).primary_key
     )
 
   def to_json(self, depth=1, expand=True):
