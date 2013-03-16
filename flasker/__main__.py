@@ -199,11 +199,8 @@ def shell_handler(parsed_args):
   except ImportError:
     interact(local=context)
   else:
-    try:
-      sh = IPython.Shell.IPShellEmbed()
-    except AttributeError:
-      sh = IPython.frontend.terminal.embed.InteractiveShellEmbed()
-    sh(global_ns=dict(), local_ns=context)
+    sh = IPython.frontend.terminal.embed.InteractiveShellEmbed()
+    sh(local_ns=context)
 
 shell_parser.set_defaults(handler=shell_handler)
 
