@@ -78,6 +78,10 @@ def convert(value, rtype=None):
         elif value.lower() == 'false':
           return False
         else:
+          try:
+            return loads(value)
+          except ValueError:
+            pass
           return value
 
 Part = namedtuple('Part', ['offset', 'limit'])
