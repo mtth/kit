@@ -52,7 +52,7 @@
 <p>General helpers.</p>
 <dl class="function">
 <dt id="flasker.util.convert">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">convert</tt><big>(</big><em>value</em>, <em>rtype=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.convert" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">flasker.util.</tt><tt class="descname">convert</tt><big>(</big><em>value</em>, <em>rtype=None</em>, <em>allow_json=False</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.convert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts a string to another value.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -61,7 +61,9 @@
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>value</strong> (<em>str</em>) &#8211; the value to be converted</li>
 <li><strong>rtype</strong> (<em>str</em>) &#8211; string representation of the type the value should be
-converted to</li>
+converted to. Accepted values are <tt class="docutils literal"><span class="pre">['int',</span> <span class="pre">'float',</span> <span class="pre">'bool',</span> <span class="pre">'unicode',</span>
+<span class="pre">'str',</span> <span class="pre">'json']</span></tt>.</li>
+<li><strong>allow_json</strong> (<em>bool</em>) &#8211; allow loading of json strings</li>
 </ul>
 </td>
 </tr>
@@ -71,7 +73,8 @@ converted to</li>
 </tbody>
 </table>
 <p>If <tt class="docutils literal"><span class="pre">rtype</span></tt> isn&#8217;t specified, the following conversions are attempted in
-order: <tt class="docutils literal"><span class="pre">int</span></tt>, <tt class="docutils literal"><span class="pre">float</span></tt>, <tt class="docutils literal"><span class="pre">bool</span></tt>. If all fail, the method returns the
+order: <tt class="docutils literal"><span class="pre">int</span></tt>, <tt class="docutils literal"><span class="pre">float</span></tt>, <tt class="docutils literal"><span class="pre">bool</span></tt> and finally <tt class="docutils literal"><span class="pre">json.loads</span></tt> (only if
+<tt class="docutils literal"><span class="pre">allow_json</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt>). If all fail, the method returns the
 string <tt class="docutils literal"><span class="pre">value</span></tt> unchanged.</p>
 <p>Boolean conversions convert <tt class="docutils literal"><span class="pre">'true',</span> <span class="pre">'1'</span></tt> to <tt class="docutils literal"><span class="pre">True</span></tt>, and <tt class="docutils literal"><span class="pre">'false',</span> <span class="pre">'0'</span></tt>
 to <tt class="docutils literal"><span class="pre">False</span></tt> (case insensitive) and otherwise raises an error.</p>
@@ -260,7 +263,7 @@ This is resolved creating a new key <tt class="docutils literal"><span class="pr
 
 <dl class="class">
 <dt id="flasker.util.SmartDictReader">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">SmartDictReader</tt><big>(</big><em>csvfile</em>, <em>fields=None</em>, <em>silent=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#SmartDictReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.SmartDictReader" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">SmartDictReader</tt><big>(</big><em>csvfile</em>, <em>fields=None</em>, <em>silent=False</em>, <em>allow_json=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#SmartDictReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.SmartDictReader" title="Permalink to this definition">¶</a></dt>
 <dd><p><tt class="docutils literal"><span class="pre">DictReader</span></tt> with built-in value conversion.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -272,6 +275,7 @@ This is resolved creating a new key <tt class="docutils literal"><span class="pr
 <tt class="docutils literal"><span class="pre">(fieldname,</span> <span class="pre">fieldtype)</span></tt>. If specified, the <tt class="docutils literal"><span class="pre">fieldtype</span></tt> will be passed
 as second argument to the <tt class="docutils literal"><span class="pre">convert</span></tt> function.</li>
 <li><strong>silent</strong> (<em>bool</em>) &#8211; whether or not to silence errors while processing the file.</li>
+<li><strong>allow_json</strong> (<em>bool</em>) &#8211; allow loading of json strings</li>
 <li><strong>kwargs</strong> &#8211; keyword arguments to forward to the undelying
 <tt class="docutils literal"><span class="pre">csv.DictReader</span></tt> object.</li>
 </ul>
