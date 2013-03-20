@@ -9,6 +9,7 @@ from decimal import Decimal
 from itertools import islice
 from json import dumps, loads
 from functools import partial, wraps
+from logging import getLogger
 from math import ceil
 from re import sub
 from sqlalchemy.ext.mutable import Mutable
