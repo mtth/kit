@@ -29,18 +29,22 @@ except ImportError:
 #
 # ===
 
-def convert(value, rtype=None):
+def convert(value, rtype=None, allow_json=False):
   """Converts a string to another value.
 
   :param value: the value to be converted
   :type value: str
   :param rtype: string representation of the type the value should be
-    converted to
+    converted to. Accepted values are ``['int', 'float', 'bool', 'unicode',
+    'str', 'json']``.
   :type rtype: str
+  :param allow_json: allow loading of json strings
+  :type allow_json: bool
   :rtype: int, float, bool, str, unicode
 
   If ``rtype`` isn't specified, the following conversions are attempted in
-  order: ``int``, ``float``, ``bool``. If all fail, the method returns the
+  order: ``int``, ``float``, ``bool`` and finally ``json.loads`` (only if
+  ``allow_json`` is ``True``). If all fail, the method returns the
   string ``value`` unchanged.
 
   Boolean conversions convert ``'true', '1'`` to ``True``, and ``'false', '0'``
@@ -64,6 +68,8 @@ def convert(value, rtype=None):
       return unicode(value, encoding='utf-8', errors='replace')
     elif rtype == 'str':
       return value
+    elif rtype == 'json':
+      return loads(value)
     # if we get here, something has gone wrong
     raise ValueError('Invalid conversion type: %s' % rtype)
   else:
@@ -78,10 +84,11 @@ def convert(value, rtype=None):
         elif value.lower() == 'false':
           return False
         else:
-          try:
-            return loads(value)
-          except ValueError:
-            pass
+          if allow_json:
+            try:
+              return loads(value)
+            except ValueError:
+              pass
           return value
 
 Part = namedtuple('Part', ['offset', 'limit'])
@@ -334,6 +341,8 @@ class SmartDictReader(DictReader):
   :type fields: list
   :param silent: whether or not to silence errors while processing the file.
   :type silent: bool
+  :param allow_json: allow loading of json strings
+  :type allow_json: bool
   :param kwargs: keyword arguments to forward to the undelying
     ``csv.DictReader`` object.
   :rtype: iterable
@@ -351,11 +360,13 @@ class SmartDictReader(DictReader):
 
   """
 
-  def __init__(self, csvfile, fields=None, silent=False, **kwargs):
+  def __init__(self, csvfile, fields=None, silent=False, allow_json=False,
+               **kwargs):
     self.csvfile = csvfile
     self.rows_imported = 0
     self.errors = []
     self.silent = silent
+    self.allow_json = allow_json
     if fields:
       if isinstance(fields[0], (list, tuple)):
         kwargs['fieldnames'] = [field[0] for field in fields]
@@ -372,7 +383,7 @@ class SmartDictReader(DictReader):
     row = DictReader.next(self)
     try:
       processed_row = dict(
-          (key, convert(value, self.field_types[key]))
+          (key, convert(value, self.field_types[key], self.allow_json))
           for key, value in row.iteritems()
       )
     except ValueError as e:

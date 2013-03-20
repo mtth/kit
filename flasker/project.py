@@ -172,7 +172,7 @@ class Project(object):
         'Unable to parse configuration file at %s.' % config_path
       )
     conf = dict(
-      (s, dict((k, convert(v)) for (k, v) in parser.items(s)))
+      (s, dict((k, convert(v, allow_json=True)) for (k, v) in parser.items(s)))
       for s in parser.sections()
     )
     if not conf['PROJECT']['NAME']:
