@@ -3,7 +3,7 @@
 from flask import render_template
 from flasker import current_project
 
-app = current_project.app
+app = current_project.flask
 
 @app.route('/')
 def index():

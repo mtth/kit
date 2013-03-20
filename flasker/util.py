@@ -341,6 +341,8 @@ class SmartDictReader(DictReader):
   :type fields: list
   :param silent: whether or not to silence errors while processing the file.
   :type silent: bool
+  :param allow_json: allow loading of json strings
+  :type allow_json: bool
   :param kwargs: keyword arguments to forward to the undelying
     ``csv.DictReader`` object.
   :rtype: iterable
@@ -358,11 +360,13 @@ class SmartDictReader(DictReader):
 
   """
 
-  def __init__(self, csvfile, fields=None, silent=False, **kwargs):
+  def __init__(self, csvfile, fields=None, silent=False, allow_json=False,
+               **kwargs):
     self.csvfile = csvfile
     self.rows_imported = 0
     self.errors = []
     self.silent = silent
+    self.allow_json = allow_json
     if fields:
       if isinstance(fields[0], (list, tuple)):
         kwargs['fieldnames'] = [field[0] for field in fields]
@@ -379,7 +383,7 @@ class SmartDictReader(DictReader):
     row = DictReader.next(self)
     try:
       processed_row = dict(
-          (key, convert(value, self.field_types[key]))
+          (key, convert(value, self.field_types[key], self.allow_json))
           for key, value in row.iteritems()
       )
     except ValueError as e:
