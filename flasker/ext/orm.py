@@ -11,7 +11,7 @@ Setup is straightforward:
   from flasker import current_project as pj
   from flasker.ext import ORM
 
-  orm = ORM()
+  orm = ORM(pj)
 
   Model = orm.Model               # the customized base
   relationship = orm.relationship # the customized relationship
@@ -27,7 +27,6 @@ Models can now be created by subclassing ``orm.Model`` as follows:
 
     id = Column(Integer)
     address = Column(String(128))
-
 
   class Cat(Model):
       
@@ -49,25 +48,31 @@ Models can be queried in several ways:
   query = pj.session.query(Cat)
   query = Cat.q
 
-  # relationships can be used as well (if lazy is set to dynamic)
-  house = House.q.first()
-  query = house.cats
-
-All the queries above are instances of ``flasker.ext.orm.Query`` (cf. below
-for the list of available methods. Finally, there is a special property ``c``
-exposed on all children of ``orm.Model`` that returns an optimized count
-query (by default SQLAlchemy count queries use subqueries which are very slow).
-This is useful when counting over large numbers of rows (10k and more), as
-the following benchmark shows (~250k rows):
+Both queries above are instances of ``flasker.ext.orm.Query``, which are
+customized ``sqlalchemy.orm.Query`` objects (cf. below for the list of
+available methods). If relationships (and backrefs) are defined using the
+``orm.relationship`` and ``orm.backref`` functions, appender queries will
+also return custom queries:
 
 .. code:: python
 
-  In [1]: %time Model.q.count()
+  house = House.q.first()
+  relationship_query = house.cats # instance of flasker.ext.orm.Query
+
+Finally, there is a special property ``c`` exposed on all children of
+``orm.Model`` that returns an optimized count query (by default SQLAlchemy
+count queries use subqueries which are very slow).  This is useful when
+counting over large numbers of rows (10k and more), as the following benchmark
+shows (~250k rows):
+
+.. code:: python
+
+  In [1]: %time Cat.q.count()
   CPU times: user 0.01 s, sys: 0.00 s, total: 0.01 s
   Wall time: 1.36 s
   Out[1]: 281992L
 
-  In [2]: %time Model.c.scalar()
+  In [2]: %time Cat.c.scalar()
   CPU times: user 0.00 s, sys: 0.00 s, total: 0.00 s
   Wall time: 0.06 s
   Out[2]: 281992L
@@ -96,15 +101,18 @@ from ..util import (Cacheable, to_json,
 
 class ORM(object):
 
-  """The main ORM extension.
+  """The main ORM object.
 
-  Responsible for adding the ``q`` and ``c`` query proxies on the model and
-  configuring the project to use a custom ``Query`` class.
+  :param project: the project against which the extension will be registered
+  :type project: flasker.project.Project
+  :param create_all: whether or not to automatically create tables for the
+    models defined (``True`` by default). Tables will only be created for
+    models which do not have one already.
+  :type create_all: bool
 
-  There is currently a single option available:
-
-  * ``CREATE_ALL`` to create tables for all models which don't already have one
-    (defaults to ``True``).
+  When this object is initialized, it is responsible for adding the ``q`` and
+  ``c`` query proxies on the model and configuring the project to use the
+  custom ``Query`` class.
 
   """
 
@@ -128,7 +136,8 @@ class Query(_Query):
 
   """Base query class.
 
-  The first two methods are from Flask-SQLAlchemy.
+  All queries and relationships/backrefs defined using this extension will
+  return an instance of this class.
 
   """
 
@@ -138,6 +147,8 @@ class Query(_Query):
     :param model_id: the model's primary key
     :type model_id: varies
     :rtype: model or HTTPError
+
+    This method is from Flask-SQLAlchemy.
     
     """
     rv = self.get(model_id)
@@ -148,9 +159,9 @@ class Query(_Query):
   def first_or_404(self):
     """Like first but aborts with 404 if not found.
     
-    :param model_id: the model's primary key
-    :type model_id: varies
     :rtype: model or HTTPError
+
+    This method is from Flask-SQLAlchemy.
     
     """
     rv = self.first()
@@ -197,6 +208,7 @@ class Query(_Query):
       ``flasker.util.query_to_dataframe``. For convenience, if no ``exclude``
       kwarg is specified, it will default to ``['_cache']``.
     :type lazy: bool
+    :rtype: pandas.DataFrame
 
     Requires the ``pandas`` library to be installed.
 
@@ -207,9 +219,16 @@ class Query(_Query):
     else:
       return DataFrame([model.to_json() for model in self])
 
-  def to_records(self, *args, **kwargs):
-    """Raw execute of the query into a generator."""
-    return query_to_records(self, *args, **kwargs)
+  def to_records(self, **kwargs):
+    """Raw execute of the query into a generator.
+
+    :rtype: generator
+
+    This method accepts the same keyword arguments as 
+    ``flasker.util.query_to_records``.
+    
+    """
+    return query_to_records(self, **kwargs)
 
 
 class _QueryProperty(object):
@@ -247,19 +266,15 @@ class _CountProperty(object):
 
 class Base(Cacheable, Loggable):
 
-  """The SQLAlchemy base model with multiple helpers.
+  """The custom SQLAlchemy base.
 
   Along with the methods described below, the following conveniences are
   provided:
 
-  * the ``q`` query property
-
-  * the ``c`` count query property. This will be much faster than issuing
-    ``count()`` on a normal query on MySQL as it will bypass the use of a
-    subquery.
-
   * Automatic table naming (to the model's class name uncamelcased with an
-    extra s appended for good measure).
+    extra s appended for good measure). To disable this behavior, simply
+    override the ``__tablename__`` argument (setting it to ``None`` for
+    single table inheritance).
 
   * ``__repr__`` implementation with model class and primary keys
 
@@ -300,6 +315,9 @@ class Base(Cacheable, Loggable):
   def retrieve(cls, flush_if_new=True, **kwargs):
     """Given constructor arguments will return a match or create one.
 
+    :param flush_if_new: whether or not to flush the model if created (this
+      can be used to generate its ``id``).
+    :type flush_if_new: bool
     :param kwargs: constructor arguments
     :rtype: tuple
 
@@ -405,6 +423,12 @@ class Base(Cacheable, Loggable):
     return rv
 
   def flush(self):
+    """Add the model to the session and flush.
+
+    This is useful for example when an ``id`` for the model needs to be
+    generated.
+
+    """
     session = self.q.session
     session.add(self)
     session.flush([self])
