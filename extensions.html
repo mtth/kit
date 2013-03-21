@@ -60,7 +60,7 @@
 <div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">current_project</span> <span class="k">as</span> <span class="n">pj</span>
 <span class="kn">from</span> <span class="nn">flasker.ext</span> <span class="kn">import</span> <span class="n">ORM</span>
 
-<span class="n">orm</span> <span class="o">=</span> <span class="n">ORM</span><span class="p">()</span>
+<span class="n">orm</span> <span class="o">=</span> <span class="n">ORM</span><span class="p">(</span><span class="n">pj</span><span class="p">)</span>
 
 <span class="n">Model</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">Model</span>               <span class="c"># the customized base</span>
 <span class="n">relationship</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">relationship</span> <span class="c"># the customized relationship</span>
@@ -74,7 +74,6 @@
 
   <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">)</span>
   <span class="n">address</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">128</span><span class="p">))</span>
-
 
 <span class="k">class</span> <span class="nc">Cat</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
     
@@ -92,24 +91,28 @@ please refer to the documentation for <tt class="docutils literal"><span class="
 <div class="code python highlight-python"><div class="highlight"><pre><span class="c"># the two following queries are equivalent</span>
 <span class="n">query</span> <span class="o">=</span> <span class="n">pj</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Cat</span><span class="p">)</span>
 <span class="n">query</span> <span class="o">=</span> <span class="n">Cat</span><span class="o">.</span><span class="n">q</span>
-
-<span class="c"># relationships can be used as well (if lazy is set to dynamic)</span>
-<span class="n">house</span> <span class="o">=</span> <span class="n">House</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
-<span class="n">query</span> <span class="o">=</span> <span class="n">house</span><span class="o">.</span><span class="n">cats</span>
 </pre></div>
 </div>
-<p>All the queries above are instances of <tt class="docutils literal"><span class="pre">flasker.ext.orm.Query</span></tt> (cf. below
-for the list of available methods. Finally, there is a special property <tt class="docutils literal"><span class="pre">c</span></tt>
-exposed on all children of <tt class="docutils literal"><span class="pre">orm.Model</span></tt> that returns an optimized count
-query (by default SQLAlchemy count queries use subqueries which are very slow).
-This is useful when counting over large numbers of rows (10k and more), as
-the following benchmark shows (~250k rows):</p>
-<div class="code python highlight-python"><pre>In [1]: %time Model.q.count()
+<p>Both queries above are instances of <tt class="docutils literal"><span class="pre">flasker.ext.orm.Query</span></tt>, which are
+customized <tt class="docutils literal"><span class="pre">sqlalchemy.orm.Query</span></tt> objects (cf. below for the list of
+available methods). If relationships (and backrefs) are defined using the
+<tt class="docutils literal"><span class="pre">orm.relationship</span></tt> and <tt class="docutils literal"><span class="pre">orm.backref</span></tt> functions, appender queries will
+also return custom queries:</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="n">house</span> <span class="o">=</span> <span class="n">House</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+<span class="n">relationship_query</span> <span class="o">=</span> <span class="n">house</span><span class="o">.</span><span class="n">cats</span> <span class="c"># instance of flasker.ext.orm.Query</span>
+</pre></div>
+</div>
+<p>Finally, there is a special property <tt class="docutils literal"><span class="pre">c</span></tt> exposed on all children of
+<tt class="docutils literal"><span class="pre">orm.Model</span></tt> that returns an optimized count query (by default SQLAlchemy
+count queries use subqueries which are very slow).  This is useful when
+counting over large numbers of rows (10k and more), as the following benchmark
+shows (~250k rows):</p>
+<div class="code python highlight-python"><pre>In [1]: %time Cat.q.count()
 CPU times: user 0.01 s, sys: 0.00 s, total: 0.01 s
 Wall time: 1.36 s
 Out[1]: 281992L
 
-In [2]: %time Model.c.scalar()
+In [2]: %time Cat.c.scalar()
 CPU times: user 0.00 s, sys: 0.00 s, total: 0.00 s
 Wall time: 0.06 s
 Out[2]: 281992L</pre>
@@ -117,21 +120,32 @@ Out[2]: 281992L</pre>
 <dl class="class">
 <dt id="flasker.ext.orm.ORM">
 <em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">ORM</tt><big>(</big><em>project</em>, <em>create_all=True</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#ORM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.ORM" title="Permalink to this definition">¶</a></dt>
-<dd><p>The main ORM extension.</p>
-<p>Responsible for adding the <tt class="docutils literal"><span class="pre">q</span></tt> and <tt class="docutils literal"><span class="pre">c</span></tt> query proxies on the model and
-configuring the project to use a custom <tt class="docutils literal"><span class="pre">Query</span></tt> class.</p>
-<p>There is currently a single option available:</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">CREATE_ALL</span></tt> to create tables for all models which don&#8217;t already have one
-(defaults to <tt class="docutils literal"><span class="pre">True</span></tt>).</li>
+<dd><p>The main ORM object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>project</strong> (<a class="reference internal" href="project.html#flasker.project.Project" title="flasker.project.Project"><em>flasker.project.Project</em></a>) &#8211; the project against which the extension will be registered</li>
+<li><strong>create_all</strong> (<em>bool</em>) &#8211; whether or not to automatically create tables for the
+models defined (<tt class="docutils literal"><span class="pre">True</span></tt> by default). Tables will only be created for
+models which do not have one already.</li>
 </ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>When this object is initialized, it is responsible for adding the <tt class="docutils literal"><span class="pre">q</span></tt> and
+<tt class="docutils literal"><span class="pre">c</span></tt> query proxies on the model and configuring the project to use the
+custom <tt class="docutils literal"><span class="pre">Query</span></tt> class.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="flasker.ext.orm.Query">
 <em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">Query</tt><big>(</big><em>entities</em>, <em>session=None</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Query" title="Permalink to this definition">¶</a></dt>
 <dd><p>Base query class.</p>
-<p>The first two methods are from Flask-SQLAlchemy.</p>
+<p>All queries and relationships/backrefs defined using this extension will
+return an instance of this class.</p>
 <dl class="method">
 <dt id="flasker.ext.orm.Query.get_or_404">
 <tt class="descname">get_or_404</tt><big>(</big><em>model_id</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/orm.html#Query.get_or_404"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Query.get_or_404" title="Permalink to this definition">¶</a></dt>
@@ -146,6 +160,7 @@ configuring the project to use a custom <tt class="docutils literal"><span class
 </tr>
 </tbody>
 </table>
+<p>This method is from Flask-SQLAlchemy.</p>
 </dd></dl>
 
 <dl class="method">
@@ -156,12 +171,11 @@ configuring the project to use a custom <tt class="docutils literal"><span class
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>model_id</strong> (<em>varies</em>) &#8211; the model&#8217;s primary key</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">model or HTTPError</td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">model or HTTPError</td>
 </tr>
 </tbody>
 </table>
+<p>This method is from Flask-SQLAlchemy.</p>
 </dd></dl>
 
 <dl class="method">
@@ -205,6 +219,8 @@ method also accepts the same keyword arguments as
 <tt class="docutils literal"><span class="pre">flasker.util.query_to_dataframe</span></tt>. For convenience, if no <tt class="docutils literal"><span class="pre">exclude</span></tt>
 kwarg is specified, it will default to <tt class="docutils literal"><span class="pre">['_cache']</span></tt>.</td>
 </tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">pandas.DataFrame</td>
+</tr>
 </tbody>
 </table>
 <p>Requires the <tt class="docutils literal"><span class="pre">pandas</span></tt> library to be installed.</p>
@@ -212,8 +228,18 @@ kwarg is specified, it will default to <tt class="docutils literal"><span class=
 
 <dl class="method">
 <dt id="flasker.ext.orm.Query.to_records">
-<tt class="descname">to_records</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Query.to_records" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">to_records</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Query.to_records" title="Permalink to this definition">¶</a></dt>
 <dd><p>Raw execute of the query into a generator.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">generator</td>
+</tr>
+</tbody>
+</table>
+<p>This method accepts the same keyword arguments as 
+<tt class="docutils literal"><span class="pre">flasker.util.query_to_records</span></tt>.</p>
 </dd></dl>
 
 </dd></dl>
@@ -221,16 +247,14 @@ kwarg is specified, it will default to <tt class="docutils literal"><span class=
 <dl class="class">
 <dt id="flasker.ext.orm.Base">
 <em class="property">class </em><tt class="descclassname">flasker.ext.orm.</tt><tt class="descname">Base</tt><a class="reference internal" href="_modules/flasker/ext/orm.html#Base"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.orm.Base" title="Permalink to this definition">¶</a></dt>
-<dd><p>The SQLAlchemy base model with multiple helpers.</p>
+<dd><p>The custom SQLAlchemy base.</p>
 <p>Along with the methods described below, the following conveniences are
 provided:</p>
 <ul class="simple">
-<li>the <tt class="docutils literal"><span class="pre">q</span></tt> query property</li>
-<li>the <tt class="docutils literal"><span class="pre">c</span></tt> count query property. This will be much faster than issuing
-<tt class="docutils literal"><span class="pre">count()</span></tt> on a normal query on MySQL as it will bypass the use of a
-subquery.</li>
 <li>Automatic table naming (to the model&#8217;s class name uncamelcased with an
-extra s appended for good measure).</li>
+extra s appended for good measure). To disable this behavior, simply
+override the <tt class="docutils literal"><span class="pre">__tablename__</span></tt> argument (setting it to <tt class="docutils literal"><span class="pre">None</span></tt> for
+single table inheritance).</li>
 <li><tt class="docutils literal"><span class="pre">__repr__</span></tt> implementation with model class and primary keys</li>
 <li>Caching (from <tt class="docutils literal"><span class="pre">flasker.util.Cacheable</span></tt>)</li>
 <li>Logging (from <tt class="docutils literal"><span class="pre">flasker.util.Loggable</span></tt>)</li>
@@ -243,9 +267,15 @@ extra s appended for good measure).</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kwargs</strong> &#8211; constructor arguments</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>flush_if_new</strong> (<em>bool</em>) &#8211; whether or not to flush the model if created (this
+can be used to generate its <tt class="docutils literal"><span class="pre">id</span></tt>).</li>
+<li><strong>kwargs</strong> &#8211; constructor arguments</li>
+</ul>
+</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">tuple</td>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">tuple</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -299,6 +329,14 @@ one of <tt class="docutils literal"><span class="pre">False,</span> <span class=
 <p>The consequence of this is that this method will never issue extra queries
 to populate the JSON. Furthermore, all the attribute names to be
 included are computed at class declaration so this method is very fast.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.orm.Base.flush">
+<tt class="descname">flush</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the model to the session and flush.</p>
+<p>This is useful for example when an <tt class="docutils literal"><span class="pre">id</span></tt> for the model needs to be
+generated.</p>
 </dd></dl>
 
 </dd></dl>
