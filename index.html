@@ -74,11 +74,11 @@ frameworks is therefore required.</li>
 </div></blockquote>
 </li>
 </ul>
-<p>Flasker also comes with three extensions for commonly needed functionalities:</p>
+<p>Flasker also comes with extensions for commonly needed functionalities:</p>
 <ul class="simple">
-<li>Authentication</li>
-<li>Expanded ORM Models</li>
+<li>Expanded SQLAlchemy base and queries</li>
 <li>ReSTful API <em>(still alpha)</em></li>
+<li>Authentication via OpenID <em>(still alpha)</em></li>
 </ul>
 <p>Flasker is under development. You can find the latest version on <a class="reference external" href="http://github.com/mtth/flasker">GitHub</a> and
 read the documentation on <a class="reference external" href="http://mtth.github.com/flasker">GitHub pages</a>.</p>
@@ -177,27 +177,18 @@ project manually as follow:</p>
 </div>
 <div class="section" id="project-configuration">
 <h2>Project configuration<a class="headerlink" href="#project-configuration" title="Permalink to this headline">¶</a></h2>
-<p>A few options are available for the <tt class="docutils literal"><span class="pre">PROJECT</span></tt> section of the configuration
-file:</p>
+<p>Here are a few of the available options for the <tt class="docutils literal"><span class="pre">PROJECT</span></tt> section of the
+configuration file:</p>
 <ul class="simple">
 <li><tt class="docutils literal"><span class="pre">NAME</span></tt>: the name of the project, used for debugging and to generate a
 default domain name for the Celery workers.</li>
 <li><tt class="docutils literal"><span class="pre">MODULES</span></tt>: comma separated list of the project&#8217;s modules. They must be
 importable from the configuration file&#8217;s folder.</li>
-<li><tt class="docutils literal"><span class="pre">FLASK_ROOT_FOLDER</span></tt>: path to the Flask application&#8217;s root folder relative
-to the configuration file (defaults to <tt class="docutils literal"><span class="pre">app</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">FLASK_STATIC_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">static_folder</span></tt> relative to the
-application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">static</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">FLASK_TEMPLATE_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">template_folder</span></tt> relative to
-the application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">templates</span></tt>).</li>
 <li><tt class="docutils literal"><span class="pre">COMMIT_ON_TEARDOWN</span></tt>: if <tt class="docutils literal"><span class="pre">True</span></tt> (default), all database transactions will
 be committed after each Flask app request and Celery task completion. If
 <tt class="docutils literal"><span class="pre">False</span></tt> the session will simply be removed.</li>
-<li><tt class="docutils literal"><span class="pre">DOMAIN</span></tt>: if specified, used to generate Celery worker hostnames (defaults
-to the project name, sluggified).</li>
-<li><tt class="docutils literal"><span class="pre">SUBDOMAIN</span></tt>: if specified, used to generate Celery worker hostnames
-(defaults to the configuration file&#8217;s name).</li>
 </ul>
+<p>For the full list of options, refer to the documentation on <a class="reference external" href="http://mtth.github.com/flasker">GitHub pages</a>.</p>
 </div>
 </div>
 <div class="section" id="contents">

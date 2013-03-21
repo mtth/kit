@@ -156,6 +156,23 @@ sessions.</li>
 </ul>
 <p>For convenience, both these variables are also available directly in the
 <tt class="docutils literal"><span class="pre">flasker</span></tt> namespace.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>In most cases <a class="reference internal" href="#flasker.project.Project" title="flasker.project.Project"><tt class="xref py py-class docutils literal"><span class="pre">flasker.project.Project</span></tt></a> will not need to be
+instantiated explicitely (the console tool handles the setup) and will only
+be accessed via the <tt class="docutils literal"><span class="pre">current_project</span></tt> proxy. In some cases however the
+constructor can be called to create a project (for example from an IPython
+notebook or to use a separate WSGI server).</p>
+<div class="code python last highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">Project</span>
+
+<span class="c"># instantiating the project</span>
+<span class="n">pj</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s">&#39;path/to/config.cfg&#39;</span><span class="p">)</span>
+
+<span class="c"># the application that would be passed to a WSGI server</span>
+<span class="n">application</span> <span class="o">=</span> <span class="n">pj</span><span class="o">.</span><span class="n">flask</span>
+</pre></div>
+</div>
+</div>
 <dl class="class">
 <dt id="flasker.project.Project">
 <em class="property">class </em><tt class="descclassname">flasker.project.</tt><tt class="descname">Project</tt><big>(</big><em>config_path=None</em>, <em>make=True</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project" title="Permalink to this definition">¶</a></dt>
@@ -165,7 +182,7 @@ sessions.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>config_path</strong> (<em>bool</em>) &#8211; path to the configuration file. The following sections
+<li><strong>config_path</strong> (<em>str</em>) &#8211; path to the configuration file. The following sections
 should be present: <tt class="docutils literal"><span class="pre">PROJECT</span></tt>, <tt class="docutils literal"><span class="pre">ENGINE</span></tt>, <tt class="docutils literal"><span class="pre">FLASK</span></tt>, <tt class="docutils literal"><span class="pre">CELERY</span></tt>. See
 below for a list of available options in each section.</li>
 <li><strong>make</strong> (<em>bool</em>) &#8211; whether or not to create all the project components. This should
@@ -215,23 +232,24 @@ completion. If <tt class="docutils literal"><span class="pre">False</span></tt> 
 </ul>
 </li>
 </ul>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>In most cases this class will not need to be instantiated explicitely (the
-console tool handles the setup) and will only be accessed via the
-<tt class="docutils literal"><span class="pre">current_project</span></tt> proxy. In some cases however the constructor can be
-called to create a project (for example from an IPython notebook or to use
-a separate WSGI server).</p>
-<div class="code python last highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">Project</span>
+<dl class="attribute">
+<dt id="flasker.project.Project.flask">
+<tt class="descname">flask</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.flask" title="Permalink to this definition">¶</a></dt>
+<dd><p>the Flask application</p>
+</dd></dl>
 
-<span class="c"># instantiating the project</span>
-<span class="n">pj</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s">&#39;path/to/config.cfg&#39;</span><span class="p">)</span>
+<dl class="attribute">
+<dt id="flasker.project.Project.celery">
+<tt class="descname">celery</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.celery" title="Permalink to this definition">¶</a></dt>
+<dd><p>the Celery application</p>
+</dd></dl>
 
-<span class="c"># the application that would be passed to a WSGI server</span>
-<span class="n">application</span> <span class="o">=</span> <span class="n">pj</span><span class="o">.</span><span class="n">flask</span>
-</pre></div>
-</div>
-</div>
+<dl class="attribute">
+<dt id="flasker.project.Project.session">
+<tt class="descname">session</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.session" title="Permalink to this definition">¶</a></dt>
+<dd><p>the SQLAlchemy scoped sessionmaker</p>
+</dd></dl>
+
 <dl class="method">
 <dt id="flasker.project.Project.before_startup">
 <tt class="descname">before_startup</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project.before_startup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project.before_startup" title="Permalink to this definition">¶</a></dt>
@@ -254,7 +272,7 @@ the project have been created.</p>
 <dl class="data">
 <dt id="flasker.project.current_project">
 <tt class="descclassname">flasker.project.</tt><tt class="descname">current_project</tt><a class="headerlink" href="#flasker.project.current_project" title="Permalink to this definition">¶</a></dt>
-<dd><p>proxy to the current project</p>
+<dd><p>Proxy to the current project</p>
 </dd></dl>
 
 </div>
