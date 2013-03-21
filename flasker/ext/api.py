@@ -56,7 +56,7 @@ for :class:`flasker.ext.api.BaseView` for the list of all available options.
 """
 
 from flask import Blueprint, jsonify, request
-from flask.views import View
+from flask.views import MethodView, View
 from os.path import abspath, dirname, join
 from sqlalchemy.orm import class_mapper, mapperlib
 from time import time
@@ -107,31 +107,37 @@ class API(object):
   def __init__(self, project, url_prefix='api', index_view=True,
                parser_options=None):
 
-    self._views = []
-
-    self.parser = Parser(parser_options or {})
+    parser_options = parser_options or {}
 
     self.View = type(
       'View',
       (BaseView, ),
       {
-        '__all__': self._views,
-        'url_prefix': url_prefix,
+        '__all__': [],
+        'parser': Parser(**parser_options)
       }
     )
 
     @project.before_startup
     def handler(project):
+
       blueprint = Blueprint(
         url_prefix,
         '%s.%s' % (project.config['PROJECT']['FLASK_ROOT_FOLDER'], url_prefix),
-        # template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
         url_prefix='/%s' % url_prefix,
       )
-      for view in self._views:
-        view._attach_views(blueprint)
+
+      for view in self.View.__all__:
+        view._attach(blueprint)
+
       if index_view:
-        IndexView._attach(blueprint)
+
+        @blueprint.route('/')
+        def index():
+          return jsonify({
+            'available_endpoints': [] #TODO
+          })
+
       project.flask.register_blueprint(blueprint)
 
 
@@ -143,296 +149,187 @@ class _BaseViewMeta(type):
 
   def __new__(cls, name, bases, dct):
     rv = super(_BaseViewMeta, cls).__new__(cls, name, bases, dct)
-    if rv.__all__ is not None:
+    if rv.__model__ is not None:
       rv.__all__.append(rv)
     return rv
 
 
 class BaseView(View):
 
-  """Base API view. Not an actual view.
+  """Base API view.
 
-  :param Model: the ``Model`` subclass to be exposed.
-  :param relationships: whether or not to create subroutes for the model's
-    lazy and dynamic relationships. This parameter can take the following
-    values:
-
-    * ``True`` to create routes for all 
-    * ``False`` to create none
-    * a list of relationship keys to create routes for
-
-  :param methods: which request methods to allow. Can take the following
-    values:
-
-    * ``True`` to allow all
-    * a list of methods to allow
-  
-  Calling this function multiple times will override any options previously 
-  set for the Model.
-
-  ..note::
-    
-    Only relationships with ``lazy`` set to ``'dynamic'``, ``'select'`` or
-    ``True`` can have subroutes. All eagerly loaded relationships are simply
-    available directly on the model.
+  To customize, override the ``get``, ``post``, etc. methods.
 
   """
 
   __metaclass__ = _BaseViewMeta
-
   __all__ = None
 
   #: orm.Model class
   __model__ = None
 
+  #: Base URL (will default to the model's tablename).
+  base_url = None
+
+  #: Endpoint (will default to the model's tablename).
+  endpoint = None
+
   #: Allowed methods.
   methods = frozenset(['GET'])
 
-  #: Whether or not to create the collection endpoint.
-  collection_view = True
+  #: Parser (will default to the API instance parser).
+  parser = None
 
-  #: Whether or not to create the model endpoint.
-  model_view = True
-
-  #: Which relationship endpoints to create.
-  #: can be ``True`` (all relationships), a list of relationship attributes
-  #: names or a dictionary with keys being relationship attributes and values
-  #: tuples of (RelationshipCollectionView, RelationshipModelView).
+  #: Which relationship endpoints to create (these allow GET requests).
+  #: Can be ``True`` (all relationships) or a list of relationship names.
+  #: Only relationships with ``lazy`` set to ``'dynamic'``, ``'select'`` or
+  #: ``True`` can have subroutes. All eagerly loaded relationships are simply
+  #: available directly on the model.
   relationship_views = []
 
   @classmethod
-  def _attach_views(cls, blueprint):
-    Model = cls.__model__
-    if cls.collection_view:
-      CollectionView._attach(Model, cls.methods)
-    if cls.model_view:
-      ModelView._attach(Model, cls.methods)
-    if relationships == True:
-      rels = Model._get_relationships()
-    elif relationships == False:
-      rels = []
+  def _attach(cls, blueprint):
+    """Create the URL routes for the view."""
+
+    model = cls.__model__
+    base_url = cls.base_url or model.__tablename__
+    endpoint = cls.endpoint or model.__tablename__
+    view = cls.as_view(endpoint)
+
+    if 'GET' in cls.methods:
+      blueprint.add_url_rule(
+        rule='/%s' % (base_url, ),
+        view_func=view,
+        methods=['GET', ],
+      )
+
+    if 'POST' in cls.methods:
+      blueprint.add_url_rule(
+        rule='/%s' % (base_url, ),
+        view_func=view,
+        methods=['POST', ],
+      )
+
+    methods = set(['GET', 'PUT', 'DELETE']) & cls.methods
+    if methods:
+      blueprint.add_url_rule(
+        rule='/%s%s' % (
+          base_url,
+          ''.join('/<%s>' % k.name for k in class_mapper(model).primary_key)
+        ),
+        view_func=view,
+        methods=methods,
+      )
+
+    if cls.relationship_views == True:
+      rels = model._get_relationships()
     else:
       rels = filter(
-        lambda r: r.key in relationships,
-        Model._get_relationships()
+        lambda r: r.key in cls.relationship_views,
+        model._get_relationships()
       )
     for rel in rels:
-      if rel.lazy == 'dynamic' and rel.uselist:
-        RelationshipModelView._attach(rel, **options)
-        DynamicRelationshipView.attach_view(rel, **options)
-      elif rel.lazy in [True, 'select'] and rel.uselist:
-        RelationshipModelView.attach_view(rel, **options)
-        LazyRelationshipView.attach_view(rel, **options)
+      if rel.lazy in ['dynamic', True, 'select'] and rel.uselist:
+        type(
+          'View',
+          (_RelationshipView, ),
+          {
+            '__relationship__': rel,
+            'parser': cls.parser,
+            'base_url': base_url,
+            'endpoint': '%s_%s' % (endpoint, rel.key),
+          }
+        )._attach(blueprint)
 
-  @classmethod
-  def _get_endpoint(cls):
-    """Returns the endpoint for use in the blueprint.
-
-    These should be unique accross all your API views.
+  def dispatch_request(self, **kwargs):
+    """Dispatches requests to the corresponding method name.
+    
+    Similar to the ``flask.views.MethodView`` implementation: GET requests
+    are passed to :meth:`get`, POST to :meth:`post`, etc.
     
     """
-    return uncamelcase(clf.__model__.__name__)
-
-  def get_rule(self):
-    """Returns the URL route for the view.
-
-    Routes should be unique (duh).
-
-    """
-    return self.url
+    meth = getattr(self, request.method.lower(), None)
+    if meth is None and request.method == 'HEAD':
+        meth = getattr(self, 'get', None)
+    return meth(**kwargs)
 
   def get(self, **kwargs):
-    timers = {}
-    filtered_query = parser.filter_and_sort(self.Model.q )
-    now = time()
-    count = parser.filter_and_sort(self.Model.c, False).scalar()
-    timers['count'] = time() - now
-    now = time()
-    content = [
-      e.to_json(**parser.get_jsonify_kwargs())
-      for e in parser.offset_and_limit(filtered_query)
-    ]
-    timers['jsonification'] = time() - now
-    return jsonify({
-      'status': '200 Success',
-      'processing_time': timers,
-      'matches': {
-        'total': count,
-        'returned': len(content),
-      },
-      'request': {
-        'base_url': request.base_url,
-        'method': request.method,
-        'values': request.values
-      },
-      'content': content
-    }), 200
+    query = self.__model__.q
+    model_id = kwargs.values() if kwargs else None
+    # TODO: check here if the order makes sense for composite keys
+    return jsonify(self.parser.parse(query, model_id=model_id))
 
   def post(self):
-    if self._is_valid(self.Model, request.json):
-      model = self.Model(**request.json)
-      pj.session.add(model)
-      pj.session.commit() # generate an ID
-      return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
-    else:
-      raise APIError(400, 'Failed validation')
+    # TODO: validate JSON
+    model = self.__model__(**request.json)
+    model._flush()
+    return jsonify(self.parser.serialize([model]))
 
   def put(self, **kwargs):
-    model = self.Model.q.get(kwargs.values())
-    if model:
-      if self._is_valid(model.__class__, request.json):
-        for k, v in request.json.items():
-          setattr(model, k, v)
-        return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
-      else:
-        raise APIError(400, 'Failed validation')
-    else:
-      raise APIError(404, 'No resource found for this ID')
+    # TODO: validate JSON
+    model = self.parser._get_model(self.__model__.q, **kwargs)
+    for k, v in request.json.items():
+      setattr(model, k, v)
+    return jsonify(self.parser.serialize([model]))
 
   def delete(self, **kwargs):
-    model = self.Model.q.get(kwargs.values())
-    if model:
-      pj.session.delete(model)
-      return jsonify({'status': '200 Success', 'content': 'Resource deleted'})
-    else:
-      raise APIError(404, 'No resource found for this ID')
-
-  @classmethod
-  def attach_view(cls, *view_args, **view_kwargs):
-    """Create and attach a view to the blueprint.
-
-    New views should be created with this method otherwise the extension will
-    be unaware of them.
-    
-    """
-    view = cls(*view_args)
-    methods = view_kwargs.get('methods', True)
-    if methods == True:
-      view.allowed_methods = cls.methods
-    else:
-      view.allowed_methods = frozenset(methods)
-    cls.__extension__.blueprint.add_url_rule(
-      rule=view.get_rule(),
-      endpoint=view.get_endpoint(),
-      view_func=view,
-      methods=cls.methods
-    )
-    cls.__all__.append(view)
-
-  def get_endpoint(self):
-    return 'collection_view_for_%s' % self.Model.__tablename__
-    return 'model_view_for_%s' % self.Model.__tablename__
-
-  def get_rule(self):
-    url = '/%s' % self.Model.__tablename__
-    url += ''.join('/<%s>' % k.name for k in class_mapper(self.Model).primary_key)
-    return url
-    return '/%s' % self.Model.__tablename__
+    model = self.parser._get_model(self.__model__.q, **kwargs)
+    pj.session.delete(model)
+    return jsonify({'meta': 'Resource deleted'})
 
 
-class RelationshipView(View):
+class _RelationshipView(MethodView):
 
-  """Not an actual view, meant to be subclassed."""
+  """Relationship View."""
 
-  __model__ = None
   __relationship__ = None
 
-  @property
-  def Model(self):
-    return self.rel.mapper.class_
+  base_url = None
+  endpoint = None
+  parser = None
 
-  @property
-  def parent_Model(self):
-    return self.rel.parent.class_
+  @classmethod
+  def _attach(cls, blueprint):
 
-  def get_endpoint(self):
-    return 'relationship_view_for_%s_%s' % (
-      uncamelcase(self.parent_Model.__name__),
-      self.rel.key
+    relationship = cls.__relationship__
+    parent_model = cls.__relationship__.parent.class_
+
+    base_url = cls.base_url
+    endpoint = cls.endpoint
+
+    view = cls.as_view(endpoint)
+
+    blueprint.add_url_rule(
+      rule='/%s%s/%s' % (
+        base_url,
+        ''.join(
+          '/<%s>' % k.name for k in class_mapper(parent_model).primary_key
+        ),
+        relationship.key,
+      ),
+      view_func=view,
+      methods=['GET', ],
     )
 
-  def get_rule(self):
-    url = '/%s' % self.parent_Model.__tablename__
-    url += ''.join(
-      '/<%s>' % k.name for k in class_mapper(self.parent_Model).primary_key
+    blueprint.add_url_rule(
+      rule='/%s%s/%s/<position>' % (
+        base_url,
+        ''.join(
+          '/<%s>' % k.name for k in class_mapper(parent_model).primary_key
+        ),
+        relationship.key,
+      ),
+      view_func=view,
+      methods=cls.methods,
     )
-    url += '/%s' % self.rel.key
-    return url
-
-  def get_collection(self, **kwargs):
-    parent_model = self.parent_Model.q.get(kwargs.values())
-    if not parent_model:
-      raise APIError(404, 'No resource found')
-    return getattr(parent_model, self.rel.key)
 
   def get(self, **kwargs):
-    key = kwargs.pop('key')
-    collection = self.get_collection(**kwargs)
-    if isinstance(collection, (InstrumentedList, AppenderQuery)):
-      try:
-        pos = int(key) - 1
-      except ValueError:
-        raise APIError(400, 'Invalid key')
-      else:
-        if pos >= 0:
-          if isinstance(collection, InstrumentedList):
-            try:
-              model = collection[pos]
-            except IndexError:
-              model = None
-          else:
-            model = collection.offset(pos).first()
-        else:
-          raise APIError(400, 'Invalid position index')
-    # TODO: support attribute mapped collections
-    if not model:
-      raise APIError(404, 'No resource found')
-    return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
+    position = kwargs.pop('position', None)
+    parent_model = self.__relationship__.parent.class_
+    parent_instance = self.parser._get_model(parent_model.q, **kwargs)
+    collection =  getattr(parent_instance, self.__relationship__.key)
+    return jsonify(self.parser.parse(collection, model_position=position))
 
-  def get(self, **kwargs):
-    return jsonify({
-      'status': '200 Success',
-    }), 200
-
-  """Default view for relationship models."""
-
-  allowed_request_keys = frozenset(['depth', 'expand'])
-
-  def get_endpoint(self):
-    return 'relationship_model_view_for_%s_%s' % (
-      self.parent_Model.__name__,
-      self.rel.key
-    )
-
-  def get_rule(self):
-    url = '/%s' % self.parent_Model.__tablename__
-    url += ''.join(
-      '/<%s>' % k.name for k in class_mapper(self.parent_Model).primary_key
-    )
-    url += '/%s/<key>' % self.rel.key
-    return url
-
-
-class IndexView(View):
-
-  """API splash page with a few helpful keys."""
-
-  url = '/'
-
-  def get(self, params, **kwargs):
-    return jsonify({
-      'status': '200 Welcome',
-      'available_endpoints': [
-        '%s (%s)' % (
-          view.get_rule(),
-          ', '.join(m.upper() for m in view._get_available_methods()))
-        for view in self.__all__
-        if view._get_available_methods()
-      ]
-    })
-
-
-# Helper
 
 class Parser(object):
 
@@ -479,13 +376,10 @@ class Parser(object):
     :rtype: dict
 
     This method is convenience for calling :meth:`process` followed by
-    :meth:`flasker.ext.api.Parser.serialize`, with the following variant.
-    When using this method, the ``wrap`` parameter is determined by the type
-    of ``collection``:
+    :meth:`serialize`, with the content key parameter smartly chosen to 
+    abide by ``flask.jsonify``'s limitation to only objects as top level.
 
-    * ``wrap=True`` if ``collection`` is a :class:`flasker.ext.orm.Query` and
-      ``model_id`` and ``model_position`` are ``None``
-    * ``wrap=False`` otherwise
+    Also adds a match count and request overview for wrapped responses.
 
     """
     collection, match = self.process(
@@ -493,7 +387,10 @@ class Parser(object):
       model_id=model_id,
       model_position=model_position
     )
-    content_key = 'data' if isinstance(collection, Query) else None
+    if isinstance(collection, Query) or len(collection) > 1:
+      content_key = 'data'
+    else:
+      content_key = None
     return self.serialize(
       collection,
       content_key=content_key,
@@ -515,27 +412,28 @@ class Parser(object):
     :param model_id: model identifier. If specified, the parser will call
       ``get`` on the query with this id.
     :type model_id: varies
-    :param model_position: position of the model in the collection
+    :param model_position: position of the model in the collection (1 indexed).
     :type model_position: int
     :rtype: tuple
 
-    Returns a tuple ``(collection, info)``.
+    Returns a tuple ``(collection, match)``:
+
+    * ``collection`` is the filtered, sorted, offsetted, limited collection
+    * ``match`` is a dictionary with two keys: ``total`` with the total number
+      of results from the filtered query and ``returned`` with the total number
+      of results for the filtered, offsetted and limited query.
 
     """
-    # keys = set(request.args.keys())
-    # if not keys <= set(allowed_keys):
-    #   raise APIError(400, 'Invalid parameters found: %s not in %s' % (
-    #     list(self.keys), list(allowed_keys)
-    #   ))
 
-    processing_timer = time()
+    if not collection:
+      return []
 
     if model_id or model_position:
 
       if model_id:
         collection = [collection.get(model_id)]
       else:
-        position = model_position - 1 # model_position is 1 indexed
+        position = int(model_position) - 1 # model_position is 1 indexed
         if isinstance(collection, list):
           collection = collection[position:(position + 1)]
         else:
@@ -625,8 +523,13 @@ class Parser(object):
     """Serializes a list or query to a dictionary.
 
     :param collection: the collection to be serialized
+    :type collection: iterable
     :param content_key: key to wrap content in
-    :param kwargs: ignored if ``content_key`` is ``None``
+    :type content_key: str
+    :rtype: dict
+    
+    The keyword arguments are ignored if ``content_key`` is ``None`` and
+    used to update the returned dictionary otherwise.
 
     """
 
@@ -636,34 +539,48 @@ class Parser(object):
     content = [
       e.to_json(depth=depth, expand=expand)
       for e in collection
+      if e
     ]
 
-    if not content_key:
+    if not content:
+      raise APIError(404, 'Resource not found')
 
-      if len(content) == 0:
-        raise APIError(404, 'Resource not found')
-      elif len(content) == 1:
+    if not content_key:
+      if len(content) == 1:
         return content[0]
       else:
         return content
-
     else:
-
       rv = kwargs or {}
       rv[content_key] = content
       return rv
 
-  def _get_model_class(self, query):
-    """Return corresponding model class from query."""
+  def _get_model_class(self, collection):
+    """Return corresponding model class from collection."""
   
-    models = query_to_models(query)
+    if isinstance(collection, Query):
+      models = query_to_models(collection)
 
-    # only tested for _BaseQueries and associated count queries
-    assert len(models) < 2, 'Invalid query'
+      # only tested for _BaseQueries and associated count queries
+      assert len(models) < 2, 'Invalid query'
 
-    if not len(models):
-      # this is a count query
-      return query._select_from_entity
-    # this is a Query
-    return models[0]
+      if not len(models):
+        # this is a count query
+        return collection._select_from_entity
+      else:
+        # this is a Query
+        return models[0]
+
+    else:
+      return collection[0].__class__
+
+  def _get_model(self, query, **kwargs):
+    """Get model instance from a query and keyword arguments."""
+    model_id = kwargs.values() if kwargs else None
+    collection, match = self.process(query, model_id)
+    assert len(collection) <= 1, 'Multiple models found'
+    if len(collection):
+      return collection[0]
+    else:
+      raise APIError(404, 'Resource not found')
 
