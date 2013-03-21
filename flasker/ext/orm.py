@@ -13,9 +13,9 @@ Setup is straightforward:
 
   orm = ORM(pj)
 
-  Model = orm.Model               # the customized base
-  relationship = orm.relationship # the customized relationship
-  backref = orm.backref           # the associated backref
+  Model = orm.Model                 # the customized base
+  relationship = orm.relationship   # the customized relationship
+  backref = orm.backref             # the associated backref
 
 Models can now be created by subclassing ``orm.Model`` as follows:
 
@@ -57,7 +57,7 @@ also return custom queries:
 .. code:: python
 
   house = House.q.first()
-  relationship_query = house.cats # instance of flasker.ext.orm.Query
+  relationship_query = house.cats   # instance of flasker.ext.orm.Query
 
 Finally, there is a special property ``c`` exposed on all children of
 ``orm.Model`` that returns an optimized count query (by default SQLAlchemy
@@ -104,7 +104,7 @@ class ORM(object):
   """The main ORM object.
 
   :param project: the project against which the extension will be registered
-  :type project: `flasker.project.Project`
+  :type project: flasker.project.Project
   :param create_all: whether or not to automatically create tables for the
     models defined (``True`` by default). Tables will only be created for
     models which do not have one already.
@@ -205,8 +205,8 @@ class Query(_Query):
       ``to_json`` of the models, otherwise it will only contain the columns
       existing in the database (default behavior). If lazy is ``True``, this
       method also accepts the same keyword arguments as
-      ``flasker.util.query_to_dataframe``. For convenience, if no ``exclude``
-      kwarg is specified, it will default to ``['_cache']``.
+      :func:`flasker.util.query_to_dataframe`. For convenience, if no
+      ``exclude`` kwarg is specified, it will default to ``['_cache']``.
     :type lazy: bool
     :rtype: pandas.DataFrame
 
@@ -225,7 +225,7 @@ class Query(_Query):
     :rtype: generator
 
     This method accepts the same keyword arguments as 
-    ``flasker.util.query_to_records``.
+    :func:`flasker.util.query_to_records`.
     
     """
     return query_to_records(self, **kwargs)
@@ -276,11 +276,15 @@ class Base(Cacheable, Loggable):
     override the ``__tablename__`` argument (setting it to ``None`` for
     single table inheritance).
 
-  * ``__repr__`` implementation with model class and primary keys
+  * Default implementation of ``__repr__`` with model class and primary keys
 
-  * Caching (from ``flasker.util.Cacheable``)
+  * Caching (inherited from :class:`flasker.util.Cacheable`). The cache is
+    persistent by default (``_cache`` is actually a
+    :class:`flasker.util.JSONEncodedDict` column).
 
-  * Logging (from ``flasker.util.Loggable``)
+  * Logging (inherited from :class:`flasker.util.Loggable`)
+
+  Recall that the ``q`` and ``c`` query properties are also available.
 
   """
 
@@ -331,16 +335,12 @@ class Base(Cacheable, Loggable):
       return instance, False
     instance = cls(**kwargs)
     if flush_if_new:
-      instance.flush()
+      instance._flush()
     return instance, True
 
   @declared_attr
   def __json__(cls):
-    """Varnames that get JSONified.
-
-    Doesn't emit any additional queries!
-
-    """
+    """Varnames that get JSONified. Doesn't emit any additional queries!"""
     return list(
       varname
       for varname in dir(cls)
@@ -359,12 +359,7 @@ class Base(Cacheable, Loggable):
 
   @declared_attr
   def __tablename__(cls):
-    """Automatically create the table name.
-
-    Override this to choose your own tablename (e.g. for single table
-    inheritance).
-
-    """
+    """Automatically create the table name."""
     return '%ss' % uncamelcase(cls.__name__)
 
   def __repr__(self):
@@ -374,8 +369,14 @@ class Base(Cacheable, Loggable):
     )
     return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
 
+  def _flush(self):
+    """Add the model to the session and flush."""
+    session = self.q.session
+    session.add(self)
+    session.flush([self])
+
   def get_primary_key(self):
-    """Returns the dictionary of primary keys for a given model.
+    """Returns a dictionary of primary keys for the given model.
 
     :rtype: dict
 
@@ -386,7 +387,7 @@ class Base(Cacheable, Loggable):
     )
 
   def to_json(self, depth=1, expand=True):
-    """Special implementation of to_json for Model objects.
+    """Serializes the model into a dictionary.
 
     :param depth:
     :type depth: int
@@ -398,14 +399,19 @@ class Base(Cacheable, Loggable):
 
     The following attributes are included in the returned JSON:
 
-    * all non private properties
     * all non private columns
+    * all non private properties
     * all non private relationships which have their ``lazy`` attribute set to
       one of ``False, 'joined', 'immediate'``
 
-    The consequence of this is that this method will never issue extra queries
+    A consequence of this is that this method will never issue extra queries
     to populate the JSON. Furthermore, all the attribute names to be
     included are computed at class declaration so this method is very fast.
+
+    .. note::
+
+      To change which attributes are included in the dictionary, you can 
+      override the ``__json__`` attribute.
 
     """
     if depth <= self._json_depth:
@@ -421,15 +427,4 @@ class Base(Cacheable, Loggable):
       except ValueError as e:
         rv[varname] = e.message
     return rv
-
-  def flush(self):
-    """Add the model to the session and flush.
-
-    This is useful for example when an ``id`` for the model needs to be
-    generated.
-
-    """
-    session = self.q.session
-    session.add(self)
-    session.flush([self])
 
