@@ -62,9 +62,9 @@
 
 <span class="n">orm</span> <span class="o">=</span> <span class="n">ORM</span><span class="p">(</span><span class="n">pj</span><span class="p">)</span>
 
-<span class="n">Model</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">Model</span>               <span class="c"># the customized base</span>
-<span class="n">relationship</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">relationship</span> <span class="c"># the customized relationship</span>
-<span class="n">backref</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">backref</span>           <span class="c"># the associated backref</span>
+<span class="n">Model</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">Model</span>                 <span class="c"># the customized base</span>
+<span class="n">relationship</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">relationship</span>   <span class="c"># the customized relationship</span>
+<span class="n">backref</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">backref</span>             <span class="c"># the associated backref</span>
 </pre></div>
 </div>
 <p>Models can now be created by subclassing <tt class="docutils literal"><span class="pre">orm.Model</span></tt> as follows:</p>
@@ -99,7 +99,7 @@ available methods). If relationships (and backrefs) are defined using the
 <tt class="docutils literal"><span class="pre">orm.relationship</span></tt> and <tt class="docutils literal"><span class="pre">orm.backref</span></tt> functions, appender queries will
 also return custom queries:</p>
 <div class="code python highlight-python"><div class="highlight"><pre><span class="n">house</span> <span class="o">=</span> <span class="n">House</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
-<span class="n">relationship_query</span> <span class="o">=</span> <span class="n">house</span><span class="o">.</span><span class="n">cats</span> <span class="c"># instance of flasker.ext.orm.Query</span>
+<span class="n">relationship_query</span> <span class="o">=</span> <span class="n">house</span><span class="o">.</span><span class="n">cats</span>   <span class="c"># instance of flasker.ext.orm.Query</span>
 </pre></div>
 </div>
 <p>Finally, there is a special property <tt class="docutils literal"><span class="pre">c</span></tt> exposed on all children of
@@ -126,7 +126,7 @@ Out[2]: 281992L</pre>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>project</strong> (<cite>flasker.project.Project</cite>) &#8211; the project against which the extension will be registered</li>
+<li><strong>project</strong> (<a class="reference internal" href="project.html#flasker.project.Project" title="flasker.project.Project"><em>flasker.project.Project</em></a>) &#8211; the project against which the extension will be registered</li>
 <li><strong>create_all</strong> (<em>bool</em>) &#8211; whether or not to automatically create tables for the
 models defined (<tt class="docutils literal"><span class="pre">True</span></tt> by default). Tables will only be created for
 models which do not have one already.</li>
@@ -216,8 +216,8 @@ generate random offsets.</li>
 <tt class="docutils literal"><span class="pre">to_json</span></tt> of the models, otherwise it will only contain the columns
 existing in the database (default behavior). If lazy is <tt class="docutils literal"><span class="pre">True</span></tt>, this
 method also accepts the same keyword arguments as
-<tt class="docutils literal"><span class="pre">flasker.util.query_to_dataframe</span></tt>. For convenience, if no <tt class="docutils literal"><span class="pre">exclude</span></tt>
-kwarg is specified, it will default to <tt class="docutils literal"><span class="pre">['_cache']</span></tt>.</td>
+<a class="reference internal" href="util.html#flasker.util.query_to_dataframe" title="flasker.util.query_to_dataframe"><tt class="xref py py-func docutils literal"><span class="pre">flasker.util.query_to_dataframe()</span></tt></a>. For convenience, if no
+<tt class="docutils literal"><span class="pre">exclude</span></tt> kwarg is specified, it will default to <tt class="docutils literal"><span class="pre">['_cache']</span></tt>.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">pandas.DataFrame</td>
 </tr>
@@ -239,7 +239,7 @@ kwarg is specified, it will default to <tt class="docutils literal"><span class=
 </tbody>
 </table>
 <p>This method accepts the same keyword arguments as 
-<tt class="docutils literal"><span class="pre">flasker.util.query_to_records</span></tt>.</p>
+<a class="reference internal" href="util.html#flasker.util.query_to_records" title="flasker.util.query_to_records"><tt class="xref py py-func docutils literal"><span class="pre">flasker.util.query_to_records()</span></tt></a>.</p>
 </dd></dl>
 
 </dd></dl>
@@ -255,10 +255,13 @@ provided:</p>
 extra s appended for good measure). To disable this behavior, simply
 override the <tt class="docutils literal"><span class="pre">__tablename__</span></tt> argument (setting it to <tt class="docutils literal"><span class="pre">None</span></tt> for
 single table inheritance).</li>
-<li><tt class="docutils literal"><span class="pre">__repr__</span></tt> implementation with model class and primary keys</li>
-<li>Caching (from <tt class="docutils literal"><span class="pre">flasker.util.Cacheable</span></tt>)</li>
-<li>Logging (from <tt class="docutils literal"><span class="pre">flasker.util.Loggable</span></tt>)</li>
+<li>Default implementation of <tt class="docutils literal"><span class="pre">__repr__</span></tt> with model class and primary keys</li>
+<li>Caching (inherited from <a class="reference internal" href="util.html#flasker.util.Cacheable" title="flasker.util.Cacheable"><tt class="xref py py-class docutils literal"><span class="pre">flasker.util.Cacheable</span></tt></a>). The cache is
+persistent by default (<tt class="docutils literal"><span class="pre">_cache</span></tt> is actually a
+<a class="reference internal" href="util.html#flasker.util.JSONEncodedDict" title="flasker.util.JSONEncodedDict"><tt class="xref py py-class docutils literal"><span class="pre">flasker.util.JSONEncodedDict</span></tt></a> column).</li>
+<li>Logging (inherited from <a class="reference internal" href="util.html#flasker.util.Loggable" title="flasker.util.Loggable"><tt class="xref py py-class docutils literal"><span class="pre">flasker.util.Loggable</span></tt></a>)</li>
 </ul>
+<p>Recall that the <tt class="docutils literal"><span class="pre">q</span></tt> and <tt class="docutils literal"><span class="pre">c</span></tt> query properties are also available.</p>
 <dl class="classmethod">
 <dt id="flasker.ext.orm.Base.retrieve">
 <em class="property">classmethod </em><tt class="descname">retrieve</tt><big>(</big><em>flush_if_new=True</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.retrieve" title="Permalink to this definition">¶</a></dt>
@@ -287,7 +290,7 @@ and <tt class="docutils literal"><span class="pre">False</span></tt> otherwise.<
 <dl class="method">
 <dt id="flasker.ext.orm.Base.get_primary_key">
 <tt class="descname">get_primary_key</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.get_primary_key" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the dictionary of primary keys for a given model.</p>
+<dd><p>Returns a dictionary of primary keys for the given model.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -301,7 +304,7 @@ and <tt class="docutils literal"><span class="pre">False</span></tt> otherwise.<
 <dl class="method">
 <dt id="flasker.ext.orm.Base.to_json">
 <tt class="descname">to_json</tt><big>(</big><em>depth=1</em>, <em>expand=True</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.to_json" title="Permalink to this definition">¶</a></dt>
-<dd><p>Special implementation of to_json for Model objects.</p>
+<dd><p>Serializes the model into a dictionary.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -321,22 +324,19 @@ has model support (e.g. using Backbone-Relational).</li>
 </table>
 <p>The following attributes are included in the returned JSON:</p>
 <ul class="simple">
-<li>all non private properties</li>
 <li>all non private columns</li>
+<li>all non private properties</li>
 <li>all non private relationships which have their <tt class="docutils literal"><span class="pre">lazy</span></tt> attribute set to
 one of <tt class="docutils literal"><span class="pre">False,</span> <span class="pre">'joined',</span> <span class="pre">'immediate'</span></tt></li>
 </ul>
-<p>The consequence of this is that this method will never issue extra queries
+<p>A consequence of this is that this method will never issue extra queries
 to populate the JSON. Furthermore, all the attribute names to be
 included are computed at class declaration so this method is very fast.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="flasker.ext.orm.Base.flush">
-<tt class="descname">flush</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.ext.orm.Base.flush" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add the model to the session and flush.</p>
-<p>This is useful for example when an <tt class="docutils literal"><span class="pre">id</span></tt> for the model needs to be
-generated.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">To change which attributes are included in the dictionary, you can 
+override the <tt class="docutils literal"><span class="pre">__json__</span></tt> attribute.</p>
+</div>
 </dd></dl>
 
 </dd></dl>
