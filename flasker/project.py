@@ -159,6 +159,7 @@ class Project(object):
         else:
           self.config[key] = config[key]
 
+      self.config_path = config_path
       self.root_dir = dirname(abspath(config_path))
       self.domain = (
         self.config['PROJECT']['DOMAIN'] or
@@ -171,13 +172,13 @@ class Project(object):
 
       path.append(self.root_dir)
 
-      #: the Flask application
+      #: Flask application (initialized on project startup)
       self.flask = None
 
-      #: the Celery application
+      #: Celery application (initialized on project startup)
       self.celery = None
 
-      #: the SQLAlchemy scoped sessionmaker
+      #: SQLAlchemy scoped sessionmaker (initialized on project startup)
       self.session = None
 
       self._engine = None
@@ -190,7 +191,9 @@ class Project(object):
         self._make()
 
   def __repr__(self):
-    return '<Project %r, %r>' % (self.config['PROJECT']['NAME'], self.root_dir)
+    return '<Project %r, %r>' % (
+      self.config['PROJECT']['NAME'], self.config_path
+    )
 
   def before_startup(self, func):
     """Hook to run a function right before project starts.

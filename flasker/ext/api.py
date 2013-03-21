@@ -1,37 +1,68 @@
 #!/usr/bin/env python
 
-"""API Extension.
+"""API Extension (requires the ORM extension).
 
-Models can be added in two ways. Either individually::
-  
-  api.add_model(Model)
+This extension provides a base class to create API views.
 
-or globally::
+Setup is as follows:
 
-  api.add_all_models()
+.. code:: python
 
-Both functions accept the same additional options (cf. ``add_all_models``)
+  from flasker import current_project as pj
+  from flasker.ext import API
 
-It also exposes the `authorize` and `validate` decorators.
+  api = API(pj)
 
-Once all the models have been added along with (optionally) the authorize and
-validate functions, the API extension should be registered with the project::
+  View = api.View   # the base API view
 
-  current_project.register_extension(extension)
+Views can then be created for models as follows:
 
-Next steps:
+.. code:: python
 
-To configure further the views corresponding to each model, you can access
-the ``__view__`` attribute and insert your custom API views there.
+  # Cat is a subclass of flasker.ext.orm.Base
+
+  class CatView(View):
+
+    __model__ = Cat
+
+This view will create the following hooks:
+
+* ``/cats``
+* ``/cats/<id>``
+
+Another slighly more complex example:
+
+.. code:: python
+
+  # House is a subclass of flasker.ext.orm.Base
+
+  class HouseView(View):
+
+    __model__ = House
+
+    methods = ['GET', 'POST']
+    relationship_views = ['cats']
+
+This view will create the following hooks:
+
+* ``/houses``
+* ``/houses/<id>``
+* ``/houses/<id>/cats``
+* ``/houses/<id>/cats/<position>``
+
+These are only two simple ways to add a view. Please refer to the documentation
+for :class:`flasker.ext.api.BaseView` for the list of all available options.
 
 """
 
 from flask import Blueprint, jsonify, request
+from flask.views import View
 from os.path import abspath, dirname, join
 from sqlalchemy.orm import class_mapper, mapperlib
 from time import time
 from werkzeug.exceptions import HTTPException
 
+from .orm import Query
 from ..util import uncamelcase, query_to_models
 
 
@@ -56,154 +87,126 @@ class APIError(HTTPException):
   def __repr__(self):
     return '<APIError %r: %r>' % (self.message, self.content)
 
+
 class API(object):
 
-  """Main API extension.
+  """The main API object.
 
-  Handles the creation and registration of all API views. The following
-  configuration options are available:
-
-  * ``URL_PREFIX`` the blueprint URL prefix (defaults to ``/api``)
-  * ``DEFAULT_DEPTH`` the default depth models are jsonified to. ``0`` yields 
-    an empty dictionary (defaults to ``1``).
-  * ``DEFAULT_LIMIT`` the default number of results returned per query 
-    (defaults to ``20``)
-  * ``MAX_LIMIT`` the maximum number of results returned by a query. ``0`` 
-    means no limit (defaults to ``0``).
-  * ``EXPAND`` if ``True``, same model data will be repeated in the response
-    if the model is encountered multiple times, otherwise only the key will
-    be returned. This can be very useful for efficiency when used with a 
-    client-side library such as Backbone-Relational (defaults to ``True``).
-
-  These can either be passed to the constructor (parameter names are not case
-  sensitive)::
-
-    api = API(url_prefix='/my_api', max_limit=10)
-
-  Or they can be stored in the main project configuration file and passed on
-  when registering the extension with the ``config_section`` argument::
-
-    current_project.register_extension(api, config_section='API')
+  :param project: the project against which the extension will be registered
+  :type project: flasker.project.Project
+  :param url_prefix: the blueprint URL prefix
+  :type url_prefix: str
+  :param index_view: whether or not to create a splash page for the api
+  :type index_view: bool
+  :param parser_options: dictionary of options to create the default request
+    :class:`flasker.ext.api.Parser`
+  :type parser_options: dict
 
   """
 
-  __project__ = None
+  def __init__(self, project, url_prefix='api', index_view=True,
+               parser_options=None):
 
-  _authorize = None
-  _validate = None
+    self._views = []
 
-  config = {
-    'URL_PREFIX': '/api',
-    'DEFAULT_DEPTH': 1,
-    'DEFAULT_LIMIT': 20,
-    'MAX_LIMIT': 0,
-    'EXPAND': True,
-  }
+    self.parser = Parser(parser_options or {})
 
-  def __init__(self, project, config_section=None, **kwargs):
-
-    if config_section:
-      for k, v in project.config[config_section].items():
-        self.config[k] = v
-    for k, v in kwargs.items():
-      self.config[k.upper()] = v
-    APIView.__extension__ = self
-    self.Models = {}
+    self.View = type(
+      'View',
+      (BaseView, ),
+      {
+        '__all__': self._views,
+        'url_prefix': url_prefix,
+      }
+    )
 
     @project.before_startup
     def handler(project):
-      self.blueprint = Blueprint(
-        'api',
-        project.config['PROJECT']['FLASK_ROOT_FOLDER'] + '.api',
-        template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
-        url_prefix=self.config['URL_PREFIX']
+      blueprint = Blueprint(
+        url_prefix,
+        '%s.%s' % (project.config['PROJECT']['FLASK_ROOT_FOLDER'], url_prefix),
+        # template_folder=abspath(join(dirname(__file__), 'templates', 'api')),
+        url_prefix='/%s' % url_prefix,
       )
-      for model_class, options in self.Models.values():
-        self._create_model_views(model_class, options)
-      IndexView.attach_view()
-      project.flask.register_blueprint(self.blueprint)
+      for view in self._views:
+        view._attach_views(blueprint)
+      if index_view:
+        IndexView._attach(blueprint)
+      project.flask.register_blueprint(blueprint)
 
-  def authorize(self, func):
-    """Decorator to set the authorization function.
 
-    :param func: an authorization function. It will be called everytime a new
-      request comes in and is passed 2 arguments:
+# Views
+
+class _BaseViewMeta(type):
+
+  """To register classes with the API on definition."""
+
+  def __new__(cls, name, bases, dct):
+    rv = super(_BaseViewMeta, cls).__new__(cls, name, bases, dct)
+    if rv.__all__ is not None:
+      rv.__all__.append(rv)
+    return rv
+
+
+class BaseView(View):
+
+  """Base API view. Not an actual view.
+
+  :param Model: the ``Model`` subclass to be exposed.
+  :param relationships: whether or not to create subroutes for the model's
+    lazy and dynamic relationships. This parameter can take the following
+    values:
+
+    * ``True`` to create routes for all 
+    * ``False`` to create none
+    * a list of relationship keys to create routes for
+
+  :param methods: which request methods to allow. Can take the following
+    values:
+
+    * ``True`` to allow all
+    * a list of methods to allow
+  
+  Calling this function multiple times will override any options previously 
+  set for the Model.
+
+  ..note::
     
-      * the endpoint
-      * the request method
+    Only relationships with ``lazy`` set to ``'dynamic'``, ``'select'`` or
+    ``True`` can have subroutes. All eagerly loaded relationships are simply
+    available directly on the model.
 
-      If the function returns a truthful value, the request will proceed.
-      Otherwise a 403 exception is raised.
-    
-    """
-    self._authorize = func
+  """
 
-  def validate(self, func):
-    """Decorator to set the validate function, called on POST, PUT and PATCH.
+  __metaclass__ = _BaseViewMeta
 
-    The validator will be passed two arguments:
+  __all__ = None
 
-    * the model class
-    * the request json
+  #: orm.Model class
+  __model__ = None
 
-    If the function returns a truthful value, the request will proceed.
-    Otherwise a 400 exception is raised.
+  #: Allowed methods.
+  methods = frozenset(['GET'])
 
-    """
-    self._validate = func
+  #: Whether or not to create the collection endpoint.
+  collection_view = True
 
-  def add_model(self, Model, relationships=True, methods=True):
-    """Flag a Model to be added.
+  #: Whether or not to create the model endpoint.
+  model_view = True
 
-    :param Model: the ``Model`` subclass to be exposed.
-    :param relationships: whether or not to create subroutes for the model's
-      lazy and dynamic relationships. This parameter can take the following
-      values:
+  #: Which relationship endpoints to create.
+  #: can be ``True`` (all relationships), a list of relationship attributes
+  #: names or a dictionary with keys being relationship attributes and values
+  #: tuples of (RelationshipCollectionView, RelationshipModelView).
+  relationship_views = []
 
-      * ``True`` to create routes for all 
-      * ``False`` to create none
-      * a list of relationship keys to create routes for
-
-    :param methods: which request methods to allow. Can take the following
-      values:
-
-      * ``True`` to allow all
-      * a list of methods to allow
-    
-    Calling this function multiple times will override any options previously 
-    set for the Model.
-
-    ..note::
-      
-      Only relationships with ``lazy`` set to ``'dynamic'``, ``'select'`` or
-      ``True`` can have subroutes. All eagerly loaded relationships are simply
-      available directly on the model.
-
-    """
-    self.Models[Model.__name__] = (Model, {
-      'relationships': relationships,
-      'methods': methods
-    })
-
-  def add_all_models(self, **kwargs):
-    """Convenience method to add all registered models.
-    
-    This method accepts same arguments as ``add_model``, which will be passed
-    to all models.
-    
-    Remember that calling ``add_model`` overwrites previous options, so it
-    is possible to add all models and individually changing the options for
-    each by calling the ``add_model`` method for a few models afterwards.
-    
-    """
-    for model_class in [k.class_ for k in mapperlib._mapper_registry]:
-      if not model_class.__name__ in self.Models:
-        self.add_model(model_class, **kwargs)
-
-  def _create_model_views(self, Model, options):
-    relationships = options.pop('relationships')
-    CollectionView.attach_view(Model, **options)
-    ModelView.attach_view(Model, **options)
+  @classmethod
+  def _attach_views(cls, blueprint):
+    Model = cls.__model__
+    if cls.collection_view:
+      CollectionView._attach(Model, cls.methods)
+    if cls.model_view:
+      ModelView._attach(Model, cls.methods)
     if relationships == True:
       rels = Model._get_relationships()
     elif relationships == False:
@@ -215,69 +218,20 @@ class API(object):
       )
     for rel in rels:
       if rel.lazy == 'dynamic' and rel.uselist:
-        RelationshipModelView.attach_view(rel, **options)
+        RelationshipModelView._attach(rel, **options)
         DynamicRelationshipView.attach_view(rel, **options)
       elif rel.lazy in [True, 'select'] and rel.uselist:
         RelationshipModelView.attach_view(rel, **options)
         LazyRelationshipView.attach_view(rel, **options)
 
-
-# Views
-
-class APIView(object):
-
-  """Base API view.
-
-  Subclass this to implement your own.
-  
-  """
-
-  __all__ = []
-  __extension__ = None
-
-  # Flask stuff
-  decorators = []
-  methods = frozenset(['GET', 'POST', 'HEAD', 'OPTIONS',
-                       'DELETE', 'PUT', 'TRACE', 'PATCH'])
-
-  # these control which requests are allowed:
-  # the default behavior is to allow all request methods that have a 
-  # corresponding method implemented but this can be further restricted
-  # with the ``methods`` kwarg of ``add_model``, reflected here
-  allowed_methods = frozenset()
-  # which url query parameters are allowed by the parser
-  allowed_request_keys = frozenset()
-
-  def __call__(self, *args, **kwargs):
-    method = getattr(self, request.method.lower(), None)
-    if method is None and request.method == 'HEAD':
-      method = getattr(self, 'get', None)
-    try:
-      if not method or request.method not in self.allowed_methods:
-        raise APIError(405, 'Method Not Allowed')
-      elif not self._is_authorized():
-        raise APIError(403, 'Not authorized')
-      else:
-        parser = Parser(self.allowed_request_keys)
-        return method(parser, *args, **kwargs)
-    except APIError as e:
-      return jsonify({
-        'status': e.message,
-        'request': {
-          'base_url': request.base_url,
-          'method': request.method,
-          'values': request.values
-        },
-        'content': e.content
-      }), e.code
-
-  def get_endpoint(self):
+  @classmethod
+  def _get_endpoint(cls):
     """Returns the endpoint for use in the blueprint.
 
     These should be unique accross all your API views.
     
     """
-    return uncamelcase(self.__class__.__name__)
+    return uncamelcase(clf.__model__.__name__)
 
   def get_rule(self):
     """Returns the URL route for the view.
@@ -287,65 +241,7 @@ class APIView(object):
     """
     return self.url
 
-  def _get_available_methods(self):
-    endpoint = self.get_endpoint()
-    return [
-      m for m in set(m.upper() for m in dir(self)) & self.allowed_methods
-      if self._is_authorized(m.upper())
-    ]
-
-  def _is_authorized(self, method=None):
-    method = method or request.method
-    authorize = self.__extension__._authorize
-    if not authorize or authorize(self.get_endpoint(), method):
-      return True
-    return False
-
-  def _is_valid(self, Model, json):
-    validate = self.__extension__._validate
-    if not validate or validate(Model, json):
-      return True
-    return False
-
-  @classmethod
-  def attach_view(cls, *view_args, **view_kwargs):
-    """Create and attach a view to the blueprint.
-
-    New views should be created with this method otherwise the extension will
-    be unaware of them.
-    
-    """
-    view = cls(*view_args)
-    methods = view_kwargs.get('methods', True)
-    if methods == True:
-      view.allowed_methods = cls.methods
-    else:
-      view.allowed_methods = frozenset(methods)
-    cls.__extension__.blueprint.add_url_rule(
-      rule=view.get_rule(),
-      endpoint=view.get_endpoint(),
-      view_func=view,
-      methods=cls.methods
-    )
-    cls.__all__.append(view)
-
-class CollectionView(APIView):
-
-  """Default view for collection endpoints."""
-
-  allowed_request_keys = frozenset(['depth', 'limit', 'offset', 'filter', 
-                                    'sort', 'expand'])
-
-  def __init__(self, Model):
-    self.Model = Model
-
-  def get_endpoint(self):
-    return 'collection_view_for_%s' % self.Model.__tablename__
-
-  def get_rule(self):
-    return '/%s' % self.Model.__tablename__
-
-  def get(self, parser, **kwargs):
+  def get(self, **kwargs):
     timers = {}
     filtered_query = parser.filter_and_sort(self.Model.q )
     now = time()
@@ -372,7 +268,7 @@ class CollectionView(APIView):
       'content': content
     }), 200
 
-  def post(self, parser, **kwargs):
+  def post(self):
     if self._is_valid(self.Model, request.json):
       model = self.Model(**request.json)
       pj.session.add(model)
@@ -381,30 +277,7 @@ class CollectionView(APIView):
     else:
       raise APIError(400, 'Failed validation')
 
-class ModelView(APIView):
-
-  """Default view for individual model endpoints."""
-
-  allowed_request_keys = frozenset(['depth', 'expand'])
-
-  def __init__(self, Model):
-    self.Model = Model
-
-  def get_endpoint(self):
-    return 'model_view_for_%s' % self.Model.__tablename__
-
-  def get_rule(self):
-    url = '/%s' % self.Model.__tablename__
-    url += ''.join('/<%s>' % k.name for k in class_mapper(self.Model).primary_key)
-    return url
-
-  def get(self, parser, **kwargs):
-    model = self.Model.q.get(kwargs.values())
-    if not model:
-      raise APIError(404, 'No resource found')
-    return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
-
-  def put(self, parser, **kwargs):
+  def put(self, **kwargs):
     model = self.Model.q.get(kwargs.values())
     if model:
       if self._is_valid(model.__class__, request.json):
@@ -416,10 +289,7 @@ class ModelView(APIView):
     else:
       raise APIError(404, 'No resource found for this ID')
 
-  def patch(self, parser, **kwargs):
-    pass
-
-  def delete(self, parser, **kwargs):
+  def delete(self, **kwargs):
     model = self.Model.q.get(kwargs.values())
     if model:
       pj.session.delete(model)
@@ -427,12 +297,45 @@ class ModelView(APIView):
     else:
       raise APIError(404, 'No resource found for this ID')
 
-class RelationshipView(APIView):
+  @classmethod
+  def attach_view(cls, *view_args, **view_kwargs):
+    """Create and attach a view to the blueprint.
+
+    New views should be created with this method otherwise the extension will
+    be unaware of them.
+    
+    """
+    view = cls(*view_args)
+    methods = view_kwargs.get('methods', True)
+    if methods == True:
+      view.allowed_methods = cls.methods
+    else:
+      view.allowed_methods = frozenset(methods)
+    cls.__extension__.blueprint.add_url_rule(
+      rule=view.get_rule(),
+      endpoint=view.get_endpoint(),
+      view_func=view,
+      methods=cls.methods
+    )
+    cls.__all__.append(view)
+
+  def get_endpoint(self):
+    return 'collection_view_for_%s' % self.Model.__tablename__
+    return 'model_view_for_%s' % self.Model.__tablename__
+
+  def get_rule(self):
+    url = '/%s' % self.Model.__tablename__
+    url += ''.join('/<%s>' % k.name for k in class_mapper(self.Model).primary_key)
+    return url
+    return '/%s' % self.Model.__tablename__
+
+
+class RelationshipView(View):
 
   """Not an actual view, meant to be subclassed."""
 
-  def __init__(self, rel):
-    self.rel = rel
+  __model__ = None
+  __relationship__ = None
 
   @property
   def Model(self):
@@ -462,91 +365,7 @@ class RelationshipView(APIView):
       raise APIError(404, 'No resource found')
     return getattr(parent_model, self.rel.key)
 
-class DynamicRelationshipView(RelationshipView):
-
-  """Default view for dynamic relationships."""
-
-  allowed_request_keys = frozenset(['depth', 'limit', 'offset', 'filter',
-                                    'sort', 'expand'])
-
-  def get(self, parser, **kwargs):
-    query = parser.filter_and_sort(self.get_collection(**kwargs))
-    timers = {}
-    now = time()
-    count = query.count()
-    timers['count'] = time() - now
-    now = time()
-    content = [
-      e.to_json(**parser.get_jsonify_kwargs())
-      for e in parser.offset_and_limit(query)
-    ]
-    timers['jsonification'] = time() - now
-    return jsonify({
-      'status': '200 Success',
-      'processing_time': timers,
-      'matches': {
-        'total': count,
-        'returned': len(content),
-      },
-      'request': {
-        'base_url': request.base_url,
-        'method': request.method,
-        'values': request.values
-      },
-      'content': content
-    }), 200
-
-class LazyRelationshipView(RelationshipView):
-
-  """Default view for lazy relationships."""
-
-  allowed_request_keys = frozenset(['depth', 'expand'])
-
-  def get(self, parser, **kwargs):
-    timers = {}
-    now = time()
-    content = [
-      e.to_json(**parser.get_jsonify_kwargs())
-      for e in self.get_collection(**kwargs)
-    ]
-    count = len(content)
-    timers['jsonification'] = time() - now
-    return jsonify({
-      'status': '200 Success',
-      'processing_time': timers,
-      'matches': {
-        'total': count,
-        'returned': count,
-      },
-      'request': {
-        'base_url': request.base_url,
-        'method': request.method,
-        'values': request.values
-      },
-      'content': content
-    }), 200
-
-class RelationshipModelView(RelationshipView):
-
-  """Default view for relationship models."""
-
-  allowed_request_keys = frozenset(['depth', 'expand'])
-
-  def get_endpoint(self):
-    return 'relationship_model_view_for_%s_%s' % (
-      self.parent_Model.__name__,
-      self.rel.key
-    )
-
-  def get_rule(self):
-    url = '/%s' % self.parent_Model.__tablename__
-    url += ''.join(
-      '/<%s>' % k.name for k in class_mapper(self.parent_Model).primary_key
-    )
-    url += '/%s/<key>' % self.rel.key
-    return url
-
-  def get(self, parser, **kwargs):
+  def get(self, **kwargs):
     key = kwargs.pop('key')
     collection = self.get_collection(**kwargs)
     if isinstance(collection, (InstrumentedList, AppenderQuery)):
@@ -570,10 +389,31 @@ class RelationshipModelView(RelationshipView):
       raise APIError(404, 'No resource found')
     return jsonify(model.to_json(**parser.get_jsonify_kwargs()))
 
-  def put(self, parser, **kwargs):
-    pass
+  def get(self, **kwargs):
+    return jsonify({
+      'status': '200 Success',
+    }), 200
 
-class IndexView(APIView):
+  """Default view for relationship models."""
+
+  allowed_request_keys = frozenset(['depth', 'expand'])
+
+  def get_endpoint(self):
+    return 'relationship_model_view_for_%s_%s' % (
+      self.parent_Model.__name__,
+      self.rel.key
+    )
+
+  def get_rule(self):
+    url = '/%s' % self.parent_Model.__tablename__
+    url += ''.join(
+      '/<%s>' % k.name for k in class_mapper(self.parent_Model).primary_key
+    )
+    url += '/%s/<key>' % self.rel.key
+    return url
+
+
+class IndexView(View):
 
   """API splash page with a few helpful keys."""
 
@@ -591,89 +431,230 @@ class IndexView(APIView):
       ]
     })
 
+
 # Helper
 
 class Parser(object):
 
   """The request parameter parser.
+
+  :param default_depth: the default depth models are jsonified to. ``0`` yields 
+    an empty dictionary
+  :type default_depth: int
+  :param default_limit: the default number of results returned per query 
+  :type default_limit: int
+  :param max_limit: the maximum number of results returned by a query. ``0`` 
+    means no limit.
+  :type max_limit: int
+  :param expand: if ``True``, same model data will be repeated in the response
+    if the model is encountered multiple times, otherwise only the key will
+    be returned. This can be very useful for efficiency when used with a 
+    client-side library such as Backbone-Relational.
+  :type expand: bool
+  :param sep: the separator used for filters and sort parameters
+  :type sep: str
   
   """
 
-  sep = ';' # the separator used for filters and sorts
-
-  def __init__(self, allowed_keys):
-    self.defaults = APIView.__extension__.config
-    self.args = request.args
-    self.keys = set(self.args.keys())
-    if not self.keys <= set(allowed_keys):
-      raise APIError(400, 'Invalid parameters found: %s not in %s' % (
-        list(self.keys), list(allowed_keys)
-       ))
-
-  def get_jsonify_kwargs(self):
-    return {
-      'depth': self.args.get('depth', self.defaults['DEFAULT_DEPTH'], int),
-      'expand': self.args.get('expand', self.defaults['EXPAND'], int)
+  def __init__(self, default_depth=1, default_limit=20, max_limit=0,
+               expand=True, sep=';'):
+    self.options = {
+      'default_depth': default_depth,
+      'default_limit': default_limit,
+      'max_limit': max_limit,
+      'expand': expand,
+      'sep': sep,
     }
 
-  def filter_and_sort(self, query, sort=True):
-    Model = self._get_model_class(query)
-    # filter
-    raws = self.args.getlist('filter')
-    for raw in raws:
-      try:
-        key, op, value = raw.split(self.sep, 3)
-      except ValueError:
-        raise APIError(400, 'Invalid filter: %s' % raw)
-      column = getattr(Model, key, None)
-      if not column:
-        raise APIError(400, 'Invalid filter column: %s' % key)
-      if op == 'in':
-        filt = column.in_(value.split(','))
-      else:
-        try:
-          attr = filter(
-            lambda e: hasattr(column, e % op),
-            ['%s', '%s_', '__%s__']
-          )[0] % op
-        except IndexError:
-          raise APIError(400, 'Invalid filter operator: %s' % op)
-        if value == 'null':
-          value = None
-        filt = getattr(column, attr)(value)
-      query = query.filter(filt)
-    # sort
-    if sort:
-      raws = self.args.getlist('sort')
-      for raw in raws:
-        try:
-          key, order = raw.split(self.sep)
-        except ValueError:
-          raise APIError(400, 'Invalid sort: %s' % raw)
-        if not order in ['asc', 'desc']:
-          raise APIError(400, 'Invalid sort order: %s' % order)
-        column = getattr(Model, key, None)
-        if column:
-          query = query.order_by(getattr(column, order)())
-        else:
-          raise APIError(400, 'Invalid sort column: %s' % key)
-    return query
+  def parse(self, collection, model_id=None, model_position=None):
+    """Parses and serializes a list of models or a query into a dictionary.
 
-  def offset_and_limit(self, query):
-    # offset
-    offset = self.args.get('offset', 0, int)
-    if offset:
-      query = query.offset(offset)
-    # limit
-    max_limit = self.defaults['MAX_LIMIT']
-    limit = self.args.get('limit', self.defaults['DEFAULT_LIMIT'], int)
-    if max_limit:
-      limit = min(limit, max_limit) if limit else max_limit
-    if limit:
-      query = query.limit(limit)
-    return query
+    :param collection: the query or list to be transformed to JSON
+    :type collection: flasker.ext.orm.Query, list
+    :param model_id: model identifier. If specified, the parser will call
+      ``get`` on the query with this id.
+    :type model_id: varies
+    :param model_position: position of the model in the collection
+    :type model_position: int
+    :rtype: dict
+
+    This method is convenience for calling :meth:`process` followed by
+    :meth:`flasker.ext.api.Parser.serialize`, with the following variant.
+    When using this method, the ``wrap`` parameter is determined by the type
+    of ``collection``:
+
+    * ``wrap=True`` if ``collection`` is a :class:`flasker.ext.orm.Query` and
+      ``model_id`` and ``model_position`` are ``None``
+    * ``wrap=False`` otherwise
+
+    """
+    collection, match = self.process(
+      collection,
+      model_id=model_id,
+      model_position=model_position
+    )
+    content_key = 'data' if isinstance(collection, Query) else None
+    return self.serialize(
+      collection,
+      content_key=content_key,
+      meta={
+        'request': {
+          'base_url': request.base_url,
+          'method': request.method,
+          'values': request.values,
+        },
+        'match': match
+      }
+    )
+
+  def process(self, collection, model_id=None, model_position=None):
+    """Parse query and return JSON.
+
+    :param collection: the query or list to be transformed to JSON
+    :type collection: flasker.ext.orm.Query, list
+    :param model_id: model identifier. If specified, the parser will call
+      ``get`` on the query with this id.
+    :type model_id: varies
+    :param model_position: position of the model in the collection
+    :type model_position: int
+    :rtype: tuple
+
+    Returns a tuple ``(collection, info)``.
+
+    """
+    # keys = set(request.args.keys())
+    # if not keys <= set(allowed_keys):
+    #   raise APIError(400, 'Invalid parameters found: %s not in %s' % (
+    #     list(self.keys), list(allowed_keys)
+    #   ))
+
+    processing_timer = time()
+
+    if model_id or model_position:
+
+      if model_id:
+        collection = [collection.get(model_id)]
+      else:
+        position = model_position - 1 # model_position is 1 indexed
+        if isinstance(collection, list):
+          collection = collection[position:(position + 1)]
+        else:
+          collection = collection.offset(position).limit(1).all()
+
+      match = {'total': len(collection), 'returned': len(collection)}
+
+    else:
+      model = self._get_model_class(collection)
+
+      raw_filters = request.args.getlist('filter')
+      raw_sorts = request.args.getlist('sort')
+
+      offset = request.args.get('offset', 0, int)
+      limit = request.args.get('limit', self.options['default_limit'], int)
+      max_limit = self.options['max_limit']
+      if max_limit:
+        limit = min(limit, max_limit) if limit else max_limit
+
+      if isinstance(collection, list):
+
+        if raw_filters or raw_sorts:
+          raise APIError(400, 'Filter and sorts not implemented for lists')
+
+        match = {'total': len(collection)}
+
+        if limit:
+          collection = collection[offset:(offset + limit)]
+        else:
+          collection = collection[offset:]
+
+        match['returned'] = len(collection)
+
+      else:
+
+        sep = self.options['sep']
+
+        for raw_filter in raw_filters:
+          try:
+            key, op, value = raw_filter.split(sep, 3)
+          except ValueError:
+            raise APIError(400, 'Invalid filter: %s' % raw_filter)
+          column = getattr(model, key, None)
+          if not column: # TODO check if is actual column
+            raise APIError(400, 'Invalid filter column: %s' % key)
+          if op == 'in':
+            filt = column.in_(value.split(','))
+          else:
+            try:
+              attr = filter(
+                lambda e: hasattr(column, e % op),
+                ['%s', '%s_', '__%s__']
+              )[0] % op
+            except IndexError:
+              raise APIError(400, 'Invalid filter operator: %s' % op)
+            if value == 'null':
+              value = None
+            filt = getattr(column, attr)(value)
+          collection = collection.filter(filt)
+
+        for raw_sort in raw_sorts:
+          try:
+            key, order = raw_sort.split(sep)
+          except ValueError:
+            raise APIError(400, 'Invalid sort: %s' % raw_sort)
+          if not order in ['asc', 'desc']:
+            raise APIError(400, 'Invalid sort order: %s' % order)
+          column = getattr(model, key, None)
+          if column:
+            collection = collection.order_by(getattr(column, order)())
+          else:
+            raise APIError(400, 'Invalid sort column: %s' % key)
+
+        match = {'total': collection.count()}
+
+        if offset:
+          collection = collection.offset(offset)
+
+        if limit:
+          collection = collection.limit(limit)
+
+        match['returned'] = collection.count()
+
+    return collection, match
+
+  def serialize(self, collection, content_key=None, **kwargs):
+    """Serializes a list or query to a dictionary.
+
+    :param collection: the collection to be serialized
+    :param content_key: key to wrap content in
+    :param kwargs: ignored if ``content_key`` is ``None``
+
+    """
+
+    depth = request.args.get('depth', self.options['default_depth'], int)
+    expand = request.args.get('expand', self.options['expand'], int)
+
+    content = [
+      e.to_json(depth=depth, expand=expand)
+      for e in collection
+    ]
+
+    if not content_key:
+
+      if len(content) == 0:
+        raise APIError(404, 'Resource not found')
+      elif len(content) == 1:
+        return content[0]
+      else:
+        return content
+
+    else:
+
+      rv = kwargs or {}
+      rv[content_key] = content
+      return rv
 
   def _get_model_class(self, query):
+    """Return corresponding model class from query."""
   
     models = query_to_models(query)
 
