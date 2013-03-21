@@ -147,18 +147,114 @@ will be passed through).</li>
 <div class="section" id="module-flasker.project">
 <span id="configuration"></span><h2>Configuration<a class="headerlink" href="#module-flasker.project" title="Permalink to this headline">¶</a></h2>
 <p>Project module.</p>
+<p>This module defines:</p>
+<ul class="simple">
+<li>the <a class="reference internal" href="#flasker.project.Project" title="flasker.project.Project"><tt class="xref py py-class docutils literal"><span class="pre">flasker.project.Project</span></tt></a> class which contains
+all the logic between the Flask and Celery applications and the SQLAlchemy
+sessions.</li>
+<li>the <tt class="docutils literal"><span class="pre">current_project</span></tt> proxy</li>
+</ul>
+<p>For convenience, both these variables are also available directly in the
+<tt class="docutils literal"><span class="pre">flasker</span></tt> namespace.</p>
 <dl class="class">
 <dt id="flasker.project.Project">
 <em class="property">class </em><tt class="descclassname">flasker.project.</tt><tt class="descname">Project</tt><big>(</big><em>config_path=None</em>, <em>make=True</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project" title="Permalink to this definition">¶</a></dt>
 <dd><p>Project class.</p>
-<p>Global container for the Flask and Celery apps and SQLAlchemy database
-object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>config_path</strong> (<em>bool</em>) &#8211; path to the configuration file. The following sections
+should be present: <tt class="docutils literal"><span class="pre">PROJECT</span></tt>, <tt class="docutils literal"><span class="pre">ENGINE</span></tt>, <tt class="docutils literal"><span class="pre">FLASK</span></tt>, <tt class="docutils literal"><span class="pre">CELERY</span></tt>. See
+below for a list of available options in each section.</li>
+<li><strong>make</strong> (<em>bool</em>) &#8211; whether or not to create all the project components. This should
+always be true, except in some cases where it is useful to check
+consistency of the configuration before doing so. <tt class="docutils literal"><span class="pre">_make</span></tt> should then be
+called manually after these checks are done.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The following options are available each section of the configuration file
+(as a convenience, parameters stored as JSON strings are also accepted,
+which can be useful for example to configure Celery queues):</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">PROJECT</span></tt><ul>
+<li><tt class="docutils literal"><span class="pre">NAME</span></tt>: the name of the project, used for debugging and to generate a
+default domain name for the Celery workers.</li>
+<li><tt class="docutils literal"><span class="pre">MODULES</span></tt>: comma separated list of the project&#8217;s modules. They must be
+importable from the configuration file&#8217;s folder.</li>
+<li><tt class="docutils literal"><span class="pre">FLASK_ROOT_FOLDER</span></tt>: path to the Flask application&#8217;s root folder
+relative to the configuration file (defaults to <tt class="docutils literal"><span class="pre">app</span></tt>).</li>
+<li><tt class="docutils literal"><span class="pre">FLASK_STATIC_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">static_folder</span></tt> relative to
+the application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">static</span></tt>).</li>
+<li><tt class="docutils literal"><span class="pre">FLASK_TEMPLATE_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">template_folder</span></tt> relative
+to the application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">templates</span></tt>).</li>
+<li><tt class="docutils literal"><span class="pre">COMMIT_ON_TEARDOWN</span></tt>: if <tt class="docutils literal"><span class="pre">True</span></tt> (default), all database transactions
+will be committed after each Flask app request and Celery task
+completion. If <tt class="docutils literal"><span class="pre">False</span></tt> the session will simply be removed.</li>
+<li><tt class="docutils literal"><span class="pre">DOMAIN</span></tt>: if specified, used to generate Celery worker hostnames
+(defaults to the project name, sluggified).</li>
+<li><tt class="docutils literal"><span class="pre">SUBDOMAIN</span></tt>: if specified, used to generate Celery worker hostnames 
+(defaults to the configuration file&#8217;s name).</li>
+</ul>
+</li>
+<li><tt class="docutils literal"><span class="pre">ENGINE</span></tt><ul>
+<li><tt class="docutils literal"><span class="pre">URL</span></tt>: the url to the database</li>
+<li>any valid arguments to <tt class="docutils literal"><span class="pre">sqlalchemy.create_engine</span></tt></li>
+</ul>
+</li>
+<li><tt class="docutils literal"><span class="pre">FLASK</span></tt><ul>
+<li>any valid Flask configuration option</li>
+</ul>
+</li>
+<li><tt class="docutils literal"><span class="pre">CELERY</span></tt><ul>
+<li>any valid Celery configuration option</li>
+</ul>
+</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>In most cases this class will not need to be instantiated explicitely (the
+console tool handles the setup) and will only be accessed via the
+<tt class="docutils literal"><span class="pre">current_project</span></tt> proxy. In some cases however the constructor can be
+called to create a project (for example from an IPython notebook or to use
+a separate WSGI server).</p>
+<div class="code python last highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">Project</span>
+
+<span class="c"># instantiating the project</span>
+<span class="n">pj</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s">&#39;path/to/config.cfg&#39;</span><span class="p">)</span>
+
+<span class="c"># the application that would be passed to a WSGI server</span>
+<span class="n">application</span> <span class="o">=</span> <span class="n">pj</span><span class="o">.</span><span class="n">flask</span>
+</pre></div>
+</div>
+</div>
 <dl class="method">
 <dt id="flasker.project.Project.before_startup">
 <tt class="descname">before_startup</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project.before_startup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project.before_startup" title="Permalink to this definition">¶</a></dt>
-<dd><p>Decorator, hook to run a function right before project starts.</p>
+<dd><p>Hook to run a function right before project starts.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> (<em>callable</em>) &#8211; the function to be called right before startup. It will be
+passed the project as single argument.</td>
+</tr>
+</tbody>
+</table>
+<p>This decorator can be used to run functions after all the components of
+the project have been created.</p>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="data">
+<dt id="flasker.project.current_project">
+<tt class="descclassname">flasker.project.</tt><tt class="descname">current_project</tt><a class="headerlink" href="#flasker.project.current_project" title="Permalink to this definition">¶</a></dt>
+<dd><p>proxy to the current project</p>
 </dd></dl>
 
 </div>

@@ -342,28 +342,10 @@ override the <tt class="docutils literal"><span class="pre">__json__</span></tt>
 </dd></dl>
 
 </div>
-<div class="section" id="module-flasker.ext.skl">
-<span id="skl"></span><h2>SKL<a class="headerlink" href="#module-flasker.ext.skl" title="Permalink to this headline">¶</a></h2>
-<p>Thin wrapper around some sklearn algorithms.</p>
-<p>Allows for automatic parameter saving and recovery. Saving fitted algorithms
-for later reuse (convenient for parallel computing).</p>
-<p>Test results are persisted along with a few metrics.</p>
-<p>Currently supported:</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">sklearn.linear_model.logistic.LogisticRegression</span></tt></li>
-</ul>
-<p>Example usage:</p>
-<div class="code python highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">Classifier</span><span class="o">.</span><span class="n">from_engine</span><span class="p">(</span><span class="n">LogisticRegression</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">fitted_clf</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">test</span> <span class="o">=</span> <span class="n">fitted_clf</span><span class="o">.</span><span class="n">test</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">test</span><span class="o">.</span><span class="n">precision</span>
-<span class="go">0.9576324</span>
-</pre></div>
-</div>
-</div>
-<div class="section" id="module-flasker.ext.api">
-<span id="api"></span><h2>API<a class="headerlink" href="#module-flasker.ext.api" title="Permalink to this headline">¶</a></h2>
-<p>API Extension.</p>
+<div class="section" id="api">
+<h2>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h2>
+<p><em>under development</em></p>
+<span class="target" id="module-flasker.ext.api"></span><p>API Extension.</p>
 <p>Models can be added in two ways. Either individually:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">api</span><span class="o">.</span><span class="n">add_model</span><span class="p">(</span><span class="n">Model</span><span class="p">)</span>
 </pre></div>
@@ -590,9 +572,10 @@ be unaware of them.</p>
 </dd></dl>
 
 </div>
-<div class="section" id="module-flasker.ext.auth">
-<span id="authentication"></span><h2>Authentication<a class="headerlink" href="#module-flasker.ext.auth" title="Permalink to this headline">¶</a></h2>
-<p>Auth Extension.</p>
+<div class="section" id="authentication">
+<h2>Authentication<a class="headerlink" href="#authentication" title="Permalink to this headline">¶</a></h2>
+<p><em>under development</em></p>
+<span class="target" id="module-flasker.ext.auth"></span><p>Auth Extension.</p>
 <dl class="class">
 <dt id="flasker.ext.auth.User">
 <em class="property">class </em><tt class="descclassname">flasker.ext.auth.</tt><tt class="descname">User</tt><big>(</big><em>email</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/auth.html#User"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.auth.User" title="Permalink to this definition">¶</a></dt>
@@ -605,6 +588,26 @@ be unaware of them.</p>
 
 </dd></dl>
 
+</div>
+<div class="section" id="skl">
+<h2>SKL<a class="headerlink" href="#skl" title="Permalink to this headline">¶</a></h2>
+<p><em>under development</em></p>
+<span class="target" id="module-flasker.ext.skl"></span><p>Thin wrapper around some sklearn algorithms.</p>
+<p>Allows for automatic parameter saving and recovery. Saving fitted algorithms
+for later reuse (convenient for parallel computing).</p>
+<p>Test results are persisted along with a few metrics.</p>
+<p>Currently supported:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">sklearn.linear_model.logistic.LogisticRegression</span></tt></li>
+</ul>
+<p>Example usage:</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">Classifier</span><span class="o">.</span><span class="n">from_engine</span><span class="p">(</span><span class="n">LogisticRegression</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fitted_clf</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">test</span> <span class="o">=</span> <span class="n">fitted_clf</span><span class="o">.</span><span class="n">test</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">test</span><span class="o">.</span><span class="n">precision</span>
+<span class="go">0.9576324</span>
+</pre></div>
+</div>
 </div>
 </div>
 
