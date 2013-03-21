@@ -429,41 +429,20 @@ parameters, invalid form data, etc.)</li>
 <dl class="class">
 <dt id="flasker.ext.api.BaseView">
 <em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">BaseView</tt><a class="headerlink" href="#flasker.ext.api.BaseView" title="Permalink to this definition">¶</a></dt>
-<dd><p>Base API view. Not an actual view.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>Model</strong> &#8211; the <tt class="docutils literal"><span class="pre">Model</span></tt> subclass to be exposed.</li>
-<li><strong>relationships</strong> &#8211; <p>whether or not to create subroutes for the model&#8217;s
-lazy and dynamic relationships. This parameter can take the following
-values:</p>
-<ul>
-<li><tt class="docutils literal"><span class="pre">True</span></tt> to create routes for all</li>
-<li><tt class="docutils literal"><span class="pre">False</span></tt> to create none</li>
-<li>a list of relationship keys to create routes for</li>
-</ul>
-</li>
-<li><strong>methods</strong> &#8211; <p>which request methods to allow. Can take the following
-values:</p>
-<ul>
-<li><tt class="docutils literal"><span class="pre">True</span></tt> to allow all</li>
-<li>a list of methods to allow</li>
-</ul>
-</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<p>Calling this function multiple times will override any options previously 
-set for the Model.</p>
-<p>..note:</p>
-<div class="highlight-python"><pre>Only relationships with ``lazy`` set to ``'dynamic'``, ``'select'`` or
-``True`` can have subroutes. All eagerly loaded relationships are simply
-available directly on the model.</pre>
-</div>
+<dd><p>Base API view.</p>
+<p>To customize, override the <tt class="docutils literal"><span class="pre">get</span></tt>, <tt class="docutils literal"><span class="pre">post</span></tt>, etc. methods.</p>
+<dl class="attribute">
+<dt id="flasker.ext.api.BaseView.base_url">
+<tt class="descname">base_url</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.ext.api.BaseView.base_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base URL (will default to the model&#8217;s tablename).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.ext.api.BaseView.endpoint">
+<tt class="descname">endpoint</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.ext.api.BaseView.endpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Endpoint (will default to the model&#8217;s tablename).</p>
+</dd></dl>
+
 <dl class="attribute">
 <dt id="flasker.ext.api.BaseView.methods">
 <tt class="descname">methods</tt><em class="property"> = frozenset(['GET'])</em><a class="headerlink" href="#flasker.ext.api.BaseView.methods" title="Permalink to this definition">¶</a></dt>
@@ -471,46 +450,29 @@ available directly on the model.</pre>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="flasker.ext.api.BaseView.collection_view">
-<tt class="descname">collection_view</tt><em class="property"> = True</em><a class="headerlink" href="#flasker.ext.api.BaseView.collection_view" title="Permalink to this definition">¶</a></dt>
-<dd><p>Whether or not to create the collection endpoint.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.ext.api.BaseView.model_view">
-<tt class="descname">model_view</tt><em class="property"> = True</em><a class="headerlink" href="#flasker.ext.api.BaseView.model_view" title="Permalink to this definition">¶</a></dt>
-<dd><p>Whether or not to create the model endpoint.</p>
+<dt id="flasker.ext.api.BaseView.parser">
+<tt class="descname">parser</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.ext.api.BaseView.parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parser (will default to the API instance parser).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="flasker.ext.api.BaseView.relationship_views">
 <tt class="descname">relationship_views</tt><em class="property"> = []</em><a class="headerlink" href="#flasker.ext.api.BaseView.relationship_views" title="Permalink to this definition">¶</a></dt>
-<dd><p>Which relationship endpoints to create.
-can be <tt class="docutils literal"><span class="pre">True</span></tt> (all relationships), a list of relationship attributes
-names or a dictionary with keys being relationship attributes and values
-tuples of (RelationshipCollectionView, RelationshipModelView).</p>
+<dd><p>Which relationship endpoints to create (these allow GET requests).
+Can be <tt class="docutils literal"><span class="pre">True</span></tt> (all relationships) or a list of relationship names.
+Only relationships with <tt class="docutils literal"><span class="pre">lazy</span></tt> set to <tt class="docutils literal"><span class="pre">'dynamic'</span></tt>, <tt class="docutils literal"><span class="pre">'select'</span></tt> or
+<tt class="docutils literal"><span class="pre">True</span></tt> can have subroutes. All eagerly loaded relationships are simply
+available directly on the model.</p>
 </dd></dl>
 
-<dl class="classmethod">
-<dt id="flasker.ext.api.BaseView.attach_view">
-<em class="property">classmethod </em><tt class="descname">attach_view</tt><big>(</big><em>*view_args</em>, <em>**view_kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.api.BaseView.attach_view" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create and attach a view to the blueprint.</p>
-<p>New views should be created with this method otherwise the extension will
-be unaware of them.</p>
+<dl class="method">
+<dt id="flasker.ext.api.BaseView.dispatch_request">
+<tt class="descname">dispatch_request</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.api.BaseView.dispatch_request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dispatches requests to the corresponding method name.</p>
+<p>Similar to the <tt class="docutils literal"><span class="pre">flask.views.MethodView</span></tt> implementation: GET requests
+are passed to <tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt>, POST to <tt class="xref py py-meth docutils literal"><span class="pre">post()</span></tt>, etc.</p>
 </dd></dl>
 
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.api.RelationshipView">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">RelationshipView</tt><a class="reference internal" href="_modules/flasker/ext/api.html#RelationshipView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.RelationshipView" title="Permalink to this definition">¶</a></dt>
-<dd><p>Not an actual view, meant to be subclassed.</p>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.ext.api.IndexView">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">IndexView</tt><a class="reference internal" href="_modules/flasker/ext/api.html#IndexView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.IndexView" title="Permalink to this definition">¶</a></dt>
-<dd><p>API splash page with a few helpful keys.</p>
 </dd></dl>
 
 <dl class="class">
@@ -559,14 +521,9 @@ client-side library such as Backbone-Relational.</li>
 </tbody>
 </table>
 <p>This method is convenience for calling <a class="reference internal" href="#flasker.ext.api.Parser.process" title="flasker.ext.api.Parser.process"><tt class="xref py py-meth docutils literal"><span class="pre">process()</span></tt></a> followed by
-<a class="reference internal" href="#flasker.ext.api.Parser.serialize" title="flasker.ext.api.Parser.serialize"><tt class="xref py py-meth docutils literal"><span class="pre">flasker.ext.api.Parser.serialize()</span></tt></a>, with the following variant.
-When using this method, the <tt class="docutils literal"><span class="pre">wrap</span></tt> parameter is determined by the type
-of <tt class="docutils literal"><span class="pre">collection</span></tt>:</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">wrap=True</span></tt> if <tt class="docutils literal"><span class="pre">collection</span></tt> is a <a class="reference internal" href="#flasker.ext.orm.Query" title="flasker.ext.orm.Query"><tt class="xref py py-class docutils literal"><span class="pre">flasker.ext.orm.Query</span></tt></a> and
-<tt class="docutils literal"><span class="pre">model_id</span></tt> and <tt class="docutils literal"><span class="pre">model_position</span></tt> are <tt class="docutils literal"><span class="pre">None</span></tt></li>
-<li><tt class="docutils literal"><span class="pre">wrap=False</span></tt> otherwise</li>
-</ul>
+<a class="reference internal" href="#flasker.ext.api.Parser.serialize" title="flasker.ext.api.Parser.serialize"><tt class="xref py py-meth docutils literal"><span class="pre">serialize()</span></tt></a>, with the content key parameter smartly chosen to 
+abide by <tt class="docutils literal"><span class="pre">flask.jsonify</span></tt>&#8216;s limitation to only objects as top level.</p>
+<p>Also adds a match count and request overview for wrapped responses.</p>
 </dd></dl>
 
 <dl class="method">
@@ -581,7 +538,7 @@ of <tt class="docutils literal"><span class="pre">collection</span></tt>:</p>
 <li><strong>collection</strong> (<em>flasker.ext.orm.Query, list</em>) &#8211; the query or list to be transformed to JSON</li>
 <li><strong>model_id</strong> (<em>varies</em>) &#8211; model identifier. If specified, the parser will call
 <tt class="docutils literal"><span class="pre">get</span></tt> on the query with this id.</li>
-<li><strong>model_position</strong> (<em>int</em>) &#8211; position of the model in the collection</li>
+<li><strong>model_position</strong> (<em>int</em>) &#8211; position of the model in the collection (1 indexed).</li>
 </ul>
 </td>
 </tr>
@@ -590,7 +547,13 @@ of <tt class="docutils literal"><span class="pre">collection</span></tt>:</p>
 </tr>
 </tbody>
 </table>
-<p>Returns a tuple <tt class="docutils literal"><span class="pre">(collection,</span> <span class="pre">info)</span></tt>.</p>
+<p>Returns a tuple <tt class="docutils literal"><span class="pre">(collection,</span> <span class="pre">match)</span></tt>:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">collection</span></tt> is the filtered, sorted, offsetted, limited collection</li>
+<li><tt class="docutils literal"><span class="pre">match</span></tt> is a dictionary with two keys: <tt class="docutils literal"><span class="pre">total</span></tt> with the total number
+of results from the filtered query and <tt class="docutils literal"><span class="pre">returned</span></tt> with the total number
+of results for the filtered, offsetted and limited query.</li>
+</ul>
 </dd></dl>
 
 <dl class="method">
@@ -601,15 +564,19 @@ of <tt class="docutils literal"><span class="pre">collection</span></tt>:</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>collection</strong> &#8211; the collection to be serialized</li>
-<li><strong>content_key</strong> &#8211; key to wrap content in</li>
-<li><strong>kwargs</strong> &#8211; ignored if <tt class="docutils literal"><span class="pre">content_key</span></tt> is <tt class="docutils literal"><span class="pre">None</span></tt></li>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>collection</strong> (<em>iterable</em>) &#8211; the collection to be serialized</li>
+<li><strong>content_key</strong> (<em>str</em>) &#8211; key to wrap content in</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
 </td>
 </tr>
 </tbody>
 </table>
+<p>The keyword arguments are ignored if <tt class="docutils literal"><span class="pre">content_key</span></tt> is <tt class="docutils literal"><span class="pre">None</span></tt> and
+used to update the returned dictionary otherwise.</p>
 </dd></dl>
 
 </dd></dl>
