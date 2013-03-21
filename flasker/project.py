@@ -13,6 +13,24 @@ This module defines:
 For convenience, both these variables are also available directly in the
 ``flasker`` namespace.
 
+.. note::
+
+  In most cases :class:`flasker.project.Project` will not need to be
+  instantiated explicitely (the console tool handles the setup) and will only
+  be accessed via the ``current_project`` proxy. In some cases however the
+  constructor can be called to create a project (for example from an IPython
+  notebook or to use a separate WSGI server).
+
+  .. code:: python
+
+    from flasker import Project
+
+    # instantiating the project
+    pj = Project('path/to/config.cfg')
+
+    # the application that would be passed to a WSGI server
+    application = pj.flask
+
 """
 
 from ConfigParser import SafeConfigParser
@@ -49,7 +67,7 @@ class Project(object):
   :param config_path: path to the configuration file. The following sections
     should be present: ``PROJECT``, ``ENGINE``, ``FLASK``, ``CELERY``. See
     below for a list of available options in each section.
-  :type config_path: bool
+  :type config_path: str
   :param make: whether or not to create all the project components. This should
     always be true, except in some cases where it is useful to check
     consistency of the configuration before doing so. ``_make`` should then be
@@ -92,24 +110,6 @@ class Project(object):
   * ``CELERY``
 
     * any valid Celery configuration option
-
-  .. note::
-
-    In most cases this class will not need to be instantiated explicitely (the
-    console tool handles the setup) and will only be accessed via the
-    ``current_project`` proxy. In some cases however the constructor can be
-    called to create a project (for example from an IPython notebook or to use
-    a separate WSGI server).
-
-    .. code:: python
-
-      from flasker import Project
-
-      # instantiating the project
-      pj = Project('path/to/config.cfg')
-
-      # the application that would be passed to a WSGI server
-      application = pj.flask
   
   """
 
@@ -171,8 +171,13 @@ class Project(object):
 
       path.append(self.root_dir)
 
+      #: the Flask application
       self.flask = None
+
+      #: the Celery application
       self.celery = None
+
+      #: the SQLAlchemy scoped sessionmaker
       self.session = None
 
       self._engine = None
@@ -267,6 +272,6 @@ class Project(object):
 def _get_current_project():
   return _local_storage._current_project or Project()
 
-#: proxy to the current project
+#: Proxy to the current project
 current_project = LocalProxy(_get_current_project)
 
