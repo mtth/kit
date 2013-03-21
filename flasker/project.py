@@ -1,6 +1,19 @@
 #!/usr/bin/env python
 
-"""Project module."""
+"""Project module.
+
+This module defines:
+
+* the :class:`flasker.project.Project` class which contains
+  all the logic between the Flask and Celery applications and the SQLAlchemy
+  sessions.
+
+* the ``current_project`` proxy
+
+For convenience, both these variables are also available directly in the
+``flasker`` namespace.
+
+"""
 
 from ConfigParser import SafeConfigParser
 from os.path import abspath, dirname, join, sep, split, splitext
@@ -33,8 +46,70 @@ class Project(object):
 
   """Project class.
 
-  Global container for the Flask and Celery apps and SQLAlchemy database
-  object.
+  :param config_path: path to the configuration file. The following sections
+    should be present: ``PROJECT``, ``ENGINE``, ``FLASK``, ``CELERY``. See
+    below for a list of available options in each section.
+  :type config_path: bool
+  :param make: whether or not to create all the project components. This should
+    always be true, except in some cases where it is useful to check
+    consistency of the configuration before doing so. ``_make`` should then be
+    called manually after these checks are done.
+  :type make: bool
+
+  The following options are available each section of the configuration file
+  (as a convenience, parameters stored as JSON strings are also accepted,
+  which can be useful for example to configure Celery queues):
+
+  * ``PROJECT``
+
+    * ``NAME``: the name of the project, used for debugging and to generate a
+      default domain name for the Celery workers.
+    * ``MODULES``: comma separated list of the project's modules. They must be
+      importable from the configuration file's folder.
+    * ``FLASK_ROOT_FOLDER``: path to the Flask application's root folder
+      relative to the configuration file (defaults to ``app``).
+    * ``FLASK_STATIC_FOLDER``: the application's ``static_folder`` relative to
+      the application's root folder (defaults to ``static``).
+    * ``FLASK_TEMPLATE_FOLDER``: the application's ``template_folder`` relative
+      to the application's root folder (defaults to ``templates``).
+    * ``COMMIT_ON_TEARDOWN``: if ``True`` (default), all database transactions
+      will be committed after each Flask app request and Celery task
+      completion. If ``False`` the session will simply be removed.
+    * ``DOMAIN``: if specified, used to generate Celery worker hostnames
+      (defaults to the project name, sluggified).
+    * ``SUBDOMAIN``: if specified, used to generate Celery worker hostnames 
+      (defaults to the configuration file's name).
+
+  * ``ENGINE``
+
+    * ``URL``: the url to the database
+    * any valid arguments to ``sqlalchemy.create_engine``
+
+  * ``FLASK``
+
+    * any valid Flask configuration option
+
+  * ``CELERY``
+
+    * any valid Celery configuration option
+
+  .. note::
+
+    In most cases this class will not need to be instantiated explicitely (the
+    console tool handles the setup) and will only be accessed via the
+    ``current_project`` proxy. In some cases however the constructor can be
+    called to create a project (for example from an IPython notebook or to use
+    a separate WSGI server).
+
+    .. code:: python
+
+      from flasker import Project
+
+      # instantiating the project
+      pj = Project('path/to/config.cfg')
+
+      # the application that would be passed to a WSGI server
+      application = pj.flask
   
   """
 
@@ -113,7 +188,16 @@ class Project(object):
     return '<Project %r, %r>' % (self.config['PROJECT']['NAME'], self.root_dir)
 
   def before_startup(self, func):
-    """Decorator, hook to run a function right before project starts."""
+    """Hook to run a function right before project starts.
+
+    :param func: the function to be called right before startup. It will be
+      passed the project as single argument.
+    :type func: callable
+
+    This decorator can be used to run functions after all the components of
+    the project have been created.
+    
+    """
     self._before_startup.append(func)
 
   def _make(self):
@@ -183,5 +267,6 @@ class Project(object):
 def _get_current_project():
   return _local_storage._current_project or Project()
 
+#: proxy to the current project
 current_project = LocalProxy(_get_current_project)
 
