@@ -246,6 +246,8 @@ class View(_View):
           blueprint,
           view_class=_RelationshipView,
           view_name='%s_%s' % (cls.endpoint, key),
+          parent_model=model,
+          assoc_key=key,
           parser=cls.parser,
           endpoint='%s_%s' % (cls.endpoint, key),
           methods=['GET', ],
@@ -258,21 +260,23 @@ class View(_View):
   def get(self, **kwargs):
     """GET request handler."""
     query = self.__model__.q
-    model_id = kwargs.values() if kwargs else None
+    model_id = filter(None, kwargs.values()) if kwargs else None
     # TODO: check here if the order makes sense for composite keys
     return jsonify(self.parser.parse(query, model_id=model_id))
 
   def post(self):
     """POST request handler."""
-    # TODO: validate JSON
+    if not self.validate(json):
+      raise APIError(400, 'Invalid POST parameters')
     model = self.__model__(**request.json)
     model._flush()
     return jsonify(self.parser.serialize([model]))
 
   def put(self, **kwargs):
     """PUT request handler."""
-    # TODO: validate JSON
     model = self.parser._get_model(self.__model__.q, **kwargs)
+    if not self.validate(json, model):
+      raise APIError(400, 'Invalid PUT parameters')
     for k, v in request.json.items():
       setattr(model, k, v)
     return jsonify(self.parser.serialize([model]))
@@ -283,18 +287,40 @@ class View(_View):
     pj.session.delete(model)
     return jsonify({'meta': 'Resource deleted'})
 
+  def validate(self, json, model=None):
+    """Validation method.
+
+    :param json: a dictionary of attributes
+    :type json: dict
+    :param model: ``None`` if it is POST request, and the model instance to be
+      modified if it is a PUT request.
+    :type model: None or flasker.ext.orm.BaseModel
+    :rtype: bool
+
+    This method is called on each POST and PUT request. Override it to
+    implement your own validation logic: return ``True`` when the input is
+    valid and ``False`` otherwise. Default implementation accepts everything.
+
+    """
+    return True
+
 
 class _RelationshipView(_View):
 
   """Relationship View."""
 
+  parent_model = None
+  assoc_key = None
+
   def get(self, **kwargs):
     """GET request handler."""
     position = kwargs.pop('position', None)
-    parent_model = self.__model__
+    parent_model = self.parent_model
     parent_instance = self.parser._get_model(parent_model.q, **kwargs)
-    collection =  getattr(parent_instance, self.key)
-    return jsonify(self.parser.parse(collection, model_position=position))
+    collection =  getattr(parent_instance, self.assoc_key)
+    return jsonify(
+      self.parser.parse(collection, model_position=position, fast_count=False)
+    )
 
 
 class Parser(object):
@@ -319,36 +345,31 @@ class Parser(object):
   
   """
 
-  def __init__(self, default_depth=1, default_limit=20, max_limit=0,
-               expand=True, sep=';'):
+  def __init__(self, default_depth=1, max_depth=0, default_limit=20,
+               max_limit=0, expand=True, sep=';'):
     self.options = {
       'default_depth': default_depth,
+      'max_depth': max_depth,
       'default_limit': default_limit,
       'max_limit': max_limit,
       'expand': expand,
       'sep': sep,
     }
 
-  def parse(self, collection, model_id=None, model_position=None):
+  def parse(self, collection, model_id=None, model_position=None,
+            fast_count=True):
     """Parses and serializes a list of models or a query into a dictionary.
 
-    :param collection: the query or list to be transformed to JSON
-    :type collection: flasker.ext.orm.Query, list
-    :param model_id: model identifier. If specified, the parser will call
-      ``get`` on the query with this id.
-    :type model_id: varies
-    :param model_position: position of the model in the collection
-    :type model_position: int
-    :rtype: dict
-
     This method is convenience for calling :meth:`process` followed by
-    :meth:`serialize`, with a match count and request overview.
+    :meth:`serialize`, with a match count and request overview. Cf. these
+    respective methods for parameter details.
 
     """
     collection, match = self.process(
       collection,
       model_id=model_id,
-      model_position=model_position
+      model_position=model_position,
+      fast_count=fast_count,
     )
     return self.serialize(
       collection,
@@ -363,7 +384,8 @@ class Parser(object):
       }
     )
 
-  def process(self, collection, model_id=None, model_position=None):
+  def process(self, collection, model_id=None, model_position=None,
+              fast_count=True):
     """Parse query and return JSON.
 
     :param collection: the query or list to be transformed to JSON
@@ -373,11 +395,17 @@ class Parser(object):
     :type model_id: varies
     :param model_position: position of the model in the collection (1 indexed).
     :type model_position: int
+    :param fast_count: if ``True``, will issue a separate count query to get
+      the total number of matches. Because of a limitation on how count is 
+      handled using subqueries, this results in much faster results. However
+      this can only be used if the initial ``collection`` argument is an
+      unfiltered query.
+    :type fast_count: bool
     :rtype: tuple
 
     Returns a tuple ``(collection, match)``:
 
-    * ``collection`` is the filtered, sorted, offsetted, limited collection
+    * ``collection`` is the filtered, sorted, offsetted, limited collection.
     * ``match`` is a dictionary with two keys: ``total`` with the total number
       of results from the filtered query and ``returned`` with the total number
       of results for the filtered, offsetted and limited query.
@@ -385,12 +413,13 @@ class Parser(object):
     """
 
     if not collection:
-      return []
+      return [], None
 
     if model_id or model_position:
 
       if model_id:
-        collection = [collection.get(model_id)]
+        model = collection.get(model_id)
+        collection = [model] if model else []
       else:
         position = int(model_position) - 1 # model_position is 1 indexed
         if isinstance(collection, Query):
@@ -405,7 +434,6 @@ class Parser(object):
 
       raw_filters = request.args.getlist('filter')
       raw_sorts = request.args.getlist('sort')
-
       offset = request.args.get('offset', 0, int)
       limit = request.args.get('limit', self.options['default_limit'], int)
       max_limit = self.options['max_limit']
@@ -416,6 +444,7 @@ class Parser(object):
 
         sep = self.options['sep']
 
+        filters = []
         for raw_filter in raw_filters:
           try:
             key, op, value = raw_filter.split(sep, 3)
@@ -437,7 +466,18 @@ class Parser(object):
             if value == 'null':
               value = None
             filt = getattr(column, attr)(value)
-          collection = collection.filter(filt)
+          filters.append(filt)
+
+        if fast_count:
+          count_query = model.c
+          for filt in filters:
+            collection = collection.filter(filt)
+            count_query = count_query.filter(filt)
+          match = {'total': count_query.scalar()}
+        else:
+          for filt in filters:
+            collection = collection.filter(filt)
+          match = {'total': collection.count()}
 
         for raw_sort in raw_sorts:
           try:
@@ -451,8 +491,6 @@ class Parser(object):
             collection = collection.order_by(getattr(column, order)())
           else:
             raise APIError(400, 'Invalid sort column: %s' % key)
-
-        match = {'total': collection.count()}
 
         if offset:
           collection = collection.offset(offset)
@@ -492,8 +530,11 @@ class Parser(object):
 
     """
 
-    depth = request.args.get('depth', self.options['default_depth'], int)
     expand = request.args.get('expand', self.options['expand'], int)
+    depth = request.args.get('depth', self.options['default_depth'], int)
+    max_depth = self.options['max_depth']
+    if max_depth:
+      depth = min(depth, max_depth)
 
     content = [
       e.to_json(depth=depth, expand=expand)
