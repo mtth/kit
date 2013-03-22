@@ -8,7 +8,6 @@ from flask import Flask
 from os.path import join, sep
 
 from ..project import current_project
-from ..util import make_view
 
 pj = current_project
 conf = pj.config['PROJECT']
@@ -31,7 +30,5 @@ def inject():
 @app.teardown_request
 def teardown_request_handler(exception=None):
   pj._dismantle_database_connections()
-
-app.View = make_view(app)
 
 pj.flask = app
