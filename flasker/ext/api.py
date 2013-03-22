@@ -41,7 +41,7 @@ Another slighly more complex example:
     __model__ = House
 
     methods = ['GET', 'POST']
-    relationship_views = ['cats']
+    subviews = ['cats']
 
 This view will create the following hooks:
 
@@ -56,8 +56,9 @@ for :class:`flasker.ext.api.BaseView` for the list of all available options.
 """
 
 from flask import Blueprint, jsonify, request
-from flask.views import MethodView, View
+from flasker.util import make_view, View as _View, _ViewMeta
 from os.path import abspath, dirname, join
+from sqlalchemy.ext.associationproxy import AssociationProxy
 from sqlalchemy.orm import class_mapper, mapperlib
 from time import time
 from werkzeug.exceptions import HTTPException
@@ -109,52 +110,63 @@ class API(object):
 
     parser_options = parser_options or {}
 
-    self.View = type(
-      'View',
-      (BaseView, ),
-      {
-        '__all__': [],
-        'parser': Parser(**parser_options)
-      }
+    blueprint = Blueprint(
+      url_prefix,
+      '%s.%s' % (project.config['PROJECT']['FLASK_ROOT_FOLDER'], url_prefix),
+      url_prefix='/%s' % url_prefix,
+    )
+
+    self.View = make_view(
+      blueprint,
+      view_class=View,
+      parser=Parser(**parser_options)
     )
 
     @project.before_startup
     def handler(project):
-
-      blueprint = Blueprint(
-        url_prefix,
-        '%s.%s' % (project.config['PROJECT']['FLASK_ROOT_FOLDER'], url_prefix),
-        url_prefix='/%s' % url_prefix,
-      )
-
-      for view in self.View.__all__:
-        view._attach(blueprint)
 
       if index_view:
 
         @blueprint.route('/')
         def index():
           return jsonify({
-            'available_endpoints': [] #TODO
+            'available_endpoints': sorted(
+              '%s (%s)' % (r.rule, ', '.join(str(meth) for meth in r.methods))
+              for r in project.flask.url_map.iter_rules()
+              if r.endpoint.startswith('%s.' % url_prefix)
+            )
           })
 
       project.flask.register_blueprint(blueprint)
 
 
-# Views
-
-class _BaseViewMeta(type):
+class _ApiViewMeta(_ViewMeta):
 
   """To register classes with the API on definition."""
 
   def __new__(cls, name, bases, dct):
-    rv = super(_BaseViewMeta, cls).__new__(cls, name, bases, dct)
-    if rv.__model__ is not None:
-      rv.__all__.append(rv)
-    return rv
+
+    model = dct.get('__model__', None)
+
+    if model is not None:
+      dct.setdefault('endpoint', model.__tablename__)
+      base_url = dct.setdefault('base_url', model.__tablename__)
+
+      collection_route = '/%s' % (base_url, )
+      model_route = '/%s%s' % (
+        base_url,
+        ''.join('/<%s>' % k.name for k in class_mapper(model).primary_key)
+      )
+
+      dct['rules'] = {
+        collection_route: ['GET', 'POST'],
+        model_route: ['GET', 'PUT', 'DELETE'],
+      }
+
+    return super(_ApiViewMeta, cls).__new__(cls, name, bases, dct)
 
 
-class BaseView(View):
+class View(_View):
 
   """Base API view.
 
@@ -162,8 +174,7 @@ class BaseView(View):
 
   """
 
-  __metaclass__ = _BaseViewMeta
-  __all__ = None
+  __metaclass__ = _ApiViewMeta
 
   #: orm.Model class
   __model__ = None
@@ -171,13 +182,10 @@ class BaseView(View):
   #: Base URL (will default to the model's tablename).
   base_url = None
 
-  #: Endpoint (will default to the model's tablename).
-  endpoint = None
-
   #: Allowed methods.
   methods = frozenset(['GET'])
 
-  #: Parser (will default to the API instance parser).
+  #: Request parser.
   parser = None
 
   #: Which relationship endpoints to create (these allow GET requests).
@@ -185,87 +193,84 @@ class BaseView(View):
   #: Only relationships with ``lazy`` set to ``'dynamic'``, ``'select'`` or
   #: ``True`` can have subroutes. All eagerly loaded relationships are simply
   #: available directly on the model.
-  relationship_views = []
+  subviews = []
 
   @classmethod
-  def _attach(cls, blueprint):
-    """Create the URL routes for the view."""
-
-    model = cls.__model__
-    base_url = cls.base_url or model.__tablename__
-    endpoint = cls.endpoint or model.__tablename__
-    view = cls.as_view(endpoint)
-
-    if 'GET' in cls.methods:
-      blueprint.add_url_rule(
-        rule='/%s' % (base_url, ),
-        view_func=view,
-        methods=['GET', ],
-      )
-
-    if 'POST' in cls.methods:
-      blueprint.add_url_rule(
-        rule='/%s' % (base_url, ),
-        view_func=view,
-        methods=['POST', ],
-      )
-
-    methods = set(['GET', 'PUT', 'DELETE']) & cls.methods
-    if methods:
-      blueprint.add_url_rule(
-        rule='/%s%s' % (
-          base_url,
-          ''.join('/<%s>' % k.name for k in class_mapper(model).primary_key)
-        ),
-        view_func=view,
-        methods=methods,
-      )
-
-    if cls.relationship_views == True:
-      rels = model._get_relationships()
-    else:
-      rels = filter(
-        lambda r: r.key in cls.relationship_views,
-        model._get_relationships()
-      )
-    for rel in rels:
-      if rel.lazy in ['dynamic', True, 'select'] and rel.uselist:
-        type(
-          'View',
-          (_RelationshipView, ),
-          {
-            '__relationship__': rel,
-            'parser': cls.parser,
-            'base_url': base_url,
-            'endpoint': '%s_%s' % (endpoint, rel.key),
-          }
-        )._attach(blueprint)
-
-  def dispatch_request(self, **kwargs):
-    """Dispatches requests to the corresponding method name.
+  def bind_view(cls, blueprint):
+    """Create the URL routes for the view.
     
-    Similar to the ``flask.views.MethodView`` implementation: GET requests
-    are passed to :meth:`get`, POST to :meth:`post`, etc.
+    Standard :class:`flasker.util.View` implementation plus subview support.
     
     """
-    meth = getattr(self, request.method.lower(), None)
-    if meth is None and request.method == 'HEAD':
-        meth = getattr(self, 'get', None)
-    return meth(**kwargs)
+
+    super(View, cls).bind_view(blueprint)
+
+    if cls.subviews:
+      
+      model = cls.__model__
+
+      all_keys = set(
+        model._get_relationships(
+          lazy=['dynamic', True, 'select'],
+          uselist=True
+        ).keys() +
+        model._get_association_proxies().keys()
+      )
+
+      if cls.subviews == True:
+        keys = all_keys
+      else:
+        keys = set(cls.subviews)
+        if keys - all_keys:
+          raise ValueError('%s invalid for subviews' % (keys - all_keys, ))
+        keys = all_keys & keys
+
+      for key in keys:
+
+        collection_route = '/%s%s/%s' % (
+          cls.base_url,
+          ''.join(
+            '/<%s>' % k.name for k in class_mapper(model).primary_key
+          ),
+          key,
+        )
+        model_route = '/%s%s/%s/<position>' % (
+          cls.base_url,
+          ''.join(
+            '/<%s>' % k.name for k in class_mapper(model).primary_key
+          ),
+          key
+        )
+
+        make_view(
+          blueprint,
+          view_class=_RelationshipView,
+          view_name='%s_%s' % (cls.endpoint, key),
+          parser=cls.parser,
+          endpoint='%s_%s' % (cls.endpoint, key),
+          methods=['GET', ],
+          rules={
+            collection_route: ['GET', ],
+            model_route: ['GET', ],
+          },
+        )
 
   def get(self, **kwargs):
+    """GET request handler."""
     query = self.__model__.q
     model_id = kwargs.values() if kwargs else None
     # TODO: check here if the order makes sense for composite keys
     return jsonify(self.parser.parse(query, model_id=model_id))
 
   def post(self):
+    """POST request handler."""
     # TODO: validate JSON
     model = self.__model__(**request.json)
     model._flush()
     return jsonify(self.parser.serialize([model]))
 
   def put(self, **kwargs):
+    """PUT request handler."""
     # TODO: validate JSON
     model = self.parser._get_model(self.__model__.q, **kwargs)
     for k, v in request.json.items():
@@ -273,61 +278,22 @@ class BaseView(View):
     return jsonify(self.parser.serialize([model]))
 
   def delete(self, **kwargs):
+    """DELETE request handler."""
     model = self.parser._get_model(self.__model__.q, **kwargs)
     pj.session.delete(model)
     return jsonify({'meta': 'Resource deleted'})
 
 
-class _RelationshipView(MethodView):
+class _RelationshipView(_View):
 
   """Relationship View."""
 
-  __relationship__ = None
-
-  base_url = None
-  endpoint = None
-  parser = None
-
-  @classmethod
-  def _attach(cls, blueprint):
-
-    relationship = cls.__relationship__
-    parent_model = cls.__relationship__.parent.class_
-
-    base_url = cls.base_url
-    endpoint = cls.endpoint
-
-    view = cls.as_view(endpoint)
-
-    blueprint.add_url_rule(
-      rule='/%s%s/%s' % (
-        base_url,
-        ''.join(
-          '/<%s>' % k.name for k in class_mapper(parent_model).primary_key
-        ),
-        relationship.key,
-      ),
-      view_func=view,
-      methods=['GET', ],
-    )
-
-    blueprint.add_url_rule(
-      rule='/%s%s/%s/<position>' % (
-        base_url,
-        ''.join(
-          '/<%s>' % k.name for k in class_mapper(parent_model).primary_key
-        ),
-        relationship.key,
-      ),
-      view_func=view,
-      methods=cls.methods,
-    )
-
   def get(self, **kwargs):
+    """GET request handler."""
     position = kwargs.pop('position', None)
-    parent_model = self.__relationship__.parent.class_
+    parent_model = self.__model__
     parent_instance = self.parser._get_model(parent_model.q, **kwargs)
-    collection =  getattr(parent_instance, self.__relationship__.key)
+    collection =  getattr(parent_instance, self.key)
     return jsonify(self.parser.parse(collection, model_position=position))
 
 
@@ -376,10 +342,7 @@ class Parser(object):
     :rtype: dict
 
     This method is convenience for calling :meth:`process` followed by
-    :meth:`serialize`, with the content key parameter smartly chosen to 
-    abide by ``flask.jsonify``'s limitation to only objects as top level.
-
-    Also adds a match count and request overview for wrapped responses.
+    :meth:`serialize`, with a match count and request overview.
 
     """
     collection, match = self.process(
@@ -387,13 +350,9 @@ class Parser(object):
       model_id=model_id,
       model_position=model_position
     )
-    if isinstance(collection, Query) or len(collection) > 1:
-      content_key = 'data'
-    else:
-      content_key = None
     return self.serialize(
       collection,
-      content_key=content_key,
+      content_key='data',
       meta={
         'request': {
           'base_url': request.base_url,
@@ -434,10 +393,10 @@ class Parser(object):
         collection = [collection.get(model_id)]
       else:
         position = int(model_position) - 1 # model_position is 1 indexed
-        if isinstance(collection, list):
-          collection = collection[position:(position + 1)]
-        else:
+        if isinstance(collection, Query):
           collection = collection.offset(position).limit(1).all()
+        else:
+          collection = collection[position:(position + 1)]
 
       match = {'total': len(collection), 'returned': len(collection)}
 
@@ -453,21 +412,7 @@ class Parser(object):
       if max_limit:
         limit = min(limit, max_limit) if limit else max_limit
 
-      if isinstance(collection, list):
-
-        if raw_filters or raw_sorts:
-          raise APIError(400, 'Filter and sorts not implemented for lists')
-
-        match = {'total': len(collection)}
-
-        if limit:
-          collection = collection[offset:(offset + limit)]
-        else:
-          collection = collection[offset:]
-
-        match['returned'] = len(collection)
-
-      else:
+      if isinstance(collection, Query):
 
         sep = self.options['sep']
 
@@ -517,6 +462,20 @@ class Parser(object):
 
         match['returned'] = collection.count()
 
+      else:
+
+        if raw_filters or raw_sorts:
+          raise APIError(400, 'Filter and sorts not implemented for lists')
+
+        match = {'total': len(collection)}
+
+        if limit:
+          collection = collection[offset:(offset + limit)]
+        else:
+          collection = collection[offset:]
+
+        match['returned'] = len(collection)
+
     return collection, match
 
   def serialize(self, collection, content_key=None, **kwargs):
@@ -542,14 +501,14 @@ class Parser(object):
       if e
     ]
 
-    if not content:
-      raise APIError(404, 'Resource not found')
-
     if not content_key:
-      if len(content) == 1:
+      if len(content) == 0:
+        raise APIError(404, 'Resource not found')
+      elif len(content) == 1:
         return content[0]
       else:
         return content
+
     else:
       rv = kwargs or {}
       rv[content_key] = content
