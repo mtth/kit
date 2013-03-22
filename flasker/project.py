@@ -51,6 +51,7 @@ class _LocalStorage(local):
   """Thread local storage."""
   
   _current_project = None
+  _state = {}
 
 _local_storage = _LocalStorage()
 
@@ -113,9 +114,6 @@ class Project(object):
   
   """
 
-  __state = {}
-  __registered = False
-
   config = {
     'PROJECT': {
       'NAME': '',
@@ -139,18 +137,24 @@ class Project(object):
       'CELERY_SEND_EVENTS': True
     },
   }
+  config_path = None
+  flask = None
+  celery = None
 
   def __init__(self, config_path=None, make=True):
 
-    self.__dict__ = self.__state
-    _local_storage._current_project = self
+    self.__dict__ = _local_storage._state
 
-    if not self.__registered:
+    if not _local_storage._current_project:
 
       if config_path is None:
-        raise ProjectImportError('Project instantiation outside the Flasker '
-                                 'command line tool requires a configuration '
-                                 'file path.')
+        if self.config_path is None:
+          raise ProjectImportError('Project instantiation outside the Flasker '
+                                   'command line tool requires a configuration '
+                                   'file path.')
+        config_path = self.config_path
+      else:
+        self.__class__.config_path = config_path
 
       config = self._parse_config(config_path)
       for key in config:
@@ -159,7 +163,6 @@ class Project(object):
         else:
           self.config[key] = config[key]
 
-      self.config_path = config_path
       self.root_dir = dirname(abspath(config_path))
       self.domain = (
         self.config['PROJECT']['DOMAIN'] or
@@ -172,12 +175,6 @@ class Project(object):
 
       path.append(self.root_dir)
 
-      #: Flask application (initialized on project startup)
-      self.flask = None
-
-      #: Celery application (initialized on project startup)
-      self.celery = None
-
       #: SQLAlchemy scoped sessionmaker (initialized on project startup)
       self.session = None
 
@@ -185,7 +182,7 @@ class Project(object):
       self._query_class = Query
       self._before_startup = []
 
-      self.__registered = True
+      _local_storage._current_project = self
 
       if make:
         self._make()

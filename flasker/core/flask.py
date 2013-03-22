@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from flask import Flask
 from os.path import join, sep
 
-from ..project import current_project
+from ..project import current_project, Project
 
 pj = current_project
 conf = pj.config['PROJECT']
@@ -31,4 +31,4 @@ def inject():
 def teardown_request_handler(exception=None):
   pj._dismantle_database_connections()
 
-pj.flask = app
+Project.flask = app

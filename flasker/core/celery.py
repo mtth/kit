@@ -8,7 +8,7 @@ from celery import Celery
 from celery.signals import task_postrun, worker_process_init
 from celery.task import periodic_task
 
-from ..project import current_project
+from ..project import current_project, Project
 
 pj = current_project
 
@@ -30,4 +30,4 @@ def create_worker_connection(*args, **kwargs):
 def task_postrun_handler(*args, **kwargs):
   pj._dismantle_database_connections()
 
-pj.celery = celery
+Project.celery = celery
