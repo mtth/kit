@@ -215,8 +215,8 @@ class Dict(dict):
     
     """
     values = [
-        cls(dct)
-        for value in self.itervalues()
+        cls(value)
+        for value in dct.itervalues()
         if isinstance(value, dict)
     ]
     return sum(cls.width(value) for value in values) + len(dct) - len(values)
@@ -232,6 +232,10 @@ class Dict(dict):
     :param prefix: a prefix to add to all new keys
     :type prefix: str
     :rtype: dict:
+
+    .. note::
+
+      All keys in the dictionary must be strings.
 
     """
     items = []
