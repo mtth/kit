@@ -56,7 +56,7 @@ for :class:`flasker.ext.api.BaseView` for the list of all available options.
 """
 
 from flask import Blueprint, jsonify, request
-from flask.views import MethodView, View
+from flasker.util import make_view, View as _View, _ViewMeta
 from os.path import abspath, dirname, join
 from sqlalchemy.ext.associationproxy import AssociationProxy
 from sqlalchemy.orm import class_mapper, mapperlib
@@ -110,52 +110,67 @@ class API(object):
 
     parser_options = parser_options or {}
 
-    self.View = type(
-      'View',
-      (BaseView, ),
-      {
-        '__all__': [],
-        'parser': Parser(**parser_options)
-      }
+    blueprint = Blueprint(
+      url_prefix,
+      '%s.%s' % (project.config['PROJECT']['FLASK_ROOT_FOLDER'], url_prefix),
+      url_prefix='/%s' % url_prefix,
+    )
+
+    self.View = make_view(
+      blueprint,
+      view_class=View,
+      parser=Parser(**parser_options)
     )
 
     @project.before_startup
     def handler(project):
-
-      blueprint = Blueprint(
-        url_prefix,
-        '%s.%s' % (project.config['PROJECT']['FLASK_ROOT_FOLDER'], url_prefix),
-        url_prefix='/%s' % url_prefix,
-      )
-
-      for view in self.View.__all__:
-        view._attach(blueprint)
 
       if index_view:
 
         @blueprint.route('/')
         def index():
           return jsonify({
-            'available_endpoints': [] #TODO
+            'available_endpoints': sorted(
+              '%s (%s)' % (r.rule, ', '.join(str(meth) for meth in r.methods))
+              for r in project.flask.url_map.iter_rules()
+              if r.endpoint.startswith('%s.' % url_prefix)
+            )
           })
 
       project.flask.register_blueprint(blueprint)
 
 
-# Views
-
-class _BaseViewMeta(type):
+class _ApiViewMeta(_ViewMeta):
 
   """To register classes with the API on definition."""
 
   def __new__(cls, name, bases, dct):
-    rv = super(_BaseViewMeta, cls).__new__(cls, name, bases, dct)
-    if rv.__model__ is not None:
-      rv.__all__.append(rv)
-    return rv
+
+    model = dct.get('__model__', None)
+
+    if model is None:
+      if name != 'View':
+        raise ValueError('No model specified for %r' % name)
+
+    else:
+      dct.setdefault('endpoint', model.__tablename__)
+      base_url = dct.setdefault('base_url', model.__tablename__)
+
+      collection_route = '/%s' % (base_url, )
+      model_route = '/%s%s' % (
+        base_url,
+        ''.join('/<%s>' % k.name for k in class_mapper(model).primary_key)
+      )
+
+      dct['rules'] = {
+        collection_route: ['GET', 'POST'],
+        model_route: ['GET', 'PUT', 'DELETE'],
+      }
+
+    return super(_ApiViewMeta, cls).__new__(cls, name, bases, dct)
 
 
-class BaseView(View):
+class View(_View):
 
   """Base API view.
 
@@ -163,8 +178,7 @@ class BaseView(View):
 
   """
 
-  __metaclass__ = _BaseViewMeta
-  __all__ = None
+  __metaclass__ = _ApiViewMeta
 
   #: orm.Model class
   __model__ = None
@@ -172,14 +186,8 @@ class BaseView(View):
   #: Base URL (will default to the model's tablename).
   base_url = None
 
-  #: Endpoint (will default to the model's tablename).
-  endpoint = None
-
   #: Allowed methods.
   methods = frozenset(['GET'])
-
-  #: Parser (will default to the API instance parser).
-  parser = None
 
   #: Which relationship endpoints to create (these allow GET requests).
   #: Can be ``True`` (all relationships) or a list of relationship names.
@@ -188,41 +196,17 @@ class BaseView(View):
   #: available directly on the model.
   subviews = []
 
+  parser = None
+
   @classmethod
-  def _attach(cls, blueprint):
+  def bind_view(cls, blueprint):
     """Create the URL routes for the view."""
 
-    model = cls.__model__
-    base_url = cls.base_url or model.__tablename__
-    endpoint = cls.endpoint or model.__tablename__
-    view = cls.as_view(endpoint)
-
-    if 'GET' in cls.methods:
-      blueprint.add_url_rule(
-        rule='/%s' % (base_url, ),
-        view_func=view,
-        methods=['GET', ],
-      )
-
-    if 'POST' in cls.methods:
-      blueprint.add_url_rule(
-        rule='/%s' % (base_url, ),
-        view_func=view,
-        methods=['POST', ],
-      )
-
-    methods = set(['GET', 'PUT', 'DELETE']) & cls.methods
-    if methods:
-      blueprint.add_url_rule(
-        rule='/%s%s' % (
-          base_url,
-          ''.join('/<%s>' % k.name for k in class_mapper(model).primary_key)
-        ),
-        view_func=view,
-        methods=methods,
-      )
+    super(View, cls).bind_view(blueprint)
 
     if cls.subviews:
+      
+      model = cls.__model__
 
       all_keys = set(
         model._get_relationships(
@@ -236,34 +220,37 @@ class BaseView(View):
         keys = all_keys
       else:
         keys = set(cls.subviews)
-        if 
-          raise
-        keys = 
+        if keys - all_keys:
+          raise ValueError('%s invalid for subviews' % (keys - all_keys, ))
+        keys = all_keys & keys
 
       for key in keys:
-        type(
-          'View',
-          (_RelationshipView, ),
-          {
-            '__model__': model,
-            'key': key,
-            'parser': cls.parser,
-            'base_url': base_url,
-            'endpoint': '%s_%s' % (endpoint, key),
-          }
-        )._attach(blueprint)
 
-  def dispatch_request(self, **kwargs):
-    """Dispatches requests to the corresponding method name.
-    
-    Similar to the ``flask.views.MethodView`` implementation: GET requests
-    are passed to :meth:`get`, POST to :meth:`post`, etc.
-    
-    """
-    meth = getattr(self, request.method.lower(), None)
-    if meth is None and request.method == 'HEAD':
-        meth = getattr(self, 'get', None)
-    return meth(**kwargs)
+        collection_route = '/%s%s/%s' % (
+          cls.base_url,
+          ''.join(
+            '/<%s>' % k.name for k in class_mapper(model).primary_key
+          ),
+          key,
+        )
+        model_route = '/%s%s/%s/<position>' % (
+          cls.base_url,
+          ''.join(
+            '/<%s>' % k.name for k in class_mapper(model).primary_key
+          ),
+          key
+        )
+
+        make_view(
+          blueprint,
+          view_class=_RelationshipView,
+          parser=cls.parser,
+          endpoint='%s_%s' % (cls.endpoint, key),
+          rules={
+            collection_route: ['GET', ],
+            model_route: ['GET', ],
+          }
+        )
 
   def get(self, **kwargs):
     query = self.__model__.q
@@ -290,50 +277,9 @@ class BaseView(View):
     return jsonify({'meta': 'Resource deleted'})
 
 
-class _RelationshipView(MethodView):
+class _RelationshipView(_View):
 
   """Relationship View."""
-
-  __model__ = None
-
-  key = None
-  base_url = None
-  endpoint = None
-  parser = None
-
-  @classmethod
-  def _attach(cls, blueprint):
-
-    parent_model = cls.__model__
-
-    base_url = cls.base_url
-    endpoint = cls.endpoint
-
-    view = cls.as_view(endpoint)
-
-    blueprint.add_url_rule(
-      rule='/%s%s/%s' % (
-        base_url,
-        ''.join(
-          '/<%s>' % k.name for k in class_mapper(parent_model).primary_key
-        ),
-        cls.key,
-      ),
-      view_func=view,
-      methods=['GET', ],
-    )
-
-    blueprint.add_url_rule(
-      rule='/%s%s/%s/<position>' % (
-        base_url,
-        ''.join(
-          '/<%s>' % k.name for k in class_mapper(parent_model).primary_key
-        ),
-        cls.key,
-      ),
-      view_func=view,
-      methods=cls.methods,
-    )
 
   def get(self, **kwargs):
     position = kwargs.pop('position', None)
