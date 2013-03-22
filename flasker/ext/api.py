@@ -246,6 +246,8 @@ class View(_View):
           blueprint,
           view_class=_RelationshipView,
           view_name='%s_%s' % (cls.endpoint, key),
+          parent_model=model,
+          assoc_key=key,
           parser=cls.parser,
           endpoint='%s_%s' % (cls.endpoint, key),
           methods=['GET', ],
@@ -288,12 +290,15 @@ class _RelationshipView(_View):
 
   """Relationship View."""
 
+  parent_model = None
+  assoc_key = None
+
   def get(self, **kwargs):
     """GET request handler."""
     position = kwargs.pop('position', None)
-    parent_model = self.__model__
+    parent_model = self.parent_model
     parent_instance = self.parser._get_model(parent_model.q, **kwargs)
-    collection =  getattr(parent_instance, self.key)
+    collection =  getattr(parent_instance, self.assoc_key)
     return jsonify(self.parser.parse(collection, model_position=position))
 
 
@@ -385,12 +390,13 @@ class Parser(object):
     """
 
     if not collection:
-      return []
+      return [], None
 
     if model_id or model_position:
 
       if model_id:
-        collection = [collection.get(model_id)]
+        model = collection.get(model_id)
+        collection = [model] if model else []
       else:
         position = int(model_position) - 1 # model_position is 1 indexed
         if isinstance(collection, Query):
@@ -413,6 +419,8 @@ class Parser(object):
         limit = min(limit, max_limit) if limit else max_limit
 
       if isinstance(collection, Query):
+
+        # TODO: speedup counting
 
         sep = self.options['sep']
 
