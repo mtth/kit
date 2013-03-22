@@ -260,7 +260,7 @@ class View(_View):
   def get(self, **kwargs):
     """GET request handler."""
     query = self.__model__.q
-    model_id = kwargs.values() if kwargs else None
+    model_id = filter(None, kwargs.values()) if kwargs else None
     # TODO: check here if the order makes sense for composite keys
     return jsonify(self.parser.parse(query, model_id=model_id))
 
