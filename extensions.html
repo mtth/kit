@@ -380,7 +380,7 @@ override the <tt class="docutils literal"><span class="pre">__json__</span></tt>
   <span class="n">__model__</span> <span class="o">=</span> <span class="n">House</span>
 
   <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="s">&#39;POST&#39;</span><span class="p">]</span>
-  <span class="n">relationship_views</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;cats&#39;</span><span class="p">]</span>
+  <span class="n">subviews</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;cats&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>This view will create the following hooks:</p>
@@ -391,7 +391,7 @@ override the <tt class="docutils literal"><span class="pre">__json__</span></tt>
 <li><tt class="docutils literal"><span class="pre">/houses/&lt;id&gt;/cats/&lt;position&gt;</span></tt></li>
 </ul>
 <p>These are only two simple ways to add a view. Please refer to the documentation
-for <a class="reference internal" href="#flasker.ext.api.BaseView" title="flasker.ext.api.BaseView"><tt class="xref py py-class docutils literal"><span class="pre">flasker.ext.api.BaseView</span></tt></a> for the list of all available options.</p>
+for <tt class="xref py py-class docutils literal"><span class="pre">flasker.ext.api.BaseView</span></tt> for the list of all available options.</p>
 <dl class="exception">
 <dt id="flasker.ext.api.APIError">
 <em class="property">exception </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">APIError</tt><big>(</big><em>code</em>, <em>content</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#APIError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.APIError" title="Permalink to this definition">¶</a></dt>
@@ -427,37 +427,31 @@ parameters, invalid form data, etc.)</li>
 </dd></dl>
 
 <dl class="class">
-<dt id="flasker.ext.api.BaseView">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">BaseView</tt><a class="headerlink" href="#flasker.ext.api.BaseView" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.ext.api.View">
+<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">View</tt><a class="headerlink" href="#flasker.ext.api.View" title="Permalink to this definition">¶</a></dt>
 <dd><p>Base API view.</p>
 <p>To customize, override the <tt class="docutils literal"><span class="pre">get</span></tt>, <tt class="docutils literal"><span class="pre">post</span></tt>, etc. methods.</p>
 <dl class="attribute">
-<dt id="flasker.ext.api.BaseView.base_url">
-<tt class="descname">base_url</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.ext.api.BaseView.base_url" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.ext.api.View.base_url">
+<tt class="descname">base_url</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.ext.api.View.base_url" title="Permalink to this definition">¶</a></dt>
 <dd><p>Base URL (will default to the model&#8217;s tablename).</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="flasker.ext.api.BaseView.endpoint">
-<tt class="descname">endpoint</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.ext.api.BaseView.endpoint" title="Permalink to this definition">¶</a></dt>
-<dd><p>Endpoint (will default to the model&#8217;s tablename).</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.ext.api.BaseView.methods">
-<tt class="descname">methods</tt><em class="property"> = frozenset(['GET'])</em><a class="headerlink" href="#flasker.ext.api.BaseView.methods" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.ext.api.View.methods">
+<tt class="descname">methods</tt><em class="property"> = frozenset(['GET'])</em><a class="headerlink" href="#flasker.ext.api.View.methods" title="Permalink to this definition">¶</a></dt>
 <dd><p>Allowed methods.</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="flasker.ext.api.BaseView.parser">
-<tt class="descname">parser</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.ext.api.BaseView.parser" title="Permalink to this definition">¶</a></dt>
-<dd><p>Parser (will default to the API instance parser).</p>
+<dt id="flasker.ext.api.View.parser">
+<tt class="descname">parser</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.ext.api.View.parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Request parser.</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="flasker.ext.api.BaseView.relationship_views">
-<tt class="descname">relationship_views</tt><em class="property"> = []</em><a class="headerlink" href="#flasker.ext.api.BaseView.relationship_views" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.ext.api.View.subviews">
+<tt class="descname">subviews</tt><em class="property"> = []</em><a class="headerlink" href="#flasker.ext.api.View.subviews" title="Permalink to this definition">¶</a></dt>
 <dd><p>Which relationship endpoints to create (these allow GET requests).
 Can be <tt class="docutils literal"><span class="pre">True</span></tt> (all relationships) or a list of relationship names.
 Only relationships with <tt class="docutils literal"><span class="pre">lazy</span></tt> set to <tt class="docutils literal"><span class="pre">'dynamic'</span></tt>, <tt class="docutils literal"><span class="pre">'select'</span></tt> or
@@ -465,12 +459,35 @@ Only relationships with <tt class="docutils literal"><span class="pre">lazy</spa
 available directly on the model.</p>
 </dd></dl>
 
+<dl class="classmethod">
+<dt id="flasker.ext.api.View.bind_view">
+<em class="property">classmethod </em><tt class="descname">bind_view</tt><big>(</big><em>blueprint</em><big>)</big><a class="headerlink" href="#flasker.ext.api.View.bind_view" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the URL routes for the view.</p>
+<p>Standard <a class="reference internal" href="util.html#flasker.util.View" title="flasker.util.View"><tt class="xref py py-class docutils literal"><span class="pre">flasker.util.View</span></tt></a> implementation plus subview support.</p>
+</dd></dl>
+
 <dl class="method">
-<dt id="flasker.ext.api.BaseView.dispatch_request">
-<tt class="descname">dispatch_request</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.api.BaseView.dispatch_request" title="Permalink to this definition">¶</a></dt>
-<dd><p>Dispatches requests to the corresponding method name.</p>
-<p>Similar to the <tt class="docutils literal"><span class="pre">flask.views.MethodView</span></tt> implementation: GET requests
-are passed to <tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt>, POST to <tt class="xref py py-meth docutils literal"><span class="pre">post()</span></tt>, etc.</p>
+<dt id="flasker.ext.api.View.get">
+<tt class="descname">get</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.api.View.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET request handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.api.View.post">
+<tt class="descname">post</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.ext.api.View.post" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST request handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.api.View.put">
+<tt class="descname">put</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.api.View.put" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT request handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.ext.api.View.delete">
+<tt class="descname">delete</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.api.View.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE request handler.</p>
 </dd></dl>
 
 </dd></dl>
@@ -521,9 +538,7 @@ client-side library such as Backbone-Relational.</li>
 </tbody>
 </table>
 <p>This method is convenience for calling <a class="reference internal" href="#flasker.ext.api.Parser.process" title="flasker.ext.api.Parser.process"><tt class="xref py py-meth docutils literal"><span class="pre">process()</span></tt></a> followed by
-<a class="reference internal" href="#flasker.ext.api.Parser.serialize" title="flasker.ext.api.Parser.serialize"><tt class="xref py py-meth docutils literal"><span class="pre">serialize()</span></tt></a>, with the content key parameter smartly chosen to 
-abide by <tt class="docutils literal"><span class="pre">flask.jsonify</span></tt>&#8216;s limitation to only objects as top level.</p>
-<p>Also adds a match count and request overview for wrapped responses.</p>
+<a class="reference internal" href="#flasker.ext.api.Parser.serialize" title="flasker.ext.api.Parser.serialize"><tt class="xref py py-meth docutils literal"><span class="pre">serialize()</span></tt></a>, with a match count and request overview.</p>
 </dd></dl>
 
 <dl class="method">

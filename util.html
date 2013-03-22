@@ -533,6 +533,52 @@ Wall time: 10.32 s</pre>
 </div>
 </dd></dl>
 
+<dl class="class">
+<dt id="flasker.util.View">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">View</tt><a class="headerlink" href="#flasker.util.View" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base view class.</p>
+<p>Not to be used directly, should be subclassed or called via the function
+<a class="reference internal" href="#flasker.util.make_view" title="flasker.util.make_view"><tt class="xref py py-func docutils literal"><span class="pre">make_view()</span></tt></a>.</p>
+<p>If bound to an app, will automatically register itself for the rules defined
+in the rules property.</p>
+<dl class="classmethod">
+<dt id="flasker.util.View.bind_view">
+<em class="property">classmethod </em><tt class="descname">bind_view</tt><big>(</big><em>app</em><big>)</big><a class="headerlink" href="#flasker.util.View.bind_view" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attach view to app or blueprint.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.View.dispatch_request">
+<tt class="descname">dispatch_request</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.View.dispatch_request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dispatches requests to the corresponding method name.</p>
+<p>Similar to the <tt class="docutils literal"><span class="pre">flask.views.MethodView</span></tt> implementation: GET requests
+are passed to <tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt>, POST to <tt class="xref py py-meth docutils literal"><span class="pre">post()</span></tt>, etc.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.make_view">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">make_view</tt><big>(</big><em>app</em>, <em>view_class=&lt;class 'flasker.util.View'&gt;</em>, <em>view_name='View'</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.make_view" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return base view class bound to app.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>app</strong> (<em>Flask app or blueprint</em>) &#8211; the app (or blueprint) to be bound to</li>
+<li><strong>view_class</strong> (<a class="reference internal" href="#flasker.util.View" title="flasker.util.View"><em>flasker.util.View</em></a>) &#8211; base view class</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">flasker.util.View</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Any keyword arguments will be added to the class&#8217; dictionary.</p>
+</dd></dl>
+
 <dl class="function">
 <dt id="flasker.util.exponential_smoothing">
 <tt class="descclassname">flasker.util.</tt><tt class="descname">exponential_smoothing</tt><big>(</big><em>data</em>, <em>alpha=0.5</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#exponential_smoothing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.exponential_smoothing" title="Permalink to this definition">¶</a></dt>
