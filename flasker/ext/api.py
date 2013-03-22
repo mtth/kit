@@ -148,11 +148,7 @@ class _ApiViewMeta(_ViewMeta):
 
     model = dct.get('__model__', None)
 
-    if model is None:
-      if name != 'View':
-        raise ValueError('No model specified for %r' % name)
-
-    else:
+    if model is not None:
       dct.setdefault('endpoint', model.__tablename__)
       base_url = dct.setdefault('base_url', model.__tablename__)
 
@@ -189,6 +185,9 @@ class View(_View):
   #: Allowed methods.
   methods = frozenset(['GET'])
 
+  #: Request parser.
+  parser = None
+
   #: Which relationship endpoints to create (these allow GET requests).
   #: Can be ``True`` (all relationships) or a list of relationship names.
   #: Only relationships with ``lazy`` set to ``'dynamic'``, ``'select'`` or
@@ -196,11 +195,13 @@ class View(_View):
   #: available directly on the model.
   subviews = []
 
-  parser = None
-
   @classmethod
   def bind_view(cls, blueprint):
-    """Create the URL routes for the view."""
+    """Create the URL routes for the view.
+    
+    Standard :class:`flasker.util.View` implementation plus subview support.
+    
+    """
 
     super(View, cls).bind_view(blueprint)
 
@@ -244,27 +245,32 @@ class View(_View):
         make_view(
           blueprint,
           view_class=_RelationshipView,
+          view_name='%s_%s' % (cls.endpoint, key),
           parser=cls.parser,
           endpoint='%s_%s' % (cls.endpoint, key),
+          methods=['GET', ],
           rules={
             collection_route: ['GET', ],
             model_route: ['GET', ],
-          }
+          },
         )
 
   def get(self, **kwargs):
+    """GET request handler."""
     query = self.__model__.q
     model_id = kwargs.values() if kwargs else None
     # TODO: check here if the order makes sense for composite keys
     return jsonify(self.parser.parse(query, model_id=model_id))
 
   def post(self):
+    """POST request handler."""
     # TODO: validate JSON
     model = self.__model__(**request.json)
     model._flush()
     return jsonify(self.parser.serialize([model]))
 
   def put(self, **kwargs):
+    """PUT request handler."""
     # TODO: validate JSON
     model = self.parser._get_model(self.__model__.q, **kwargs)
     for k, v in request.json.items():
@@ -272,6 +278,7 @@ class View(_View):
     return jsonify(self.parser.serialize([model]))
 
   def delete(self, **kwargs):
+    """DELETE request handler."""
     model = self.parser._get_model(self.__model__.q, **kwargs)
     pj.session.delete(model)
     return jsonify({'meta': 'Resource deleted'})
@@ -282,6 +289,7 @@ class _RelationshipView(_View):
   """Relationship View."""
 
   def get(self, **kwargs):
+    """GET request handler."""
     position = kwargs.pop('position', None)
     parent_model = self.__model__
     parent_instance = self.parser._get_model(parent_model.q, **kwargs)
@@ -334,10 +342,7 @@ class Parser(object):
     :rtype: dict
 
     This method is convenience for calling :meth:`process` followed by
-    :meth:`serialize`, with the content key parameter smartly chosen to 
-    abide by ``flask.jsonify``'s limitation to only objects as top level.
-
-    Also adds a match count and request overview for wrapped responses.
+    :meth:`serialize`, with a match count and request overview.
 
     """
     collection, match = self.process(
@@ -345,13 +350,9 @@ class Parser(object):
       model_id=model_id,
       model_position=model_position
     )
-    if isinstance(collection, Query) or len(collection) > 1:
-      content_key = 'data'
-    else:
-      content_key = None
     return self.serialize(
       collection,
-      content_key=content_key,
+      content_key='data',
       meta={
         'request': {
           'base_url': request.base_url,
@@ -500,14 +501,14 @@ class Parser(object):
       if e
     ]
 
-    if not content:
-      raise APIError(404, 'Resource not found')
-
     if not content_key:
-      if len(content) == 1:
+      if len(content) == 0:
+        raise APIError(404, 'Resource not found')
+      elif len(content) == 1:
         return content[0]
       else:
         return content
+
     else:
       rv = kwargs or {}
       rv[content_key] = content

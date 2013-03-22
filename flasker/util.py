@@ -964,7 +964,7 @@ class View(_View):
     return meth(**kwargs)
   
 
-def make_view(app, view_class=View, **kwargs):
+def make_view(app, view_class=View, view_name='View', **kwargs):
   """Return base view class bound to app.
 
   :param app: the app (or blueprint) to be bound to
@@ -977,7 +977,7 @@ def make_view(app, view_class=View, **kwargs):
 
   """
   kwargs.update({'__app__': app})
-  return type('View', (view_class, ), kwargs)
+  return type(view_name, (view_class, ), kwargs)
 
 # ===
 #
