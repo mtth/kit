@@ -41,7 +41,7 @@ Another slighly more complex example:
     __model__ = House
 
     methods = ['GET', 'POST']
-    relationship_views = ['cats']
+    subviews = ['cats']
 
 This view will create the following hooks:
 
@@ -58,6 +58,7 @@ for :class:`flasker.ext.api.BaseView` for the list of all available options.
 from flask import Blueprint, jsonify, request
 from flask.views import MethodView, View
 from os.path import abspath, dirname, join
+from sqlalchemy.ext.associationproxy import AssociationProxy
 from sqlalchemy.orm import class_mapper, mapperlib
 from time import time
 from werkzeug.exceptions import HTTPException
@@ -185,7 +186,7 @@ class BaseView(View):
   #: Only relationships with ``lazy`` set to ``'dynamic'``, ``'select'`` or
   #: ``True`` can have subroutes. All eagerly loaded relationships are simply
   #: available directly on the model.
-  relationship_views = []
+  subviews = []
 
   @classmethod
   def _attach(cls, blueprint):
@@ -221,23 +222,34 @@ class BaseView(View):
         methods=methods,
       )
 
-    if cls.relationship_views == True:
-      rels = model._get_relationships()
-    else:
-      rels = filter(
-        lambda r: r.key in cls.relationship_views,
-        model._get_relationships()
+    if cls.subviews:
+
+      all_keys = set(
+        model._get_relationships(
+          lazy=['dynamic', True, 'select'],
+          uselist=True
+        ).keys() +
+        model._get_association_proxies().keys()
       )
-    for rel in rels:
-      if rel.lazy in ['dynamic', True, 'select'] and rel.uselist:
+
+      if cls.subviews == True:
+        keys = all_keys
+      else:
+        keys = set(cls.subviews)
+        if 
+          raise
+        keys = 
+
+      for key in keys:
         type(
           'View',
           (_RelationshipView, ),
           {
-            '__relationship__': rel,
+            '__model__': model,
+            'key': key,
             'parser': cls.parser,
             'base_url': base_url,
-            'endpoint': '%s_%s' % (endpoint, rel.key),
+            'endpoint': '%s_%s' % (endpoint, key),
           }
         )._attach(blueprint)
 
@@ -282,8 +294,9 @@ class _RelationshipView(MethodView):
 
   """Relationship View."""
 
-  __relationship__ = None
+  __model__ = None
 
+  key = None
   base_url = None
   endpoint = None
   parser = None
@@ -291,8 +304,7 @@ class _RelationshipView(MethodView):
   @classmethod
   def _attach(cls, blueprint):
 
-    relationship = cls.__relationship__
-    parent_model = cls.__relationship__.parent.class_
+    parent_model = cls.__model__
 
     base_url = cls.base_url
     endpoint = cls.endpoint
@@ -305,7 +317,7 @@ class _RelationshipView(MethodView):
         ''.join(
           '/<%s>' % k.name for k in class_mapper(parent_model).primary_key
         ),
-        relationship.key,
+        cls.key,
       ),
       view_func=view,
       methods=['GET', ],
@@ -317,7 +329,7 @@ class _RelationshipView(MethodView):
         ''.join(
           '/<%s>' % k.name for k in class_mapper(parent_model).primary_key
         ),
-        relationship.key,
+        cls.key,
       ),
       view_func=view,
       methods=cls.methods,
@@ -325,9 +337,9 @@ class _RelationshipView(MethodView):
 
   def get(self, **kwargs):
     position = kwargs.pop('position', None)
-    parent_model = self.__relationship__.parent.class_
+    parent_model = self.__model__
     parent_instance = self.parser._get_model(parent_model.q, **kwargs)
-    collection =  getattr(parent_instance, self.__relationship__.key)
+    collection =  getattr(parent_instance, self.key)
     return jsonify(self.parser.parse(collection, model_position=position))
 
 
@@ -434,10 +446,10 @@ class Parser(object):
         collection = [collection.get(model_id)]
       else:
         position = int(model_position) - 1 # model_position is 1 indexed
-        if isinstance(collection, list):
-          collection = collection[position:(position + 1)]
-        else:
+        if isinstance(collection, Query):
           collection = collection.offset(position).limit(1).all()
+        else:
+          collection = collection[position:(position + 1)]
 
       match = {'total': len(collection), 'returned': len(collection)}
 
@@ -453,21 +465,7 @@ class Parser(object):
       if max_limit:
         limit = min(limit, max_limit) if limit else max_limit
 
-      if isinstance(collection, list):
-
-        if raw_filters or raw_sorts:
-          raise APIError(400, 'Filter and sorts not implemented for lists')
-
-        match = {'total': len(collection)}
-
-        if limit:
-          collection = collection[offset:(offset + limit)]
-        else:
-          collection = collection[offset:]
-
-        match['returned'] = len(collection)
-
-      else:
+      if isinstance(collection, Query):
 
         sep = self.options['sep']
 
@@ -516,6 +514,20 @@ class Parser(object):
           collection = collection.limit(limit)
 
         match['returned'] = collection.count()
+
+      else:
+
+        if raw_filters or raw_sorts:
+          raise APIError(400, 'Filter and sorts not implemented for lists')
+
+        match = {'total': len(collection)}
+
+        if limit:
+          collection = collection[offset:(offset + limit)]
+        else:
+          collection = collection[offset:]
+
+        match['returned'] = len(collection)
 
     return collection, match
 

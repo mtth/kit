@@ -82,6 +82,7 @@ shows (~250k rows):
 from functools import partial
 from random import randint
 from sqlalchemy import Column, func
+from sqlalchemy.ext.associationproxy import AssociationProxy
 from sqlalchemy.ext.declarative import declarative_base, declared_attr 
 from sqlalchemy.orm import (backref as _backref, class_mapper, Query as _Query,
   relationship as _relationship)
@@ -287,33 +288,71 @@ class BaseModel(Cacheable, Loggable):
   Recall that the ``q`` and ``c`` query properties are also available.
 
   """
-
-  _cache = Column(JSONEncodedDict)
-  _json_depth = 0
+  __json__ = None
 
   c = None
   q = None
 
+  _cache = Column(JSONEncodedDict)
+  _json_depth = 0
+
+  @classmethod
+  def __declare_last__(cls):
+    """Varnames that get JSONified. Doesn't emit any additional queries!"""
+    cls.__json__ = list(
+      varname
+      for varname in dir(cls)
+      if not varname.startswith('_')  # don't show private properties
+      if (
+        isinstance(getattr(cls, varname), property) 
+      ) or (
+        isinstance(getattr(cls, varname), InstrumentedAttribute) and
+        isinstance(getattr(cls, varname).property, ColumnProperty)
+      ) or (
+        isinstance(getattr(cls, varname), InstrumentedAttribute) and
+        isinstance(getattr(cls, varname).property, RelationshipProperty) and
+        getattr(cls, varname).property.lazy in [False, 'joined', 'immediate']
+      ) or (
+        isinstance(getattr(cls, varname), AssociationProxy) and
+        getattr(
+          cls, getattr(cls, varname).target_collection
+        ).property.lazy in [False, 'joined', 'immediate']
+      )
+    )
+
   @classmethod
   def _get_columns(cls, show_private=False):
-    columns = class_mapper(cls).columns
-    if not show_private:
-      columns = [c for c in columns if not c.key.startswith('_')]
-    return columns
+    return {
+      c.key: c
+      for c in class_mapper(cls).columns
+      if show_private or not c.key.startswith('_')
+    }
 
   @classmethod
   def _get_related_models(cls, show_private=False):
-    return [
-      (r.key, r.mapper.class_)
-      for r in cls._get_relationships(show_private)
-    ]
+    return {
+      k: v.mapper.class_
+      for k, v in cls._get_relationships(show_private).items()
+    }
 
   @classmethod
-  def _get_relationships(cls, show_private=False):
-    rels =  class_mapper(cls).relationships.values()
-    if not show_private:
-      rels = [rel for rel in rels if not rel.key.startswith('_')]
-    return rels
+  def _get_relationships(cls, show_private=False, lazy=None, uselist=None):
+    return {
+      rel.key: rel
+      for rel in class_mapper(cls).relationships.values()
+      if show_private or not rel.key.startswith('_')
+      if lazy is None or rel.lazy in lazy
+      if uselist is None or rel.uselist == uselist
+    }
+
+  @classmethod
+  def _get_association_proxies(cls, show_private=False):
+    return {
+      varname: getattr(cls, varname)
+      for varname in dir(cls)
+      if isinstance(getattr(cls, varname), AssociationProxy)
+      if show_private or not varname.startswith('_')
+    }
 
   @classmethod
   def retrieve(cls, flush_if_new=True, **kwargs):
@@ -337,25 +376,6 @@ class BaseModel(Cacheable, Loggable):
     if flush_if_new:
       instance._flush()
     return instance, True
-
-  @declared_attr
-  def __json__(cls):
-    """Varnames that get JSONified. Doesn't emit any additional queries!"""
-    return list(
-      varname
-      for varname in dir(cls)
-      if not varname.startswith('_')  # don't show private properties
-      if (
-        isinstance(getattr(cls, varname), property) 
-      ) or (
-        isinstance(getattr(cls, varname), InstrumentedAttribute) and
-        isinstance(getattr(cls, varname).property, ColumnProperty)
-      ) or (
-        isinstance(getattr(cls, varname), InstrumentedAttribute) and
-        isinstance(getattr(cls, varname).property, RelationshipProperty) and
-        getattr(cls, varname).property.lazy in [False, 'joined', 'immediate']
-      )
-    )
 
   @declared_attr
   def __tablename__(cls):
