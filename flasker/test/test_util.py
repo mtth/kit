@@ -5,8 +5,69 @@ from nose.tools import eq_, raises
 from flasker.util import *
 
 
+def test_convert_auto():
+  examples = [
+    ('1', 1), ('None', None), ('hi', 'hi'), ('true', True), ('False', False),
+    ('1.432', 1.432), ('1e-3', 1e-3)
+  ]
+  for example in examples:
+    yield check_convert, example, None, False
+
+def test_convert_json():
+  examples = [
+    ('1', 1), ('None', None), ('hi', 'hi'), ('true', True), ('False', False),
+    ('1.432', 1.432), ('1e-3', 1e-3), ('null', None), ('{"a": 2}', {'a': 2}),
+  ]
+  for example in examples:
+    yield check_convert, example, None, True
+
+def test_convert_manual():
+  all_examples = {
+    'int': [
+      ('1', 1),
+    ],
+    'float': [
+      ('2.3', 2.3),
+    ],
+    'bool': [
+      ('True', True),
+      ('1', True),
+      ('false', False),
+      ('0', False),
+    ],
+    'unicode': [
+      ('hello', u'hello'),
+    ],
+    'str': [
+      ('string', 'string'),
+    ],
+    'json': [
+      ('null', None),
+      ('{"a": 23}', {'a': 23}),
+    ]
+  }
+  for rtype, examples in all_examples.items():
+    for example in examples:
+      yield check_convert, example, rtype, False
+
+def check_convert(example, rtype, allow_json):
+  eq_(convert(example[0], rtype=rtype, allow_json=allow_json), example[1])
+
+
+def test_partition_list():
+  col = range(103)
+  for i, (q, p) in enumerate(partition(col, size=5)):
+    eq_(p.offset, 5 * i)
+    eq_(p.limit, 5)
+    if i < 20:
+      eq_(len(q), 5)
+    else:
+      eq_(len(q), 3)
+
+
 def test_prod():
   eq_(prod(range(1, 5)), 2 * 3 * 4)
+
 
 def test_uncamelcase():
   eq_(uncamelcase('CalvinAndHobbes'), 'calvin_and_hobbes')
@@ -98,6 +159,13 @@ class Test_Cacheable(object):
     self.ex.refresh_cache()
     eq_(self.ex.number, 10)
 
+  def test_refresh_cache_expiration(self):
+    self.ex.number = 3
+    self.ex.refresh_cache(expiration=100)
+    eq_(self.ex.number, 3)
+    self.ex.refresh_cache()
+    eq_(self.ex.number, 10)
+
   @raises(AttributeError)
   def test_refresh_cache_error(self):
     self.ex.refresh_cache(['number2'])
@@ -110,4 +178,5 @@ class Test_Cacheable(object):
 def test_to_json():
   # TODO
   pass
+
 

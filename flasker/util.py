@@ -86,6 +86,8 @@ def convert(value, rtype=None, allow_json=False):
           return True
         elif value.lower() == 'false':
           return False
+        elif value == 'None':
+          return None
         else:
           if allow_json:
             try:
@@ -444,21 +446,22 @@ class Cacheable(object):
 
     """
     cached_properties = set(self._get_cached_properties())
+
     if names:
       for name in names:
         if name in cached_properties:
           setattr(self, name, _CacheRefresh(expiration))
         else:
           raise AttributeError('No cached property %r on %r.' % (name, self))
-      if remove_deleted:
-        for varname in self._cache.keys():
-          if not varname in cached_properties:
-            del self._cache[varname]
     else:
-      if remove_deleted:
-        self._cache = {}
       for varname in cached_properties:
         setattr(self, varname, _CacheRefresh(expiration))
+
+    if remove_deleted:
+      for varname in self._cache:
+        if not varname in cached_properties:
+          del self._cache[varname]
+
     try:
       self._cache.changed()
     except:
