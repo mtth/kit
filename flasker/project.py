@@ -51,7 +51,6 @@ class _LocalStorage(local):
   """Thread local storage."""
   
   _current_project = None
-  _state = {}
 
 _local_storage = _LocalStorage()
 
@@ -116,42 +115,58 @@ class Project(object):
 
   config = {
     'PROJECT': {
-      'NAME': '',
-      'DOMAIN': '',
-      'SUBDOMAIN': '',
-      'MODULES': '',
-      'FLASK_ROOT_FOLDER': 'app',
-      'FLASK_STATIC_FOLDER': 'static',
-      'FLASK_TEMPLATE_FOLDER': 'templates',
-      'COMMIT_ON_TEARDOWN': True,
+      'NAME':                   '',
+      'DOMAIN':                 '',
+      'SUBDOMAIN':              '',
+      'MODULES':                '',
+      'FLASK_ROOT_FOLDER':      'app',
+      'FLASK_STATIC_FOLDER':    'static',
+      'FLASK_TEMPLATE_FOLDER':  'templates',
+      'COMMIT_ON_TEARDOWN':     True,
     },
     'ENGINE': {
-      'URL': 'sqlite://',
+      'URL':                    'sqlite://',
     },
     'FLASK': {
-      'SECRET_KEY': 'a_default_unsafe_key',
+      'SECRET_KEY':             'a_default_unsafe_key',
     },
     'CELERY': {
-      'BROKER_URL': 'redis://',
-      'CELERY_RESULT_BACKEND': 'redis://',
-      'CELERY_SEND_EVENTS': True
+      'BROKER_URL':             'redis://',
+      'CELERY_RESULT_BACKEND':  'redis://',
+      'CELERY_SEND_EVENTS':     True,
     },
   }
+
   config_path = None
+
   flask = None
   celery = None
+  session = None
+
+  _current = None
+  _before_startup = None
+  _engine = None
+  _query_class = Query
+
+  __state = {}
 
   def __init__(self, config_path=None, make=True):
 
-    self.__dict__ = _local_storage._state
+    self.__dict__ = self.__state
 
-    if not _local_storage._current_project:
+    if self.__class__._current:
+
+      if config_path and config_path != self.config_path:
+        raise ProjectImportError('Cannot instantiante projects for different '
+                                 'configuration files in the same process.')
+
+    else:
 
       if config_path is None:
         if self.config_path is None:
           raise ProjectImportError('Project instantiation outside the Flasker '
-                                   'command line tool requires a configuration '
-                                   'file path.')
+                                   'command line tool requires a '
+                                   'configuration file path.')
         config_path = self.config_path
       else:
         self.__class__.config_path = config_path
@@ -175,14 +190,8 @@ class Project(object):
 
       path.append(self.root_dir)
 
-      #: SQLAlchemy scoped sessionmaker (initialized on project startup)
-      self.session = None
-
-      self._engine = None
-      self._query_class = Query
+      self.__class__._current = self
       self._before_startup = []
-
-      _local_storage._current_project = self
 
       if make:
         self._make()
@@ -227,8 +236,8 @@ class Project(object):
   def _setup_database_connection(self):
     """Setup the database engine."""
     engine_ops = dict((k.lower(), v) for k,v in self.config['ENGINE'].items())
-    self._engine = create_engine(engine_ops.pop('url'), **engine_ops)
-    self.session = scoped_session(
+    self.__class__._engine = create_engine(engine_ops.pop('url'), **engine_ops)
+    self.__class__.session = scoped_session(
       sessionmaker(bind=self._engine, query_cls=self._query_class)
     )
 
@@ -270,7 +279,7 @@ class Project(object):
 
 
 def _get_current_project():
-  return _local_storage._current_project or Project()
+  return Project._current or Project()
 
 #: Proxy to the current project
 current_project = LocalProxy(_get_current_project)

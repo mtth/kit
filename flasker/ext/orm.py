@@ -260,7 +260,11 @@ class _CountProperty(object):
       mapper = class_mapper(cls)
       if mapper:
         session = self.project.session()
-        return Query(func.count(cls), session=session).select_from(cls)
+        # the following doesn't work on sqlite
+        #return Query(func.count(cls), session=session).select_from(cls)
+        # following doesn't work for composite primary keys...
+        # return Query(func.count(*mapper.primary_key), session=session)
+        return Query(func.count(), session=session).select_from(cls)
     except UnmappedClassError:
       return None
 

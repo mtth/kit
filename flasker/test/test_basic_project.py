@@ -2,23 +2,45 @@
 
 from celery import Celery
 from flask import Flask
-from nose.tools import eq_, nottest
+from nose.tools import eq_, nottest, raises
 from os import pardir
 from os.path import abspath, dirname, exists, join
 from sqlalchemy.orm.scoping import scoped_session
 from threading import Thread
 
-from flasker.project import current_project, Project, _local_storage
+from flasker.project import *
 
 
 class Test_Project(object):
 
   def setup(self):
     self.cp = abspath(
-      join(dirname(__file__), pardir, pardir, 'example', 'default.cfg')
+      join(
+        dirname(__file__),
+        pardir,
+        pardir,
+        'examples',
+        'basic',
+        'default.cfg'
+      )
     )
     if not exists(self.cp):
       raise Exception('Missing configuration file')
+
+  def teardown(self):
+    Project._current = None
+    Project.config_path = None
+
+  @staticmethod
+  def check_thread(creator, opj, strict):
+    pj = creator()
+    if strict:
+      eq_(pj, opj)
+    else:
+      eq_(pj.__dict__, opj.__dict__)
+    eq_(pj.flask, opj.flask)
+    eq_(pj.celery, opj.celery)
+    eq_(pj.session, opj.session)
 
   def test_before_startup(self):
     pj = Project(self.cp, False)
@@ -37,8 +59,16 @@ class Test_Project(object):
 
   def test_registered(self):
     pj = Project(self.cp)
-    eq_(pj, _local_storage._current_project)
-    # eq_(self.pj.__dict__, _local_storage._current_project.__dict__)
+    eq_(pj, Project._current)
+
+  @raises(ProjectImportError)
+  def test_unique_project(self):
+    pj = Project(self.cp)
+    another = Project('some/other/path.cfg')
+
+  @raises(ProjectImportError)
+  def test_unique_project(self):
+    pj = Project()
 
   def test_components(self):
     pj = Project(self.cp)
@@ -53,50 +83,17 @@ class Test_Project(object):
 
   def test_proxy(self):
     pj = Project(self.cp)
-    # eq_(current_project.__dict__, self.pj.__dict__)
     eq_(current_project, pj)
 
-  # @nottest
-  def test_threaded_borg_pattern(self):
+  def test_threaded_project(self):
     pj = Project(self.cp)
-    cp = self.cp
-      
-    class _Thread(Thread):
-      def run(self):
-        self.pj = Project(cp)
-        eq_(self.compare_dict(), True)
-        eq_(self.compare_object(), False)
-
-      def compare_dict(self):
-        return self.pj.__dict__ == pj.__dict__
-
-      def compare_object(self):
-        return self.pj == pj
-
-    th = _Thread()
+    th = Thread(target=self.check_thread, args=(lambda: Project(), pj, 0))
     th.start()
     th.join()
 
-  @nottest
   def test_threaded_proxy(self):
     pj = Project(self.cp)
-    cp = self.cp
-    
-    class _Thread(Thread):
-      def run(self):
-        eq_(self.compare_dict(), True)
-        eq_(self.compare_object(), False)
-
-      def compare_dict(self):
-        return current_project.__dict__ == pj.__dict__
-
-      def compare_object(self):
-        return current_project == pj
-
-    th = _Thread()
+    th = Thread(target=self.check_thread, args=(lambda: current_project, pj, 1))
     th.start()
     th.join()
-
-  def teardown(self):
-    _local_storage._current_project = None
 
