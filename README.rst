@@ -24,7 +24,7 @@ Celery_.
 Flasker also comes with extensions for commonly needed functionalities:
 
 - Expanded SQLAlchemy base and queries
-- ReSTful API *(still alpha)*
+- ReSTful API
 - Authentication via OpenID *(still alpha)*
 
 Flasker is under development. You can find the latest version on GitHub_ and
@@ -40,122 +40,100 @@ Quickstart
 
     $ pip install flasker
 
+
 - To create a new project:
+
+  Let's assume we start from an empty directory ``project/``. First, we create a basic configuration file ``project.cfg`` (the name  of the file doesn't matter):
+
+  .. code:: cfg
+
+    [PROJECT]
+    NAME = My Flasker Project
+    MODULES = app
+
+  The ``MODULES`` option contains the list of python modules which will be
+  included in the project. Inside each of these modules you can use the
+  ``flasker.current_project`` proxy to get access to the current project
+  instance (which gives access to the Flask application, the Celery application
+  and the SQLAlchemy database session registry). For now we only add a single
+  module ``app``:
+
+  .. code:: python
+
+     from flask import jsonify
+     from flasker import current_project
+
+     flask_app = current_project.flask
+
+     @flask_app.route('/')
+     def index():
+      return jsonify({'message': 'Welcome!'})
+
+  Finally, we save this module in ``project/app.py`` and we're all set!
+  
+  To start the server, we run:
 
   .. code:: bash
 
-    $ flasker new basic
+     $ flasker -c project.cfg server 
+     * Running on http://0.0.0.0:5000/
 
-  This will create a basic project configuration file ``default.cfg`` in the
-  current directory and a basic Bootstrap_ themed app (this can be turned off
-  with the ``-a`` flag). Another sample configuration file is available
-  via ``flasker new celery`` that includes sane defaults for task routing.
+  We can check that our server is running:
+
+  .. code:: python
+
+     In [1]: import requests
+     In [2]: requests.get('http://localhost:5000/').json()
+     Out[2]: {u'message': u'Welcome!'}
+
+  If we navigate to the same URL in the browser, we would get similarly
+  exciting results.
+
 
 - Next steps:
 
-  .. code:: bash
+  Under the hood, on project startup, Flasker configures Flask, Celery and the
+  database engine and imports all the modules declared in ``MODULES`` (the
+  configuration file's directory is appended to the python path, so any module
+  in our ``project/`` directory will be accessible).
 
-    $ flasker -h
+  There are two ways to start the project.
+  
+    * The simplest one is to use the flasker console tool:
 
-  This will list all commands now available for that project:
+    .. code:: bash
 
-  - ``server`` to run the Werkzeug app server
-  - ``worker`` to start a worker for the Celery backend
-  - ``flower`` to run the Flower worker management app
-  - ``shell`` to start a shell in the current project context (using IPython_ 
-    if it is available)
-  - ``new`` to create a new default configuration file
+      $ flasker -h
 
-  Extra help is available for each command by typing:
+    This will list all commands now available for that project:
 
-  .. code:: bash
+    - ``server`` to run the Werkzeug app server
+    - ``worker`` to start a worker for the Celery backend
+    - ``flower`` to run the Flower worker management app
+    - ``shell`` to start a shell in the current project context (using IPython_ 
+      if it is available)
 
-    $ flasker <command> -h
+    Extra help is available for each command by typing:
 
+    .. code:: bash
 
-Structuring your project
-------------------------
+      $ flasker <command> -h
 
-Here is a sample minimalistic project configuration file:
+    * Or you can load the project manually (for example if you are using a separate
+    WSGI server or working from an IPython Notebook) as follows:
 
-.. code:: cfg
+    .. code:: python
 
-  [PROJECT]
-  NAME = My Project
-  MODULES = app.views, app.tasks
-  [ENGINE]
-  # SQLAlchemy engine configuration
-  URL = sqlite:///db/db.sqlite
-  [FLASK]
-  # any valid Flask configuration option can go here
-  DEBUG = True
-  TESTING = True
-  [CELERY]
-  # any valid Celery configuration option can go here
-  BROKER_URL = redis://
+       from flasker import Project
 
-Before running a command the ``flasker`` command line tool imports all the
-modules declared in the ``MODULES`` key of the configuration file (in the
-``PROJECT`` section). Inside each of these you can use the
-``flasker.current_project`` proxy to get access to the Flask application
-object, the Celery application object and the SQLAlchemy database session
-registry. Therefore a very simple pattern inside each module is to do:
-
-.. code:: python
-
-  from flask import render_template
-  from flasker import current_project as pj
-
-  # the Flask application
-  flask_app = pj.flask
-
-  # the Celery application
-  celery_app = pj.celery
-
-  # the SQLAlchemy scoped session registry 
-  session = pj.session
-
-  # normally you probably wouldn't need all three in a single file
-  # but you get the idea - and now you can do stuff with each...
-
-  @flask_app.route('/')
-  def index():
-    """A random view."""
-    return render_template('index.html')
-
-  @celery_app.task
-  def task():
-    """And a great task."""
-    pass
-
-  # and so on...
-
-If you are not using the command line tool (for example if you are using a
-separate WSGI server or working from an IPython Notebook), you can load the
-project manually as follow:
-
-.. code:: python
-
-   from flasker import Project
-
-   project = Project('path/to/default.cfg')
+       project = Project('path/to/default.cfg')
 
 
 Project configuration
 ---------------------
 
-Here are a few of the available options for the ``PROJECT`` section of the
-configuration file:
-
-* ``NAME``: the name of the project, used for debugging and to generate a
-  default domain name for the Celery workers.
-* ``MODULES``: comma separated list of the project's modules. They must be
-  importable from the configuration file's folder.
-* ``COMMIT_ON_TEARDOWN``: if ``True`` (default), all database transactions will
-  be committed after each Flask app request and Celery task completion. If 
-  ``False`` the session will simply be removed.
-
-For the full list of options, refer to the documentation on `GitHub pages`_.
+To read more on how to configure your Flasker project, refer to the
+documentation on `GitHub pages`_.
 
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html

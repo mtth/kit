@@ -65,9 +65,9 @@ class Project(object):
   """Project class.
 
   :param config_path: path to the configuration file. The following sections
-    should be present: ``PROJECT``, ``ENGINE``, ``FLASK``, ``CELERY``. See
-    below for a list of available options in each section.
-  :type config_path: str
+    are special: ``PROJECT``, ``ENGINE``, ``FLASK``, ``CELERY``. All but 
+    ``PROJECT`` are optional. See below for a list of available options in each
+    section.  :type config_path: str
   :param make: whether or not to create all the project components. This should
     always be true, except in some cases where it is useful to check
     consistency of the configuration before doing so. ``_make`` should then be
@@ -84,31 +84,31 @@ class Project(object):
       default domain name for the Celery workers.
     * ``MODULES``: comma separated list of the project's modules. They must be
       importable from the configuration file's folder.
-    * ``FLASK_ROOT_FOLDER``: path to the Flask application's root folder
-      relative to the configuration file (defaults to ``app``).
-    * ``FLASK_STATIC_FOLDER``: the application's ``static_folder`` relative to
-      the application's root folder (defaults to ``static``).
-    * ``FLASK_TEMPLATE_FOLDER``: the application's ``template_folder`` relative
-      to the application's root folder (defaults to ``templates``).
-    * ``COMMIT_ON_TEARDOWN``: if ``True`` (default), all database transactions
-      will be committed after each Flask app request and Celery task
-      completion. If ``False`` the session will simply be removed.
-    * ``DOMAIN``: if specified, used to generate Celery worker hostnames
-      (defaults to the project name, sluggified).
-    * ``SUBDOMAIN``: if specified, used to generate Celery worker hostnames 
-      (defaults to the configuration file's name).
 
   * ``ENGINE``
 
     * ``URL``: the url to the database
+    * ``AUTOCOMMIT``: if ``True`` (default), all database transactions
+      will be committed after each Flask app request and Celery task
+      completion. If ``False`` the session will simply be removed.
     * any valid arguments to ``sqlalchemy.create_engine``
 
   * ``FLASK``
 
+    * ``ROOT_FOLDER``: path to the Flask application's root folder
+      relative to the configuration file (defaults to ``app``).
+    * ``STATIC_FOLDER``: the application's ``static_folder`` relative to
+      the application's root folder (defaults to ``static``).
+    * ``TEMPLATE_FOLDER``: the application's ``template_folder`` relative
+      to the application's root folder (defaults to ``templates``).
     * any valid Flask configuration option
 
   * ``CELERY``
 
+    * ``DOMAIN``: if specified, used to generate Celery worker hostnames
+      (defaults to the project name, sluggified).
+    * ``SUBDOMAIN``: if specified, used to generate Celery worker hostnames 
+      (defaults to the configuration file's name).
     * any valid Celery configuration option
   
   """
@@ -116,24 +116,20 @@ class Project(object):
   config = {
     'PROJECT': {
       'NAME':                   '',
-      'DOMAIN':                 '',
-      'SUBDOMAIN':              '',
       'MODULES':                '',
-      'FLASK_ROOT_FOLDER':      'app',
-      'FLASK_STATIC_FOLDER':    'static',
-      'FLASK_TEMPLATE_FOLDER':  'templates',
-      'COMMIT_ON_TEARDOWN':     True,
     },
     'ENGINE': {
       'URL':                    'sqlite://',
+      'AUTOCOMMIT':             True,
     },
     'FLASK': {
-      'SECRET_KEY':             'a_default_unsafe_key',
+      'ROOT_FOLDER':            'app',
+      'STATIC_FOLDER':          'static',
+      'TEMPLATE_FOLDER':        'templates',
     },
     'CELERY': {
-      'BROKER_URL':             'redis://',
-      'CELERY_RESULT_BACKEND':  'redis://',
-      'CELERY_SEND_EVENTS':     True,
+      'DOMAIN':                 '',
+      'SUBDOMAIN':              '',
     },
   }
 
@@ -180,11 +176,11 @@ class Project(object):
 
       self.root_dir = dirname(abspath(config_path))
       self.domain = (
-        self.config['PROJECT']['DOMAIN'] or
+        self.config['CELERY']['DOMAIN'] or
         sub(r'\W+', '_', self.config['PROJECT']['NAME'].lower())
       )
       self.subdomain = (
-        self.config['PROJECT']['SUBDOMAIN'] or
+        self.config['CELERY']['SUBDOMAIN'] or
         splitext(config_path)[0].replace(sep, '-')
       )
 
@@ -236,6 +232,7 @@ class Project(object):
   def _setup_database_connection(self):
     """Setup the database engine."""
     engine_ops = dict((k.lower(), v) for k,v in self.config['ENGINE'].items())
+    engine_ops.pop('autocommit')
     self.__class__._engine = create_engine(engine_ops.pop('url'), **engine_ops)
     self.__class__.session = scoped_session(
       sessionmaker(bind=self._engine, query_cls=self._query_class)
@@ -244,7 +241,7 @@ class Project(object):
   def _dismantle_database_connections(self):
     """Remove database connections."""
     try:
-      if self.config['PROJECT']['COMMIT_ON_TEARDOWN']:
+      if self.config['ENGINE']['AUTOCOMMIT']:
         self.session.commit()
     except InvalidRequestError as e:
       self.session.rollback()

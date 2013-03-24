@@ -2,10 +2,10 @@
 
 """Flasker command line tool.
 
-There are currently 5 commands available via the flasker command tool, all
+There are currently 4 commands available via the flasker command tool, all
 detailed below.
 
-All commands, aside from ``new``, accept an optional argument ``-c, --conf``
+All commands accept an optional argument ``-c, --conf``
 to indicate the path of the configuration file to use. If none is specified
 flasker will search in the current directory for possible matches. If a single
 file ``.cfg`` file is found it will use it.
@@ -14,12 +14,10 @@ file ``.cfg`` file is found it will use it.
 
 from argparse import ArgumentParser, REMAINDER
 from code import interact
-from distutils.dir_util import copy_tree
 from functools import wraps
-from os import listdir, mkdir
-from os.path import abspath, dirname, exists, join, splitext
+from os import listdir
+from os.path import splitext
 from re import findall
-from shutil import copy
 
 from flasker import current_project
 from flasker.project import Project, ProjectImportError
@@ -28,7 +26,7 @@ from flasker.project import Project, ProjectImportError
 def _project_context(handler):
   """Create the project context.
 
-  Some (most) subparser handlers require the project to be created before
+  Subparser handlers require the project to be created before
   returning, this decorator handles this.
 
   """
@@ -79,60 +77,6 @@ subparsers = parser.add_subparsers(
   dest='command',
 )
 
-# New
-
-new_parser = subparsers.add_parser('new', help='start new project')
-
-new_parser.add_argument('-a', '--app',
-  action='store_false',
-  help='don\'t include basic bootstrap app template'
-)
-new_parser.add_argument('-n', '--name',
-  default='default',
-  help='name of the new config file [%(default)s]'
-)
-new_parser.add_argument('config',
-  choices=[
-    splitext(name)[0]
-    for name in listdir(join(dirname(__file__), 'data', 'configs'))
-  ],
-  help='the type of config to create'
-)
-
-def new_handler(parsed_args):
-  """Create a new project::
-
-    flasker new ...
-
-  The following options are available:
-
-  * ``-a, --app`` to toggle the creation of a bootstrap starter app
-  * ``-n, --name`` to set the name of the configuration file to be created
-    (defaults to ``default``)
-
-  """
-  src = dirname(__file__)
-  conf_name = '%s.cfg' % parsed_args.name
-  if exists(conf_name):
-    print (
-      'There already exists a configuration file with this name. '
-      'Please enter a different name with the -n option.'
-    )
-  else:
-    copy(join(src, 'data', 'configs', '%s.cfg' % parsed_args.config), conf_name)
-    print 'Project configuration file created!'
-  if parsed_args.app:
-    if exists('app'):
-      print (
-        'There already seems to be an app folder here. '
-        'App creation skipped.'
-      )
-    else:
-      mkdir('app')
-      copy_tree(join(src, 'data', 'app'), 'app')
-      print 'Bootstrap app folder created!'
-
-new_parser.set_defaults(handler=new_handler)
 
 # Server
 

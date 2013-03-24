@@ -6,6 +6,7 @@ from collections import defaultdict, namedtuple
 from csv import DictReader
 from datetime import datetime
 from decimal import Decimal
+from distutils.dir_util import copy_tree
 from flask import request
 from flask.views import View as _View
 from itertools import islice
@@ -13,6 +14,8 @@ from json import dumps, loads
 from functools import partial, wraps
 from logging import getLogger
 from math import ceil
+from os import mkdir
+from os.path import dirname, exists, join
 from re import sub
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.orm import Query
@@ -985,6 +988,17 @@ def make_view(app, view_class=View, view_name='View', **kwargs):
   """
   kwargs.update({'__app__': app})
   return type(view_name, (view_class, ), kwargs)
+
+
+def generate_app(foldername='app'):
+  """Create bootstrap app."""
+  src = dirname(__file__)
+  if exists(foldername):
+    print 'That folder already seems to exist. App creation skipped.'
+  else:
+    mkdir(foldername)
+    copy_tree(join(src, 'data', 'app'), foldername)
+    print 'Bootstrap app folder created in %s!' % (foldername, )
 
 # ===
 #
