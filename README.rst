@@ -93,7 +93,7 @@ the server, we run (from the command line in the ``project/`` directory):
    $ flasker server 
    * Running on http://0.0.0.0:5000/
 
-We can check that our server is running for example using IPython (if we
+We can check that our server is running for example using Requests_ (if we
 navigate to the same URL in the browser, we would get similarly exciting
 results):
 
@@ -105,7 +105,7 @@ results):
 
 Right now, the Flask app is running using the default configuration. We can
 change this by adding configuration options to the ``project.cfg`` file. For
-example, we will enable testing and debugging for easier bag tracking. At the
+example, we will enable testing and debugging for easier bug tracking. At the
 same time, we tell our project to store the database on disk (instead of the
 default in memory SQLite store used by Flasker). Our configuration file now
 looks like this:
@@ -194,4 +194,5 @@ to the documentation on `GitHub pages`_.
 .. _GitHub: http://github.com/mtth/flasker
 .. _IPython: http://ipython.org/
 .. _Werkzeug: http://werkzeug.pocoo.org/
+.. _Requests: http://docs.python-requests.org/en/latest/
 
