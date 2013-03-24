@@ -34,15 +34,25 @@ read the documentation on `GitHub pages`_.
 Installation
 ------------
 
+Using ``pip``:
+
 .. code:: bash
 
   $ pip install flasker
+
+Using ``easy_install``:
+
+.. code:: bash
+
+   $ easy_install flasker
 
 
 Quickstart
 ----------
 
-*The code for this example is available on GitHub_ in ``examples/basic/``.*
+This short guide will show you how to get an application combining Flask,
+Celery and SQLAlchemy running in seconds (the code is available on GitHub_ in
+``examples/basic/``).
 
 We start from an empty directory ``project/`` and inside we create a basic
 configuration file ``project.cfg``:
@@ -69,16 +79,18 @@ add a single module ``app``:
    celery_app = current_project.celery  # Celery app
    session = current_project.session    # SQLAlchemy scoped session maker
 
+   # for this simple example we will only use flask_app
+
    @flask_app.route('/')
    def index():
     return jsonify({'message': 'Welcome!'})
 
 Finally, we save this file to ``project/app.py`` and we're all set! To start
-the server, we run:
+the server, we run (from the command line in the ``project/`` directory):
 
 .. code:: bash
 
-   $ flasker -c project.cfg server 
+   $ flasker server 
    * Running on http://0.0.0.0:5000/
 
 We can check that our server is running for example using IPython (if we
@@ -102,7 +114,7 @@ in our ``project/`` directory will be accessible).
 
 There are two ways to start the project.
 
-* The simplest one is to use the flasker console tool:
+* The simplest is to use the flasker console tool:
 
   .. code:: bash
 
@@ -118,9 +130,9 @@ There are two ways to start the project.
 
   Extra help is available for each command by typing:
 
-.. code:: bash
+  .. code:: bash
 
-  $ flasker <command> -h
+    $ flasker <command> -h
 
 * Or you can load the project manually:
 
@@ -133,8 +145,8 @@ There are two ways to start the project.
 
      project = Project('path/to/default.cfg')
 
-To read more on how to configure your Flasker project, refer to the
-documentation on `GitHub pages`_.
+To read more on how to user Flasker and configure your Flasker project, refer
+to the documentation on `GitHub pages`_.
 
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
