@@ -21,12 +21,6 @@ Celery_.
     - A simplified version of Flask, Celery, and SQLAlchemy. Some knowledge of these
       frameworks is therefore required. 
 
-Flasker also comes with extensions for commonly needed functionalities:
-
-- Expanded SQLAlchemy base and queries
-- ReSTful API
-- Authentication via OpenID *(still alpha)*
-
 Flasker is under development. You can find the latest version on GitHub_ and
 read the documentation on `GitHub pages`_.
 
@@ -170,6 +164,16 @@ There are two ways to start the project.
 
 To read more on how to user Flasker and configure your Flasker project, refer
 to the documentation on `GitHub pages`_.
+
+
+Extensions
+----------
+
+Flasker also comes with extensions for commonly needed functionalities:
+
+- Expanded SQLAlchemy base and queries
+- ReSTful API
+- Authentication via OpenID *(still alpha)*
 
 
 .. _Bootstrap: http://twitter.github.com/bootstrap/index.html
