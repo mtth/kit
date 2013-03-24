@@ -2,11 +2,16 @@
 
 from celery import Celery
 from flask import Flask
-from nose.tools import eq_, nottest, raises
-from os import pardir
+from itertools import repeat
+from json import loads
+from nose.tools import ok_, eq_, nottest, raises, timed
+from os import chdir, pardir
 from os.path import abspath, dirname, exists, join
+from requests import ConnectionError, get
 from sqlalchemy.orm.scoping import scoped_session
+from subprocess import Popen, PIPE
 from threading import Thread
+from time import sleep, time
 
 from flasker.project import *
 
@@ -67,7 +72,7 @@ class Test_Project(object):
     another = Project('some/other/path.cfg')
 
   @raises(ProjectImportError)
-  def test_unique_project(self):
+  def test_empty_config_path(self):
     pj = Project()
 
   def test_components(self):
@@ -97,3 +102,46 @@ class Test_Project(object):
     th.start()
     th.join()
 
+  def test_app_server(self):
+    pj = Project(self.cp)
+    client = pj.flask.test_client()
+    json = loads(client.get('/').data)
+    eq_(json, {'message': 'Welcome!'})
+
+
+class Test_ConsoleTool(object):
+
+  def setup(self):
+    chdir(abspath(
+      join(
+        dirname(__file__),
+        pardir,
+        pardir,
+        'examples',
+        'basic'
+      )
+    ))
+    self.sps = []
+
+  def teardown(self):
+    for sp in self.sps:
+      if not sp.poll() is None:
+        sp.terminate()
+
+  def open_subprocess(self, command):
+    sp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+    self.sps.append(sp)
+    return sp
+
+  @timed(3)
+  def test_server(self):
+    sp = self.open_subprocess('flasker server -p 5050')
+    for _ in repeat(None, 4):
+      try:
+        sleep(1)
+        eq_(get('http://localhost:5050').json(), {'message': 'Welcome!'})
+        break
+      except ConnectionError:
+        pass
+    sp.terminate()
+    
