@@ -103,10 +103,12 @@ results):
    In [2]: requests.get('http://localhost:5000/').json()
    Out[2]: {u'message': u'Welcome!'}
 
-Right now, the app is running using the default configuration. We can change
-that by adding configuration options to the ``project.cfg`` file. At the same
-time, we can tell our project to store the database on disk instead of in
-memory. The new configuration file looks like this:
+Right now, the Flask app is running using the default configuration. We can
+change this by adding configuration options to the ``project.cfg`` file. For
+example, we will enable testing and debugging for easier bag tracking. At the
+same time, we tell our project to store the database on disk (instead of the
+default in memory SQLite store used by Flasker). Our configuration file now
+looks like this:
 
 .. code:: cfg
 
@@ -120,6 +122,9 @@ memory. The new configuration file looks like this:
   TESTING = true
 
 Likewise, we could configure celery by adding options to a section ``CELERY``.
+Any valid Flask, Celery or engine configuration option can go in their
+respective section. There are also a few other options available which are
+detailed in the project documentation.
 
 
 Next steps
