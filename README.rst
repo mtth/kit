@@ -31,106 +31,107 @@ Flasker is under development. You can find the latest version on GitHub_ and
 read the documentation on `GitHub pages`_.
 
 
+Installation
+------------
+
+.. code:: bash
+
+  $ pip install flasker
+
+
 Quickstart
 ----------
 
-- Installation:
+*The code for this example is available on GitHub_ in ``examples/basic/``.*
+
+We start from an empty directory ``project/`` and inside we create a basic
+configuration file ``project.cfg``:
+
+.. code:: cfg
+
+  [PROJECT]
+  NAME = My Flasker Project
+  MODULES = app
+
+The ``MODULES`` option contains the list of python modules which will be
+included in the project. Inside each of these modules you can use the
+``flasker.current_project`` proxy to get access to the current project
+instance (which gives access to the configured Flask application, the Celery
+application and the SQLAlchemy database session registry). For now we only
+add a single module ``app``:
+
+.. code:: python
+
+   from flask import jsonify
+   from flasker import current_project
+
+   flask_app = current_project.flask    # Flask app
+   celery_app = current_project.celery  # Celery app
+   session = current_project.session    # SQLAlchemy scoped session maker
+
+   @flask_app.route('/')
+   def index():
+    return jsonify({'message': 'Welcome!'})
+
+Finally, we save this file to ``project/app.py`` and we're all set! To start
+the server, we run:
+
+.. code:: bash
+
+   $ flasker -c project.cfg server 
+   * Running on http://0.0.0.0:5000/
+
+We can check that our server is running for example using IPython (if we
+navigate to the same URL in the browser, we would get similarly exciting
+results):
+
+.. code:: python
+
+   In [1]: import requests
+   In [2]: requests.get('http://localhost:5000/').json()
+   Out[2]: {u'message': u'Welcome!'}
+
+
+Next steps
+----------
+
+Under the hood, on project startup, Flasker configures Flask, Celery and the
+database engine and imports all the modules declared in ``MODULES`` (the
+configuration file's directory is appended to the python path, so any module
+in our ``project/`` directory will be accessible).
+
+There are two ways to start the project.
+
+* The simplest one is to use the flasker console tool:
 
   .. code:: bash
 
-    $ pip install flasker
+    $ flasker -h
 
+  This will list all commands now available for that project:
 
-- To create a new project:
+  - ``server`` to run the Werkzeug app server
+  - ``worker`` to start a worker for the Celery backend
+  - ``flower`` to run the Flower worker management app
+  - ``shell`` to start a shell in the current project context (using IPython_ 
+    if it is available)
 
-  Let's assume we start from an empty directory ``project/``. First, we create a basic configuration file ``project.cfg`` (the name  of the file doesn't matter):
+  Extra help is available for each command by typing:
 
-  .. code:: cfg
+.. code:: bash
 
-    [PROJECT]
-    NAME = My Flasker Project
-    MODULES = app
+  $ flasker <command> -h
 
-  The ``MODULES`` option contains the list of python modules which will be
-  included in the project. Inside each of these modules you can use the
-  ``flasker.current_project`` proxy to get access to the current project
-  instance (which gives access to the Flask application, the Celery application
-  and the SQLAlchemy database session registry). For now we only add a single
-  module ``app``:
+* Or you can load the project manually:
 
-  .. code:: python
-
-     from flask import jsonify
-     from flasker import current_project
-
-     flask_app = current_project.flask
-
-     @flask_app.route('/')
-     def index():
-      return jsonify({'message': 'Welcome!'})
-
-  Finally, we save this module in ``project/app.py`` and we're all set!
-  
-  To start the server, we run:
-
-  .. code:: bash
-
-     $ flasker -c project.cfg server 
-     * Running on http://0.0.0.0:5000/
-
-  We can check that our server is running:
+  This is useful for example if you are using a separate WSGI server or working
+  from an IPython Notebook.
 
   .. code:: python
 
-     In [1]: import requests
-     In [2]: requests.get('http://localhost:5000/').json()
-     Out[2]: {u'message': u'Welcome!'}
+     from flasker import Project
 
-  If we navigate to the same URL in the browser, we would get similarly
-  exciting results.
-
-
-- Next steps:
-
-  Under the hood, on project startup, Flasker configures Flask, Celery and the
-  database engine and imports all the modules declared in ``MODULES`` (the
-  configuration file's directory is appended to the python path, so any module
-  in our ``project/`` directory will be accessible).
-
-  There are two ways to start the project.
-  
-    * The simplest one is to use the flasker console tool:
-
-    .. code:: bash
-
-      $ flasker -h
-
-    This will list all commands now available for that project:
-
-    - ``server`` to run the Werkzeug app server
-    - ``worker`` to start a worker for the Celery backend
-    - ``flower`` to run the Flower worker management app
-    - ``shell`` to start a shell in the current project context (using IPython_ 
-      if it is available)
-
-    Extra help is available for each command by typing:
-
-    .. code:: bash
-
-      $ flasker <command> -h
-
-    * Or you can load the project manually (for example if you are using a separate
-    WSGI server or working from an IPython Notebook) as follows:
-
-    .. code:: python
-
-       from flasker import Project
-
-       project = Project('path/to/default.cfg')
-
-
-Project configuration
----------------------
+     project = Project('path/to/default.cfg')
 
 To read more on how to configure your Flasker project, refer to the
 documentation on `GitHub pages`_.
