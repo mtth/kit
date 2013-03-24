@@ -103,6 +103,24 @@ results):
    In [2]: requests.get('http://localhost:5000/').json()
    Out[2]: {u'message': u'Welcome!'}
 
+Right now, the app is running using the default configuration. We can change
+that by adding configuration options to the ``project.cfg`` file. At the same
+time, we can tell our project to store the database on disk instead of in
+memory. The new configuration file looks like this:
+
+.. code:: cfg
+
+  [PROJECT]
+  NAME = My Flasker Project
+  MODULES = app
+  [ENGINE]
+  URL = sqlite:///db.sqlite
+  [FLASK]
+  DEBUG = true
+  TESTING = true
+
+Likewise, we could configure celery by adding options to a section ``CELERY``.
+
 
 Next steps
 ----------
