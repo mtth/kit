@@ -10,7 +10,7 @@ Celery_.
       SQLAlchemy engine.
     
     - A simple pattern to organize your project via the
-      ``flasker.current_project`` proxy (cf. `Structuring your project`_).
+      ``flasker.current_project`` proxy (cf. `Quickstart`_).
 
     - A command line tool from where you can create new projects, launch the
       Flask buit in Werkzeug_ server, start Celery workers and the Flower_
@@ -51,7 +51,7 @@ Quickstart
 ----------
 
 This short guide will show you how to get an application combining Flask,
-Celery and SQLAlchemy running in seconds (the code is available on GitHub_ in
+Celery and SQLAlchemy running in seconds (the code is available on GitHub in
 ``examples/basic/``).
 
 We start from an empty directory ``project/`` and inside we create a basic
