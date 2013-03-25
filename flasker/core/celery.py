@@ -8,26 +8,28 @@ from celery import Celery
 from celery.signals import task_postrun, worker_process_init
 from celery.task import periodic_task
 
-from ..project import current_project, Project
 
-pj = current_project
+def make_celery_app(project):
 
-celery = Celery()
-celery.conf.update(pj.config['CELERY'])
-celery.periodic_task = periodic_task
+  conf = {k: v for k, v in project.config['CELERY'].items()}
 
-@worker_process_init.connect
-def create_worker_connection(*args, **kwargs):
-  """Initialize database connection.
+  celery = Celery()
+  celery.conf.update(conf)
+  celery.periodic_task = periodic_task
 
-  This has to be done after the worker processes have been started otherwise
-  the connection will fail.
+  @worker_process_init.connect
+  def create_worker_connection(*args, **kwargs):
+    """Initialize database connection.
 
-  """
-  pj._setup_database_connection()
+    This has to be done after the worker processes have been started otherwise
+    the connection will fail.
 
-@task_postrun.connect
-def task_postrun_handler(*args, **kwargs):
-  pj._dismantle_database_connections()
+    """
+    project._setup_database_connection()
 
-Project.celery = celery
+  @task_postrun.connect
+  def task_postrun_handler(*args, **kwargs):
+    project._dismantle_database_connections()
+
+  return celery
+

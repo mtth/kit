@@ -7,24 +7,25 @@ from __future__ import absolute_import
 from flask import Flask
 from os.path import join, sep
 
-from ..project import current_project as pj, Project
 
-conf = pj.config['FLASK']
-root_folder = conf.pop('ROOT_FOLDER').replace(sep, '.')
+def make_flask_app(project):
 
-app = Flask(
-  root_folder,
-  static_folder=conf.pop('STATIC_FOLDER'),
-  template_folder=conf.pop('TEMPLATE_FOLDER'),
-  instance_path=join(pj.root_dir, root_folder),
-  instance_relative_config=True,
-)
+  conf = {k: v for k, v in project.config['FLASK'].items()}
+  root_folder = conf.pop('ROOT_FOLDER').replace(sep, '.')
 
-app.config.update(conf)
+  app = Flask(
+    root_folder,
+    static_folder=conf.pop('STATIC_FOLDER'),
+    template_folder=conf.pop('TEMPLATE_FOLDER'),
+    instance_path=join(project.config['PROJECT']['ROOT_DIR'], root_folder),
+    instance_relative_config=True,
+  )
 
-@app.teardown_request
-def teardown_request_handler(exception=None):
-  pj._dismantle_database_connections()
+  app.config.update(conf)
 
-Project.flask = app
+  @app.teardown_request
+  def teardown_request_handler(exception=None):
+    project._dismantle_database_connections()
+
+  return app
 

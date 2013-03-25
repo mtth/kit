@@ -40,19 +40,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Query, scoped_session, sessionmaker
 from sys import path
-from threading import local
 from werkzeug.local import LocalProxy
 
+from .core import make_celery_app, make_flask_app
 from .util import convert
-
-
-class _LocalStorage(local):
-
-  """Thread local storage."""
-  
-  _current_project = None
-
-_local_storage = _LocalStorage()
 
 
 class ProjectImportError(Exception):
@@ -115,87 +106,69 @@ class Project(object):
 
   config = {
     'PROJECT': {
-      'NAME':                   '',
-      'MODULES':                '',
+      'NAME':             '',
+      'MODULES':          '',
     },
     'ENGINE': {
-      'URL':                    'sqlite://',
-      'AUTOCOMMIT':             True,
+      'URL':              'sqlite://',
+      'AUTOCOMMIT':       True,
     },
     'FLASK': {
-      'ROOT_FOLDER':            'app',
-      'STATIC_FOLDER':          'static',
-      'TEMPLATE_FOLDER':        'templates',
+      'ROOT_FOLDER':      'app',
+      'STATIC_FOLDER':    'static',
+      'TEMPLATE_FOLDER':  'templates',
     },
     'CELERY': {
-      'DOMAIN':                 '',
-      'SUBDOMAIN':              '',
     },
   }
 
-  config_path = None
+  query_class = Query
 
-  flask = None
-  celery = None
-  session = None
-
-  _current = None
-  _before_startup = None
-  _engine = None
-  _query_class = Query
+  _flask = None
+  _celery = None
+  _path = None
 
   __state = {}
 
-  def __init__(self, config_path=None, make=True):
+  def __init__(self, config_path=None):
 
     self.__dict__ = self.__state
 
-    if self.__class__._current:
+    if config_path is None:
 
-      if config_path and config_path != self.config_path:
-        raise ProjectImportError('Cannot instantiante projects for different '
-                                 'configuration files in the same process.')
+      if self._path is None:
+        raise ProjectImportError('Project instantiation outside the Flasker '
+                                 'command line tool requires a '
+                                 'configuration file path.')
 
     else:
 
-      if config_path is None:
-        if self.config_path is None:
-          raise ProjectImportError('Project instantiation outside the Flasker '
-                                   'command line tool requires a '
-                                   'configuration file path.')
-        config_path = self.config_path
-      else:
-        self.__class__.config_path = config_path
+      if self._path and config_path != self._path:
+        raise ProjectImportError('Cannot instantiante projects for different '
+                                 'configuration files in the same process.')
 
-      config = self._parse_config(config_path)
-      for key in config:
-        if key in self.config:
-          self.config[key].update(config[key])
-        else:
-          self.config[key] = config[key]
-
-      self.root_dir = dirname(abspath(config_path))
-      self.domain = (
-        self.config['CELERY']['DOMAIN'] or
-        sub(r'\W+', '_', self.config['PROJECT']['NAME'].lower())
-      )
-      self.subdomain = (
-        self.config['CELERY']['SUBDOMAIN'] or
-        splitext(config_path)[0].replace(sep, '-')
-      )
-
-      path.append(self.root_dir)
-
-      self.__class__._current = self
-      self._before_startup = []
-
-      if make:
-        self._make()
+      elif not self._path:
+        self._path = abspath(config_path)
+        self.config = self._parse_config(config_path)
+        self._load_project_modules()
+        self.session, self._engine = self._make_session()
+        for func in self._before_startup:
+          func(self)
 
   def __repr__(self):
-    return '<Project %r, %r>' % (
-      self.config['PROJECT']['NAME'], self.config_path
-    )
+    return '<Project %r>' % (self.config['PROJECT']['NAME'], )
+
+  @property
+  def flask(self):
+    if self._flask is None:
+      self._flask = make_flask_app(self)
+    return self._flask
+
+  @property
+  def celery(self):
+    if self._celery is None:
+      self._celery = make_celery_app(self)
+    return self._celery
 
   def before_startup(self, func):
     """Hook to run a function right before project starts.
@@ -210,33 +183,23 @@ class Project(object):
     """
     self._before_startup.append(func)
 
-  def _make(self):
+  def _load_project_modules(self):
     """Create all project components."""
-
-    # core
-    for mod in  ['flask', 'celery']:
-      __import__('flasker.core.%s' % mod)
-
-    # project modules
+    self._before_startup = []
+    path.append(self.config['PROJECT']['ROOT_DIR'])
     project_modules = self.config['PROJECT']['MODULES'].split(',') or []
     for mod in project_modules:
       __import__(mod.strip())
 
-    # database
-    self._setup_database_connection()
-
-    # final hook
-    for func in self._before_startup or []:
-      func(self)
-
-  def _setup_database_connection(self):
+  def _make_session(self):
     """Setup the database engine."""
     engine_ops = dict((k.lower(), v) for k,v in self.config['ENGINE'].items())
     engine_ops.pop('autocommit')
-    self.__class__._engine = create_engine(engine_ops.pop('url'), **engine_ops)
-    self.__class__.session = scoped_session(
-      sessionmaker(bind=self._engine, query_cls=self._query_class)
+    engine = create_engine(engine_ops.pop('url'), **engine_ops)
+    session = scoped_session(
+      sessionmaker(bind=engine, query_cls=self.query_class)
     )
+    return session, engine
 
   def _dismantle_database_connections(self):
     """Remove database connections."""
@@ -251,14 +214,10 @@ class Project(object):
       self.session.remove()
 
   def _parse_config(self, config_path):
-    """Read the configuration file and return values as a dictionary.
-
-    Raises ProjectImportError if no configuration file can be read at the
-    file path entered.
-
-    """
+    """Read the configuration file and return values as a dictionary."""
     parser = SafeConfigParser()
     parser.optionxform = str    # setting options to case-sensitive
+
     try:
       with open(config_path) as f:
         parser.readfp(f)
@@ -266,18 +225,34 @@ class Project(object):
       raise ProjectImportError(
         'Unable to parse configuration file at %s.' % config_path
       )
-    conf = dict(
-      (s, dict((k, convert(v, allow_json=True)) for (k, v) in parser.items(s)))
-      for s in parser.sections()
-    )
-    if not conf['PROJECT']['NAME']:
+    else:
+      conf = {
+        s: {k: convert(v, allow_json=True) for (k, v) in parser.items(s)}
+        for s in parser.sections()
+      }
+
+    config = self.config.copy()
+    for key in conf:
+      if key in self.config:
+        config[key].update(conf[key])
+      else:
+        config[key] = conf[key]
+
+    if not config['PROJECT']['NAME']:
       raise ProjectImportError('Missing project name.')
-    return conf
 
+    config['PROJECT'].setdefault('ROOT_DIR', dirname(self._path))
+    config['CELERY'].setdefault(
+      'DOMAIN', 
+      sub(r'\W+', '_', self.config['PROJECT']['NAME'].lower())
+    )
+    config['CELERY'].setdefault(
+      'SUBDOMAIN', 
+      splitext(config_path)[0].replace(sep, '-')
+    )
 
-def _get_current_project():
-  return Project._current or Project()
+    return config
 
 #: Proxy to the current project
-current_project = LocalProxy(_get_current_project)
+current_project = LocalProxy(Project)
 
