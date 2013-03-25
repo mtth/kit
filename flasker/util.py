@@ -7,7 +7,7 @@ from csv import DictReader
 from datetime import datetime
 from decimal import Decimal
 from distutils.dir_util import copy_tree
-from flask import request
+from flask import jsonify, request
 from flask.views import View as _View
 from itertools import islice
 from json import dumps, loads
@@ -973,6 +973,35 @@ class View(_View):
         meth = getattr(self, 'get', None)
     return meth(**kwargs)
   
+  def jsonify(self, data, data_key='data', meta_key='meta',
+    include_request=True, **kwargs):
+    """Put results in dictionary with some meta information and jsonify.
+
+    :param data: data
+    :type data: serializable
+    :param data_key: key where data will go
+    :type data_key: str
+    :param meta_key: key where metadata will go
+    :type meta_key: str
+    :param include_request: whether or not to include the issued request
+      information
+    :type include_request: bool
+    :rtype: Flask response
+    
+    Any keyword arguments will be included with the metadata.
+    
+    """
+    rv = {data_key: data, meta_key: {}}
+    if include_request:
+      rv[meta_key]['request'] = {
+        'base_url': request.base_url,
+        'method': request.method,
+        'values': request.values,
+      }
+    for k, v in kwargs.items():
+      rv[meta_key][k] = v
+    return jsonify(rv)
+
 
 def make_view(app, view_class=View, view_name='View', **kwargs):
   """Return base view class bound to app.

@@ -63,7 +63,7 @@ from sqlalchemy.orm import class_mapper, mapperlib
 from time import time
 from werkzeug.exceptions import HTTPException
 
-from .orm import Query
+from .orm import BaseModel, Query
 from ..util import uncamelcase, query_to_models
 
 
@@ -112,7 +112,7 @@ class API(object):
 
     blueprint = Blueprint(
       url_prefix,
-      '%s.%s' % (project.config['PROJECT']['FLASK_ROOT_FOLDER'], url_prefix),
+      '%s.%s' % (project.flask.name, url_prefix),
       url_prefix='/%s' % url_prefix,
     )
 
@@ -260,9 +260,11 @@ class View(_View):
   def get(self, **kwargs):
     """GET request handler."""
     query = self.__model__.q
-    model_id = filter(None, kwargs.values()) if kwargs else None
-    # TODO: check here if the order makes sense for composite keys
-    return jsonify(self.parser.parse(query, model_id=model_id))
+    col, match = self.parser.parse(query, model_id=kwargs)
+    return self.jsonify(
+      self.parser.serialize(col),
+      match=match
+    )
 
   def post(self):
     """POST request handler."""
@@ -270,22 +272,24 @@ class View(_View):
       raise APIError(400, 'Invalid POST parameters')
     model = self.__model__(**request.json)
     model._flush()
-    return jsonify(self.parser.serialize([model]))
+    return self.jsonify(self.parser.serialize([model]))
 
   def put(self, **kwargs):
     """PUT request handler."""
-    model = self.parser._get_model(self.__model__.q, **kwargs)
+    query = self.__model__.q
+    model = self.parser.parse(query, model_id=kwargs, expect_one=True)
     if not self.validate(json, model):
       raise APIError(400, 'Invalid PUT parameters')
     for k, v in request.json.items():
       setattr(model, k, v)
-    return jsonify(self.parser.serialize([model]))
+    return self.jsonify(self.parser.serialize([model]))
 
   def delete(self, **kwargs):
     """DELETE request handler."""
-    model = self.parser._get_model(self.__model__.q, **kwargs)
+    query = self.__model__.q
+    model = self.parser.parse(query, model_id=kwargs, expect_one=True)
     pj.session.delete(model)
-    return jsonify({'meta': 'Resource deleted'})
+    return self.jsonify(self.parser.serialize([model]))
 
   def validate(self, json, model=None):
     """Validation method.
@@ -315,12 +319,14 @@ class _RelationshipView(_View):
   def get(self, **kwargs):
     """GET request handler."""
     position = kwargs.pop('position', None)
-    parent_model = self.parent_model
-    parent_instance = self.parser._get_model(parent_model.q, **kwargs)
-    collection =  getattr(parent_instance, self.assoc_key)
-    return jsonify(
-      self.parser.parse(collection, model_position=position, fast_count=False)
+    parent = self.parser.parse(
+      self.parent_model.q, model_id=kwargs, expect_one=True
     )
+    collection =  getattr(parent, self.assoc_key)
+    col, match = self.parser.parse(
+      collection, model_position=position, fast_count=False
+    )
+    return self.jsonify(self.parser.serialize(col), match=match)
 
 
 class Parser(object):
@@ -357,42 +363,14 @@ class Parser(object):
     }
 
   def parse(self, collection, model_id=None, model_position=None,
-            fast_count=True):
-    """Parses and serializes a list of models or a query into a dictionary.
-
-    This method is convenience for calling :meth:`process` followed by
-    :meth:`serialize`, with a match count and request overview. Cf. these
-    respective methods for parameter details.
-
-    """
-    collection, match = self.process(
-      collection,
-      model_id=model_id,
-      model_position=model_position,
-      fast_count=fast_count,
-    )
-    return self.serialize(
-      collection,
-      content_key='data',
-      meta={
-        'request': {
-          'base_url': request.base_url,
-          'method': request.method,
-          'values': request.values,
-        },
-        'match': match
-      }
-    )
-
-  def process(self, collection, model_id=None, model_position=None,
-              fast_count=True):
+              fast_count=True, expect_one=False):
     """Parse query and return JSON.
 
     :param collection: the query or list to be transformed to JSON
     :type collection: flasker.ext.orm.Query, list
     :param model_id: model identifier. If specified, the parser will call
       ``get`` on the query with this id.
-    :type model_id: varies
+    :type model_id: dict
     :param model_position: position of the model in the collection (1 indexed).
     :type model_position: int
     :param fast_count: if ``True``, will issue a separate count query to get
@@ -401,7 +379,11 @@ class Parser(object):
       this can only be used if the initial ``collection`` argument is an
       unfiltered query.
     :type fast_count: bool
-    :rtype: tuple
+    :param expect_one: can be used when ``model_id`` is specified to change the
+      return value of this method. Instead of returning a collection, it will
+      return the unique match found or raise an error otherwise.
+    :type expect_one: bool
+    :rtype: tuple or model
 
     Returns a tuple ``(collection, match)``:
 
@@ -418,8 +400,23 @@ class Parser(object):
     if model_id or model_position:
 
       if model_id:
-        model = collection.get(model_id)
-        collection = [model] if model else []
+        if not isinstance(collection, Query):
+          #TODO: adapt for lists
+          raise APIError(400, 'Only queries with model_id')
+        model_class = self._get_model_class(collection)
+        model_key = tuple(
+          model_id[k.name]
+          for k in class_mapper(model_class).primary_key
+        )
+        model = collection.get(model_key)
+        if expect_one:
+          if model:
+            return model
+          else:
+            raise APIError(400, 'Resource not found')
+        else:
+          collection = [model] if model else []
+
       else:
         position = int(model_position) - 1 # model_position is 1 indexed
         if isinstance(collection, Query):
@@ -516,7 +513,7 @@ class Parser(object):
 
     return collection, match
 
-  def serialize(self, collection, content_key=None, **kwargs):
+  def serialize(self, collection):
     """Serializes a list or query to a dictionary.
 
     :param collection: the collection to be serialized
@@ -536,24 +533,11 @@ class Parser(object):
     if max_depth:
       depth = min(depth, max_depth)
 
-    content = [
+    return [
       e.to_json(depth=depth, expand=expand)
       for e in collection
       if e
     ]
-
-    if not content_key:
-      if len(content) == 0:
-        raise APIError(404, 'Resource not found')
-      elif len(content) == 1:
-        return content[0]
-      else:
-        return content
-
-    else:
-      rv = kwargs or {}
-      rv[content_key] = content
-      return rv
 
   def _get_model_class(self, collection):
     """Return corresponding model class from collection."""
@@ -573,14 +557,4 @@ class Parser(object):
 
     else:
       return collection[0].__class__
-
-  def _get_model(self, query, **kwargs):
-    """Get model instance from a query and keyword arguments."""
-    model_id = kwargs.values() if kwargs else None
-    collection, match = self.process(query, model_id)
-    assert len(collection) <= 1, 'Multiple models found'
-    if len(collection):
-      return collection[0]
-    else:
-      raise APIError(404, 'Resource not found')
 

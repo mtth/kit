@@ -109,39 +109,39 @@ class Test_Project(object):
     eq_(json, {'message': 'Welcome!'})
 
 
-class Test_ConsoleTool(object):
-
-  def setup(self):
-    chdir(abspath(
-      join(
-        dirname(__file__),
-        pardir,
-        pardir,
-        'examples',
-        'basic'
-      )
-    ))
-    self.sps = []
-
-  def teardown(self):
-    for sp in self.sps:
-      if not sp.poll() is None:
-        sp.terminate()
-
-  def open_subprocess(self, command):
-    sp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-    self.sps.append(sp)
-    return sp
-
-  @timed(3)
-  def test_server(self):
-    sp = self.open_subprocess('flasker server -p 5050')
-    for _ in repeat(None, 4):
-      try:
-        sleep(1)
-        eq_(get('http://localhost:5050').json(), {'message': 'Welcome!'})
-        break
-      except ConnectionError:
-        pass
-    sp.terminate()
+# class Test_ConsoleTool(object):
+# 
+#   def setup(self):
+#     chdir(abspath(
+#       join(
+#         dirname(__file__),
+#         pardir,
+#         pardir,
+#         'examples',
+#         'basic'
+#       )
+#     ))
+#     self.sps = []
+# 
+#   def teardown(self):
+#     for sp in self.sps:
+#       if sp.poll() is not None:
+#         sp.terminate()
+# 
+#   def open_subprocess(self, command):
+#     sp = Popen(command)
+#     # self.sps.append(sp)
+#     return sp
+# 
+#   @timed(3)
+#   def test_server(self):
+#     sp = self.open_subprocess(['flasker', 'server', '-p', '5050'])
+#     for _ in repeat(None, 4):
+#       try:
+#         sleep(1)
+#         eq_(get('http://localhost:5050').json(), {'message': 'Welcome!'})
+#         break
+#       except ConnectionError:
+#         pass
+#     sp.terminate()
     

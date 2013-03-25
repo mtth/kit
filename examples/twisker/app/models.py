@@ -10,8 +10,6 @@ Model = orm.Model
 relationship = orm.relationship
 backref = orm.backref
 
-api = Api()
-
 class User(Model):
 
   id = Column(Integer, primary_key=True)
