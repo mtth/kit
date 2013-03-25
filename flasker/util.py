@@ -6,13 +6,16 @@ from collections import defaultdict, namedtuple
 from csv import DictReader
 from datetime import datetime
 from decimal import Decimal
-from flask import request
+from distutils.dir_util import copy_tree
+from flask import jsonify, request
 from flask.views import View as _View
 from itertools import islice
 from json import dumps, loads
 from functools import partial, wraps
 from logging import getLogger
 from math import ceil
+from os import mkdir
+from os.path import dirname, exists, join
 from re import sub
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.orm import Query
@@ -86,6 +89,8 @@ def convert(value, rtype=None, allow_json=False):
           return True
         elif value.lower() == 'false':
           return False
+        elif value == 'None':
+          return None
         else:
           if allow_json:
             try:
@@ -215,8 +220,8 @@ class Dict(dict):
     
     """
     values = [
-        cls(dct)
-        for value in self.itervalues()
+        cls(value)
+        for value in dct.itervalues()
         if isinstance(value, dict)
     ]
     return sum(cls.width(value) for value in values) + len(dct) - len(values)
@@ -232,6 +237,10 @@ class Dict(dict):
     :param prefix: a prefix to add to all new keys
     :type prefix: str
     :rtype: dict:
+
+    .. note::
+
+      All keys in the dictionary must be strings.
 
     """
     items = []
@@ -440,21 +449,22 @@ class Cacheable(object):
 
     """
     cached_properties = set(self._get_cached_properties())
+
     if names:
       for name in names:
         if name in cached_properties:
           setattr(self, name, _CacheRefresh(expiration))
         else:
           raise AttributeError('No cached property %r on %r.' % (name, self))
-      if remove_deleted:
-        for varname in self._cache.keys():
-          if not varname in cached_properties:
-            del self._cache[varname]
     else:
-      if remove_deleted:
-        self._cache = {}
       for varname in cached_properties:
         setattr(self, varname, _CacheRefresh(expiration))
+
+    if remove_deleted:
+      for varname in self._cache:
+        if not varname in cached_properties:
+          del self._cache[varname]
+
     try:
       self._cache.changed()
     except:
@@ -963,6 +973,35 @@ class View(_View):
         meth = getattr(self, 'get', None)
     return meth(**kwargs)
   
+  def jsonify(self, data, data_key='data', meta_key='meta',
+    include_request=True, **kwargs):
+    """Put results in dictionary with some meta information and jsonify.
+
+    :param data: data
+    :type data: serializable
+    :param data_key: key where data will go
+    :type data_key: str
+    :param meta_key: key where metadata will go
+    :type meta_key: str
+    :param include_request: whether or not to include the issued request
+      information
+    :type include_request: bool
+    :rtype: Flask response
+    
+    Any keyword arguments will be included with the metadata.
+    
+    """
+    rv = {data_key: data, meta_key: {}}
+    if include_request:
+      rv[meta_key]['request'] = {
+        'base_url': request.base_url,
+        'method': request.method,
+        'values': request.values,
+      }
+    for k, v in kwargs.items():
+      rv[meta_key][k] = v
+    return jsonify(rv)
+
 
 def make_view(app, view_class=View, view_name='View', **kwargs):
   """Return base view class bound to app.
@@ -978,6 +1017,17 @@ def make_view(app, view_class=View, view_name='View', **kwargs):
   """
   kwargs.update({'__app__': app})
   return type(view_name, (view_class, ), kwargs)
+
+
+def generate_app(foldername='app'):
+  """Create bootstrap app."""
+  src = dirname(__file__)
+  if exists(foldername):
+    print 'That folder already seems to exist. App creation skipped.'
+  else:
+    mkdir(foldername)
+    copy_tree(join(src, 'data', 'app'), foldername)
+    print 'Bootstrap app folder created in %s!' % (foldername, )
 
 # ===
 #

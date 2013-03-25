@@ -7,31 +7,24 @@ from __future__ import absolute_import
 from flask import Flask
 from os.path import join, sep
 
-from ..project import current_project
-from ..util import make_view
+from ..project import current_project as pj, Project
 
-pj = current_project
-conf = pj.config['PROJECT']
+conf = pj.config['FLASK']
+root_folder = conf.pop('ROOT_FOLDER').replace(sep, '.')
 
 app = Flask(
-  conf['FLASK_ROOT_FOLDER'].replace(sep, '.'),
-  static_folder=conf['FLASK_STATIC_FOLDER'],
-  template_folder=conf['FLASK_TEMPLATE_FOLDER'],
-  instance_path=join(pj.root_dir, conf['FLASK_ROOT_FOLDER']),
+  root_folder,
+  static_folder=conf.pop('STATIC_FOLDER'),
+  template_folder=conf.pop('TEMPLATE_FOLDER'),
+  instance_path=join(pj.root_dir, root_folder),
   instance_relative_config=True,
 )
-app.config.update(pj.config['FLASK'])
 
-@app.context_processor
-def inject():
-  return {
-    'project_name': conf['NAME'],
-  }
+app.config.update(conf)
 
 @app.teardown_request
 def teardown_request_handler(exception=None):
   pj._dismantle_database_connections()
 
-app.View = make_view(app)
+Project.flask = app
 
-pj.flask = app
