@@ -490,11 +490,36 @@ available directly on the model.</p>
 <dd><p>DELETE request handler.</p>
 </dd></dl>
 
+<dl class="method">
+<dt id="flasker.ext.api.View.validate">
+<tt class="descname">validate</tt><big>(</big><em>json</em>, <em>model=None</em><big>)</big><a class="headerlink" href="#flasker.ext.api.View.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validation method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>json</strong> (<em>dict</em>) &#8211; a dictionary of attributes</li>
+<li><strong>model</strong> (<em>None or flasker.ext.orm.BaseModel</em>) &#8211; <tt class="docutils literal"><span class="pre">None</span></tt> if it is POST request, and the model instance to be
+modified if it is a PUT request.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>This method is called on each POST and PUT request. Override it to
+implement your own validation logic: return <tt class="docutils literal"><span class="pre">True</span></tt> when the input is
+valid and <tt class="docutils literal"><span class="pre">False</span></tt> otherwise. Default implementation accepts everything.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="class">
 <dt id="flasker.ext.api.Parser">
-<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">Parser</tt><big>(</big><em>default_depth=1</em>, <em>default_limit=20</em>, <em>max_limit=0</em>, <em>expand=True</em>, <em>sep=';'</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#Parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.Parser" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">flasker.ext.api.</tt><tt class="descname">Parser</tt><big>(</big><em>default_depth=1</em>, <em>max_depth=0</em>, <em>default_limit=20</em>, <em>max_limit=0</em>, <em>expand=True</em>, <em>sep=';'</em><big>)</big><a class="reference internal" href="_modules/flasker/ext/api.html#Parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.ext.api.Parser" title="Permalink to this definition">¶</a></dt>
 <dd><p>The request parameter parser.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -518,32 +543,7 @@ client-side library such as Backbone-Relational.</li>
 </table>
 <dl class="method">
 <dt id="flasker.ext.api.Parser.parse">
-<tt class="descname">parse</tt><big>(</big><em>collection</em>, <em>model_id=None</em>, <em>model_position=None</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Parser.parse" title="Permalink to this definition">¶</a></dt>
-<dd><p>Parses and serializes a list of models or a query into a dictionary.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>collection</strong> (<em>flasker.ext.orm.Query, list</em>) &#8211; the query or list to be transformed to JSON</li>
-<li><strong>model_id</strong> (<em>varies</em>) &#8211; model identifier. If specified, the parser will call
-<tt class="docutils literal"><span class="pre">get</span></tt> on the query with this id.</li>
-<li><strong>model_position</strong> (<em>int</em>) &#8211; position of the model in the collection</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p>This method is convenience for calling <a class="reference internal" href="#flasker.ext.api.Parser.process" title="flasker.ext.api.Parser.process"><tt class="xref py py-meth docutils literal"><span class="pre">process()</span></tt></a> followed by
-<a class="reference internal" href="#flasker.ext.api.Parser.serialize" title="flasker.ext.api.Parser.serialize"><tt class="xref py py-meth docutils literal"><span class="pre">serialize()</span></tt></a>, with a match count and request overview.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="flasker.ext.api.Parser.process">
-<tt class="descname">process</tt><big>(</big><em>collection</em>, <em>model_id=None</em>, <em>model_position=None</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Parser.process" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">parse</tt><big>(</big><em>collection</em>, <em>model_id=None</em>, <em>model_position=None</em>, <em>fast_count=True</em>, <em>expect_one=False</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Parser.parse" title="Permalink to this definition">¶</a></dt>
 <dd><p>Parse query and return JSON.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -551,20 +551,28 @@ client-side library such as Backbone-Relational.</li>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>collection</strong> (<em>flasker.ext.orm.Query, list</em>) &#8211; the query or list to be transformed to JSON</li>
-<li><strong>model_id</strong> (<em>varies</em>) &#8211; model identifier. If specified, the parser will call
+<li><strong>model_id</strong> (<em>dict</em>) &#8211; model identifier. If specified, the parser will call
 <tt class="docutils literal"><span class="pre">get</span></tt> on the query with this id.</li>
 <li><strong>model_position</strong> (<em>int</em>) &#8211; position of the model in the collection (1 indexed).</li>
+<li><strong>fast_count</strong> (<em>bool</em>) &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, will issue a separate count query to get
+the total number of matches. Because of a limitation on how count is 
+handled using subqueries, this results in much faster results. However
+this can only be used if the initial <tt class="docutils literal"><span class="pre">collection</span></tt> argument is an
+unfiltered query.</li>
+<li><strong>expect_one</strong> (<em>bool</em>) &#8211; can be used when <tt class="docutils literal"><span class="pre">model_id</span></tt> is specified to change the
+return value of this method. Instead of returning a collection, it will
+return the unique match found or raise an error otherwise.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">tuple</p>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">tuple or model</p>
 </td>
 </tr>
 </tbody>
 </table>
 <p>Returns a tuple <tt class="docutils literal"><span class="pre">(collection,</span> <span class="pre">match)</span></tt>:</p>
 <ul class="simple">
-<li><tt class="docutils literal"><span class="pre">collection</span></tt> is the filtered, sorted, offsetted, limited collection</li>
+<li><tt class="docutils literal"><span class="pre">collection</span></tt> is the filtered, sorted, offsetted, limited collection.</li>
 <li><tt class="docutils literal"><span class="pre">match</span></tt> is a dictionary with two keys: <tt class="docutils literal"><span class="pre">total</span></tt> with the total number
 of results from the filtered query and <tt class="docutils literal"><span class="pre">returned</span></tt> with the total number
 of results for the filtered, offsetted and limited query.</li>
@@ -573,7 +581,7 @@ of results for the filtered, offsetted and limited query.</li>
 
 <dl class="method">
 <dt id="flasker.ext.api.Parser.serialize">
-<tt class="descname">serialize</tt><big>(</big><em>collection</em>, <em>content_key=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Parser.serialize" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">serialize</tt><big>(</big><em>collection</em><big>)</big><a class="headerlink" href="#flasker.ext.api.Parser.serialize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Serializes a list or query to a dictionary.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />

@@ -55,26 +55,12 @@
 <div class="section" id="module-flasker.__main__">
 <span id="console-tool"></span><h2>Console tool<a class="headerlink" href="#module-flasker.__main__" title="Permalink to this headline">¶</a></h2>
 <p>Flasker command line tool.</p>
-<p>There are currently 5 commands available via the flasker command tool, all
+<p>There are currently 4 commands available via the flasker command tool, all
 detailed below.</p>
-<p>All commands, aside from <tt class="docutils literal"><span class="pre">new</span></tt>, accept an optional argument <tt class="docutils literal"><span class="pre">-c,</span> <span class="pre">--conf</span></tt>
+<p>All commands accept an optional argument <tt class="docutils literal"><span class="pre">-c,</span> <span class="pre">--conf</span></tt>
 to indicate the path of the configuration file to use. If none is specified
 flasker will search in the current directory for possible matches. If a single
 file <tt class="docutils literal"><span class="pre">.cfg</span></tt> file is found it will use it.</p>
-<dl class="function">
-<dt id="flasker.__main__.new_handler">
-<tt class="descclassname">flasker.__main__.</tt><tt class="descname">new_handler</tt><big>(</big><em>parsed_args</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#new_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.new_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a new project:</p>
-<div class="highlight-python"><pre>flasker new ...</pre>
-</div>
-<p>The following options are available:</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">-a,</span> <span class="pre">--app</span></tt> to toggle the creation of a bootstrap starter app</li>
-<li><tt class="docutils literal"><span class="pre">-n,</span> <span class="pre">--name</span></tt> to set the name of the configuration file to be created
-(defaults to <tt class="docutils literal"><span class="pre">default</span></tt>)</li>
-</ul>
-</dd></dl>
-
 <dl class="function">
 <dt id="flasker.__main__.server_handler">
 <tt class="descclassname">flasker.__main__.</tt><tt class="descname">server_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#server_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.server_handler" title="Permalink to this definition">¶</a></dt>
@@ -182,9 +168,10 @@ notebook or to use a separate WSGI server).</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>config_path</strong> (<em>str</em>) &#8211; path to the configuration file. The following sections
-should be present: <tt class="docutils literal"><span class="pre">PROJECT</span></tt>, <tt class="docutils literal"><span class="pre">ENGINE</span></tt>, <tt class="docutils literal"><span class="pre">FLASK</span></tt>, <tt class="docutils literal"><span class="pre">CELERY</span></tt>. See
-below for a list of available options in each section.</li>
+<li><strong>config_path</strong> &#8211; path to the configuration file. The following sections
+are special: <tt class="docutils literal"><span class="pre">PROJECT</span></tt>, <tt class="docutils literal"><span class="pre">ENGINE</span></tt>, <tt class="docutils literal"><span class="pre">FLASK</span></tt>, <tt class="docutils literal"><span class="pre">CELERY</span></tt>. All but 
+<tt class="docutils literal"><span class="pre">PROJECT</span></tt> are optional. See below for a list of available options in each
+section.  :type config_path: str</li>
 <li><strong>make</strong> (<em>bool</em>) &#8211; whether or not to create all the project components. This should
 always be true, except in some cases where it is useful to check
 consistency of the configuration before doing so. <tt class="docutils literal"><span class="pre">_make</span></tt> should then be
@@ -203,53 +190,35 @@ which can be useful for example to configure Celery queues):</p>
 default domain name for the Celery workers.</li>
 <li><tt class="docutils literal"><span class="pre">MODULES</span></tt>: comma separated list of the project&#8217;s modules. They must be
 importable from the configuration file&#8217;s folder.</li>
-<li><tt class="docutils literal"><span class="pre">FLASK_ROOT_FOLDER</span></tt>: path to the Flask application&#8217;s root folder
-relative to the configuration file (defaults to <tt class="docutils literal"><span class="pre">app</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">FLASK_STATIC_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">static_folder</span></tt> relative to
-the application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">static</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">FLASK_TEMPLATE_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">template_folder</span></tt> relative
-to the application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">templates</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">COMMIT_ON_TEARDOWN</span></tt>: if <tt class="docutils literal"><span class="pre">True</span></tt> (default), all database transactions
-will be committed after each Flask app request and Celery task
-completion. If <tt class="docutils literal"><span class="pre">False</span></tt> the session will simply be removed.</li>
-<li><tt class="docutils literal"><span class="pre">DOMAIN</span></tt>: if specified, used to generate Celery worker hostnames
-(defaults to the project name, sluggified).</li>
-<li><tt class="docutils literal"><span class="pre">SUBDOMAIN</span></tt>: if specified, used to generate Celery worker hostnames 
-(defaults to the configuration file&#8217;s name).</li>
 </ul>
 </li>
 <li><tt class="docutils literal"><span class="pre">ENGINE</span></tt><ul>
 <li><tt class="docutils literal"><span class="pre">URL</span></tt>: the url to the database</li>
+<li><tt class="docutils literal"><span class="pre">AUTOCOMMIT</span></tt>: if <tt class="docutils literal"><span class="pre">True</span></tt> (default), all database transactions
+will be committed after each Flask app request and Celery task
+completion. If <tt class="docutils literal"><span class="pre">False</span></tt> the session will simply be removed.</li>
 <li>any valid arguments to <tt class="docutils literal"><span class="pre">sqlalchemy.create_engine</span></tt></li>
 </ul>
 </li>
 <li><tt class="docutils literal"><span class="pre">FLASK</span></tt><ul>
+<li><tt class="docutils literal"><span class="pre">ROOT_FOLDER</span></tt>: path to the Flask application&#8217;s root folder
+relative to the configuration file (defaults to <tt class="docutils literal"><span class="pre">app</span></tt>).</li>
+<li><tt class="docutils literal"><span class="pre">STATIC_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">static_folder</span></tt> relative to
+the application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">static</span></tt>).</li>
+<li><tt class="docutils literal"><span class="pre">TEMPLATE_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">template_folder</span></tt> relative
+to the application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">templates</span></tt>).</li>
 <li>any valid Flask configuration option</li>
 </ul>
 </li>
 <li><tt class="docutils literal"><span class="pre">CELERY</span></tt><ul>
+<li><tt class="docutils literal"><span class="pre">DOMAIN</span></tt>: if specified, used to generate Celery worker hostnames
+(defaults to the project name, sluggified).</li>
+<li><tt class="docutils literal"><span class="pre">SUBDOMAIN</span></tt>: if specified, used to generate Celery worker hostnames 
+(defaults to the configuration file&#8217;s name).</li>
 <li>any valid Celery configuration option</li>
 </ul>
 </li>
 </ul>
-<dl class="attribute">
-<dt id="flasker.project.Project.flask">
-<tt class="descname">flask</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.flask" title="Permalink to this definition">¶</a></dt>
-<dd><p>Flask application (initialized on project startup)</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.project.Project.celery">
-<tt class="descname">celery</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.celery" title="Permalink to this definition">¶</a></dt>
-<dd><p>Celery application (initialized on project startup)</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.project.Project.session">
-<tt class="descname">session</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.session" title="Permalink to this definition">¶</a></dt>
-<dd><p>SQLAlchemy scoped sessionmaker (initialized on project startup)</p>
-</dd></dl>
-
 <dl class="method">
 <dt id="flasker.project.Project.before_startup">
 <tt class="descname">before_startup</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project.before_startup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project.before_startup" title="Permalink to this definition">¶</a></dt>

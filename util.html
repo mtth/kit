@@ -224,6 +224,10 @@ actions simpler.</p>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">All keys in the dictionary must be strings.</p>
+</div>
 </dd></dl>
 
 <dl class="classmethod">
@@ -555,6 +559,31 @@ in the rules property.</p>
 are passed to <tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt>, POST to <tt class="xref py py-meth docutils literal"><span class="pre">post()</span></tt>, etc.</p>
 </dd></dl>
 
+<dl class="method">
+<dt id="flasker.util.View.jsonify">
+<tt class="descname">jsonify</tt><big>(</big><em>data</em>, <em>data_key='data'</em>, <em>meta_key='meta'</em>, <em>include_request=True</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.View.jsonify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Put results in dictionary with some meta information and jsonify.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>serializable</em>) &#8211; data</li>
+<li><strong>data_key</strong> (<em>str</em>) &#8211; key where data will go</li>
+<li><strong>meta_key</strong> (<em>str</em>) &#8211; key where metadata will go</li>
+<li><strong>include_request</strong> (<em>bool</em>) &#8211; whether or not to include the issued request
+information</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Flask response</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Any keyword arguments will be included with the metadata.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="function">
@@ -577,6 +606,12 @@ are passed to <tt class="xref py py-meth docutils literal"><span class="pre">get
 </tbody>
 </table>
 <p>Any keyword arguments will be added to the class&#8217; dictionary.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.generate_app">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">generate_app</tt><big>(</big><em>foldername='app'</em><big>)</big><a class="headerlink" href="#flasker.util.generate_app" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create bootstrap app.</p>
 </dd></dl>
 
 <dl class="function">
