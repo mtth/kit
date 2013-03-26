@@ -119,7 +119,7 @@ class ORM(object):
 
   def __init__(self, project, create_all=True):
 
-    project.query_class = Query
+    project.conf['SESSION']['QUERY_CLS'] = Query
 
     self.Model = declarative_base(cls=BaseModel)
     self.backref = partial(_backref, query_class=Query)

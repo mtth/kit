@@ -60,7 +60,7 @@ class Test_Project(object):
 
   def test_config_path(self):
     pj = Project(self.cp)
-    eq_(self.cp, pj._path)
+    eq_(self.cp, pj.conf_path)
 
   @raises(ProjectImportError)
   def test_unique_project(self):

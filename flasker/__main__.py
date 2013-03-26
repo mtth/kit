@@ -183,8 +183,8 @@ def worker_handler(parsed_args):
   * w2.default.my_project
 
   """
-  domain = pj.config['CELERY']['DOMAIN']
-  subdomain = pj.config['CELERY']['SUBDOMAIN']
+  domain = sub(r'\W+', '_', pj.conf['PROJECT']['NAME'].lower())
+  subdomain = splitext(pj.conf_path)[0].replace(sep, '-')
   pj_worker_names = [d.keys()[0] for d in pj.celery.control.ping()]
   worker_pattern = r'w(\d+)\.%s.%s' % (subdomain, domain)
   worker_numbers = [

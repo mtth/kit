@@ -3,6 +3,7 @@
 """General helpers."""
 
 from collections import defaultdict, namedtuple
+from ConfigParser import SafeConfigParser
 from csv import DictReader
 from datetime import datetime
 from decimal import Decimal
@@ -406,6 +407,20 @@ class SmartDictReader(DictReader):
       self.rows_imported += 1
       return processed_row
 
+
+def smart_parse_config(filepath):
+  parser = SafeConfigParser()
+  parser.optionxform = str    # setting options to case-sensitive
+  with open(filepath) as f:
+    parser.readfp(f)
+  return {
+    s: {
+      k: convert(v, allow_json=True)
+      for (k, v) in parser.items(s)
+    }
+    for s in parser.sections()
+  }
+  
 
 # ===
 # 
