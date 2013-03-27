@@ -4,12 +4,6 @@ from flasker import current_project as pj
 from flasker.ext import API
 
 import app.models as m
-import app.test as t
-
-
-@pj.run_after_module_imports
-def preproc(project):
-  project.r = t.request
 
 
 api = API(pj)
@@ -35,7 +29,7 @@ class Tweet(api.View):
   __model__ = m.Tweet
 
 
-@pj.celery.task
+@pj.celery.periodic_task(run_every=10)
 def update():
   for user in m.User.q:
     user.import_new_tweets()

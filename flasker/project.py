@@ -36,7 +36,7 @@ For convenience, both these variables are also available directly in the
 from __future__ import absolute_import
 
 from collections import defaultdict
-from logging import getLogger, StreamHandler, DEBUG
+from logging import getLogger, NullHandler, StreamHandler, DEBUG
 from os.path import abspath, dirname, join, sep, split, splitext
 from sys import path
 from werkzeug.local import LocalProxy
@@ -171,7 +171,9 @@ class Project(object):
         self.logger = getLogger(__name__)
         if self.conf['PROJECT']['DEBUG']:
           self.logger.setLevel(DEBUG)
-        self.logger.addHandler(StreamHandler())
+          self.logger.addHandler(StreamHandler())
+        else:
+          self.logger.addHandler(NullHandler())
 
         # load all project modules
         self._funcs = []
@@ -329,7 +331,7 @@ class Project(object):
     except InvalidRequestError as e:
       self.session.rollback()
       self.session.expunge_all()
-      self.logger.error('error while committing: %s' % (e, ))
+      raise e
     finally:
       self.session.remove()
       self.logger.debug('session removed')
