@@ -52,35 +52,27 @@ The basic folder hierarchy for a Flasker project looks something like this:
 .. code:: bash
 
   project/
-    conf.cfg    # configuration file
+    conf.cfg    # configuration
     app.py      # code
-    db.sqlite   # database
 
-Where ``conf.cfg`` contains:
+Where ``conf.cfg`` is:
 
 .. code:: cfg
 
   [PROJECT]
   MODULES = app
-  [ENGINE]
-  URL = sqlite:///db.sqlite
 
-In this basic example there are only two options specified:
-
-* ``MODULES`` contains the list of python modules which belong
-  to the project. Inside each of these modules you can use the
-  ``flasker.current_project`` proxy to get access to the current project
-  instance (which gives access to the configured Flask application, the Celery
-  application and the SQLAlchemy database session registry).
-
-* ``URL`` tells SQLAlchemy which engine to bind the session on. By
-  default Flasker will tell SQLAlchemy to use the in-memory SQLite store.
+The ``MODULES`` option contains the list of python modules which belong
+to the project. Inside each of these modules we can use the
+``flasker.current_project`` proxy to get access to the current project
+instance (which gives access to the configured Flask application, the Celery
+application and the SQLAlchemy database session registry). This is the
+only option required in a Flasker project configuration file.
 
 Here is a sample ``app.py``:
 
 .. code:: python
 
-   from flask import jsonify
    from flasker import current_project
 
    flask_app = current_project.flask    # Flask app
@@ -91,9 +83,9 @@ Here is a sample ``app.py``:
 
    @flask_app.route('/')
    def index():
-    return jsonify({'message': 'Welcome!'})
+    return 'Hello World!'
 
-Once those two files are in place, we can already start the server! We 
+Once these two files are in place, we can already start the server! We 
 simply run (from the command line in the ``project/`` directory):
 
 .. code:: bash
@@ -108,15 +100,29 @@ results):
 .. code:: python
 
    In [1]: import requests
-   In [2]: requests.get('http://localhost:5000/').json()
-   Out[2]: {u'message': u'Welcome!'}
+   In [2]: requests.get('http://localhost:5000/')
+   Out[2]: Hello World!
 
-Right now, the Flask app is running using the default configuration. We can
-change this by adding configuration options to the ``project.cfg`` file. For
-example, we will enable testing and debugging for easier bug tracking. At the
-same time, we tell our project to store the database on disk (instead of the
-default in memory SQLite store used by Flasker). Our configuration file now
-looks like this:
+
+Configuring your project
+------------------------
+
+In the previous example, the project was using the default configuration,
+this can easily be changed by adding options to the ``conf.cfg`` file. 
+Here is an example of a customized configuration file:
+
+.. code:: cfg
+
+  [PROJECT]
+  MODULES = app
+  [ENGINE]
+  URL = sqlite:///db.sqlite   # the engine to bind the session on
+  [FLASK]
+  DEBUG = true                # generic Flask options
+  TESTING = true
+
+For an exhaustive list of all the options available, please refer to the
+documentation on GitHub Pages.
 
 Finally, of course, all your code doesn't have to be in a single file. You can
 specify a list of modules to import in the ``MODULES`` option, which will all
