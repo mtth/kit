@@ -46,18 +46,6 @@ class Test_Project(object):
     eq_(pj.celery, opj.celery)
     eq_(pj.session, opj.session)
 
-  def test_before_startup(self):
-    pass
-    # pj = Project(self.cp)
-    # before_startup = []
-
-    # @pj.before_startup
-    # def before_startup_handler(project):
-    #   before_startup.append(1)
-
-    # pj._make()
-    # eq_(len(before_startup), 1)
-
   def test_config_path(self):
     pj = Project(self.cp)
     eq_(self.cp, pj.conf_path)
@@ -84,7 +72,6 @@ class Test_Project(object):
 
   def test_proxy(self):
     pj = Project(self.cp)
-    # eq_(current_project, pj)
     eq_(current_project.__dict__, pj.__dict__)
 
   def test_threaded_project(self):

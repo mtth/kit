@@ -429,12 +429,12 @@ class SmartDictReader(DictReader):
       return processed_row
 
 
-def parse_config(filepath, default=None, allow_json=False,
+def parse_config(file_or_filepath, default=None, allow_json=False,
   case_sensitive=False, parser_type=SafeConfigParser):
   """Returns a dictionary of values from a configuration file.
 
-  :param filepath: filepath to configuration file
-  :type filepath: str
+  :param file_or_filepath: file or filepath to configuration file
+  :type file_or_filepath: str or file
   :param default: dictionary of default values to use
   :type default: dict
   :param allow_json: allow loading of json options
@@ -449,8 +449,11 @@ def parse_config(filepath, default=None, allow_json=False,
   parser = parser_type()
   if case_sensitive:
     parser.optionxform = str
-  with open(filepath) as f:
-    parser.readfp(f)
+  if isinstance(file_or_filepath, str):
+    with open(file_or_filepath) as f:
+      parser.readfp(f)
+  else:
+    parser.readfp(file_or_filepath)
   conf = {
     s: {
       k: convert(v, allow_json=allow_json)

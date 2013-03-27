@@ -304,6 +304,10 @@ class Project(object):
     finally:
       self.session.remove()
 
+  def _reset(self):
+    """Reset current project."""
+    self.__class__.__state = {}
+
 
 #: Proxy to the current project
 current_project = LocalProxy(Project)
