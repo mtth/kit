@@ -2,8 +2,9 @@
 
 """General helpers."""
 
-from collections import defaultdict, namedtuple
+from collections import defaultdict, Mapping, namedtuple
 from ConfigParser import SafeConfigParser
+from copy import deepcopy
 from csv import DictReader
 from datetime import datetime
 from decimal import Decimal
@@ -186,7 +187,7 @@ def uncamelcase(name):
   return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-class Dict(dict):
+class Dict(object):
 
   """Expands the dictionary class with a few helper methods.
 
@@ -221,7 +222,7 @@ class Dict(dict):
     
     """
     values = [
-        cls(value)
+        value
         for value in dct.itervalues()
         if isinstance(value, dict)
     ]
@@ -286,6 +287,26 @@ class Dict(dict):
       else:
         d[key[-1]] = dct[sep.join(key)]
     return result
+
+  @classmethod
+  def update(cls, a, b, copy=False):
+    """Update for nested dictionaries.
+
+    :param copy: whether or not to do a deepcopy of each dictionary before
+      updating.
+    :type copy: bool
+    :rtype: dict
+
+    """
+    if copy:
+      a = deepcopy(a)
+      b = deepcopy(b)
+    for k, v in b.iteritems():
+      if isinstance(v, Mapping):
+        a[k] = cls.update(a.get(k, {}), v)
+      else:
+        a[k] = b[k]
+    return a
 
   @classmethod
   def table(cls, mode='horizontal', left_columns=None):
@@ -408,19 +429,38 @@ class SmartDictReader(DictReader):
       return processed_row
 
 
-def smart_parse_config(filepath):
-  parser = SafeConfigParser()
-  parser.optionxform = str    # setting options to case-sensitive
+def parse_config(filepath, default=None, allow_json=False,
+  case_sensitive=False, parser_type=SafeConfigParser):
+  """Returns a dictionary of values from a configuration file.
+
+  :param filepath: filepath to configuration file
+  :type filepath: str
+  :param default: dictionary of default values to use
+  :type default: dict
+  :param allow_json: allow loading of json options
+  :type allow_json: bool
+  :param case_sensitive: keep option names' case
+  :type case_sensitive: bool
+  :param parser_type: base parser type to use for parsing the file
+  :type parser_type: ConfigParser.RawConfiParser
+  :rtype: dict
+
+  """
+  parser = parser_type()
+  if case_sensitive:
+    parser.optionxform = str
   with open(filepath) as f:
     parser.readfp(f)
-  return {
+  conf = {
     s: {
-      k: convert(v, allow_json=True)
+      k: convert(v, allow_json=allow_json)
       for (k, v) in parser.items(s)
     }
     for s in parser.sections()
   }
-  
+  if default:
+    conf = Dict.update(default, conf, copy=True)
+  return conf
 
 # ===
 # 

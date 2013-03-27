@@ -128,6 +128,11 @@ class Test_Dict(object):
   def test_unflatten(self):
     for example in self.examples:
       eq_(Dict.unflatten(example['f']), example['u'])
+
+  def test_update(self):
+    a = {'a': 1, 'b': {'c': 0}}
+    b = {'a': 2, 'b': {'d': 1}}
+    eq_(Dict.update(a, b), {'a': 2, 'b': {'c': 0, 'd': 1}})
   
 
 class Test_Cacheable(object):

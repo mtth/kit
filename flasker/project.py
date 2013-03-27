@@ -43,7 +43,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sys import path
 from werkzeug.local import LocalProxy
 
-from .util import smart_parse_config
+from .util import parse_config
 
 
 class ProjectImportError(Exception):
@@ -159,14 +159,12 @@ class Project(object):
       elif not self.conf_path:
 
         # load configuration
-        conf = smart_parse_config(conf_path)
+        self.conf = parse_config(
+          conf_path,
+          default=self.default_conf,
+          case_sensitive=True
+        )
         self.conf_path = abspath(conf_path)
-        self.conf = self.default_conf.copy()
-        for key in conf:
-          if key in self.conf:
-            self.conf[key].update(conf[key])
-          else:
-            self.conf[key] = conf[key]
 
         # load all project modules
         self._before_startup = []
