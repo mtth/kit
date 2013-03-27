@@ -40,32 +40,30 @@ Using ``easy_install``:
    $ easy_install flasker
 
 
-Overview
---------
+Quickstart
+----------
 
-The typical folder hierarchy for a Flasker project looks something like this:
+This short guide will show you how to get an application combining Flask,
+Celery and SQLAlchemy running in moments (the code is available on GitHub in
+``examples/basic/``).
+
+The basic folder hierarchy for a Flasker project looks something like this:
 
 .. code:: bash
 
   project/
-    conf.cfg
-    app/
-      models.py
-      tasks.py
-      views.py
-      static/
-      templates/
-    db/
-      db.sqlite
+    conf.cfg    # configuration file
+    app.py      # code
+    db.sqlite   # database
 
 Where ``conf.cfg`` contains:
 
 .. code:: cfg
 
   [PROJECT]
-  MODULES = app.models, app.tasks, app.views
+  MODULES = app
   [ENGINE]
-  URL = sqlite:///db/db.sqlite
+  URL = sqlite:///db.sqlite
 
 In this basic example there are only two options specified:
 
@@ -78,13 +76,7 @@ In this basic example there are only two options specified:
 * ``URL`` tells SQLAlchemy which engine to bind the session on. By
   default Flasker will tell SQLAlchemy to use the in-memory SQLite store.
 
-
-Quickstart
-----------
-
-This short guide will show you how to get an application combining Flask,
-Celery and SQLAlchemy running in seconds (the code is available on GitHub in
-``examples/basic/``).
+Here is a sample ``app.py``:
 
 .. code:: python
 
@@ -101,8 +93,8 @@ Celery and SQLAlchemy running in seconds (the code is available on GitHub in
    def index():
     return jsonify({'message': 'Welcome!'})
 
-Finally, we save this file to ``project/app.py`` and we're all set! To start
-the server, we run (from the command line in the ``project/`` directory):
+Once those two files are in place, we can already start the server! We 
+simply run (from the command line in the ``project/`` directory):
 
 .. code:: bash
 
@@ -126,21 +118,10 @@ same time, we tell our project to store the database on disk (instead of the
 default in memory SQLite store used by Flasker). Our configuration file now
 looks like this:
 
-.. code:: cfg
-
-  [PROJECT]
-  NAME = My Flasker Project
-  MODULES = app
-  [ENGINE]
-  URL = sqlite:///db.sqlite
-  [FLASK]
-  DEBUG = true
-  TESTING = true
-
-Likewise, we could configure celery by adding options to a section ``CELERY``.
-Any valid Flask, Celery or engine configuration option can go in their
-respective section. There are also a few other options available which are
-detailed in the project documentation.
+Finally, of course, all your code doesn't have to be in a single file. You can
+specify a list of modules to import in the ``MODULES`` option, which will all
+be imported on project startup. For an example of a more complex application,
+you can check out the code in ``examples/flisker``.
 
 
 Next steps
