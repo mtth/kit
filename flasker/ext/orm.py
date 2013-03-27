@@ -119,18 +119,23 @@ class ORM(object):
 
   def __init__(self, project, create_all=True):
 
-    project._query_class = Query
+    project.conf['SESSION']['QUERY_CLS'] = Query
 
     self.Model = declarative_base(cls=BaseModel)
     self.backref = partial(_backref, query_class=Query)
     self.relationship = partial(_relationship, query_class=Query)
 
-    @project.before_startup
-    def handler(project):
+    @project.run_after_module_imports
+    def orm_after_imports(project):
       self.Model.q = _QueryProperty(project)
       self.Model.c = _CountProperty(project)
       if create_all:
-        self.Model.metadata.create_all(project._engine, checkfirst=True)
+        self.Model.metadata.create_all(
+          project.session.get_bind(),
+          checkfirst=True
+        )
+
+    project.logger.debug('orm extension initialized')
 
 
 class Query(_Query):
@@ -260,10 +265,6 @@ class _CountProperty(object):
       mapper = class_mapper(cls)
       if mapper:
         session = self.project.session()
-        # the following doesn't work on sqlite
-        #return Query(func.count(cls), session=session).select_from(cls)
-        # following doesn't work for composite primary keys...
-        # return Query(func.count(*mapper.primary_key), session=session)
         return Query(func.count(), session=session).select_from(cls)
     except UnmappedClassError:
       return None
@@ -359,12 +360,15 @@ class BaseModel(Cacheable, Loggable):
     }
 
   @classmethod
-  def retrieve(cls, flush_if_new=True, **kwargs):
+  def retrieve(cls, flush_if_new=True, from_id=None, **kwargs):
     """Given constructor arguments will return a match or create one.
 
     :param flush_if_new: whether or not to flush the model if created (this
       can be used to generate its ``id``).
     :type flush_if_new: bool
+    :param from_id: instead of issuing a filter on kwargs, this will issue
+      a get query by id using this parameter
+    :type from_id: varies
     :param kwargs: constructor arguments
     :rtype: tuple
 
@@ -373,9 +377,18 @@ class BaseModel(Cacheable, Loggable):
     and ``False`` otherwise.
 
     """
-    instance = cls.q.filter_by(**kwargs).first()
+    if from_id:
+      instance = cls.q.get(from_id)
+    else:
+      instance = cls.q.filter_by(**kwargs).first()
     if instance:
       return instance, False
+    if from_id:
+      key_names = [k.name for k in class_mapper(cls).primary_key]
+      if len(key_names) == 1:
+        kwargs.update({key_names[0]: from_id})
+      else:
+        kwargs.update(dict(zip(key_names, from_id)))
     instance = cls(**kwargs)
     if flush_if_new:
       instance._flush()

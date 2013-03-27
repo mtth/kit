@@ -17,9 +17,9 @@ from code import interact
 from functools import wraps
 from os import listdir
 from os.path import splitext
-from re import findall
+from re import findall, match, sub
 
-from flasker import current_project
+from flasker import current_project as pj
 from flasker.project import Project, ProjectImportError
 
 
@@ -51,12 +51,11 @@ def _project_context(handler):
           return
         else:
           conf_file = conf_files[0]
-      pj = Project(conf_file, make=False)
+      pj = Project(conf_file)
     except ProjectImportError as e:
       print e
       return
     else:
-      pj._make()
       handler(*args, **kwargs)
   return wrapper
 
@@ -111,7 +110,6 @@ def server_handler(parsed_args):
     debugging).
   
   """
-  pj = current_project
   host = '127.0.0.1' if parsed_args.restrict else '0.0.0.0'
   pj.flask.run(host=host, port=parsed_args.port, debug=parsed_args.debug)
 
@@ -134,10 +132,7 @@ def shell_handler(parsed_args):
   Flasker will use IPython if it is available.
   
   """
-  pj = current_project
-  context = {
-    'pj': pj,
-  }
+  context = {'pj': pj}
   try:
     import IPython
   except ImportError:
@@ -152,6 +147,9 @@ shell_parser.set_defaults(handler=shell_handler)
 
 worker_parser = subparsers.add_parser('worker', help='start worker')
 
+worker_parser.add_argument('domain',
+  help='worker domain name'
+)
 worker_parser.add_argument('-o', '--only-direct',
   action='store_true',
   help='only listen to direct queue'
@@ -188,9 +186,9 @@ def worker_handler(parsed_args):
   * w2.default.my_project
 
   """
-  pj = current_project
+  domain = parsed_args.domain
   pj_worker_names = [d.keys()[0] for d in pj.celery.control.ping()]
-  worker_pattern = r'w(\d+)\.%s.%s' % (pj.subdomain, pj.domain)
+  worker_pattern = r'w(\d+)\.%s' % (domain, )
   worker_numbers = [
     findall(worker_pattern, worker_name) or ['0']
     for worker_name in pj_worker_names
@@ -202,7 +200,7 @@ def worker_handler(parsed_args):
   if parsed_args.verbose_help:
     pj.celery.worker_main(['worker', '-h'])
   else:
-    hostname = 'w%s.%s.%s' % (wkn, pj.subdomain, pj.domain)
+    hostname = 'w%s.%s' % (wkn, domain)
     options = ['worker', '--hostname=%s' % hostname]
     if parsed_args.only_direct:
       options.append('--queues=%s.dq' % hostname)
@@ -244,7 +242,6 @@ def flower_handler(parsed_args):
     will be passed through).
   
   """
-  pj = current_project
   if parsed_args.verbose_help:
     pj.celery.start(['celery', 'flower', '--help'])
   else:

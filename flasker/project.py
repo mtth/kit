@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+  #!/usr/bin/env python
 
 """Project module.
 
@@ -33,26 +33,14 @@ For convenience, both these variables are also available directly in the
 
 """
 
-from ConfigParser import SafeConfigParser
+from __future__ import absolute_import
+
+from logging import getLogger, NullHandler, StreamHandler, DEBUG
 from os.path import abspath, dirname, join, sep, split, splitext
-from re import match, sub
-from sqlalchemy import create_engine  
-from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import Query, scoped_session, sessionmaker
 from sys import path
-from threading import local
 from werkzeug.local import LocalProxy
 
-from .util import convert
-
-
-class _LocalStorage(local):
-
-  """Thread local storage."""
-  
-  _current_project = None
-
-_local_storage = _LocalStorage()
+from .util import parse_config
 
 
 class ProjectImportError(Exception):
@@ -64,15 +52,11 @@ class Project(object):
 
   """Project class.
 
-  :param config_path: path to the configuration file. The following sections
+  :param conf_path: path to the configuration file. The following sections
     are special: ``PROJECT``, ``ENGINE``, ``FLASK``, ``CELERY``. All but 
     ``PROJECT`` are optional. See below for a list of available options in each
-    section.  :type config_path: str
-  :param make: whether or not to create all the project components. This should
-    always be true, except in some cases where it is useful to check
-    consistency of the configuration before doing so. ``_make`` should then be
-    called manually after these checks are done.
-  :type make: bool
+    section.
+  :type conf_path: str
 
   The following options are available each section of the configuration file
   (as a convenience, parameters stored as JSON strings are also accepted,
@@ -80,18 +64,23 @@ class Project(object):
 
   * ``PROJECT``
 
-    * ``NAME``: the name of the project, used for debugging and to generate a
-      default domain name for the Celery workers.
     * ``MODULES``: comma separated list of the project's modules. They must be
       importable from the configuration file's folder.
+    * ``DEBUG``
+    * ``DISABLE_FLASK``
+    * ``DISABLE_CELERY``
 
   * ``ENGINE``
 
     * ``URL``: the url to the database
-    * ``AUTOCOMMIT``: if ``True`` (default), all database transactions
+    * any valid arguments to ``sqlalchemy.create_engine``
+
+  * ``SESSION``
+
+    * ``SMARTCOMMIT``: if ``True`` (default), all database transactions
       will be committed after each Flask app request and Celery task
       completion. If ``False`` the session will simply be removed.
-    * any valid arguments to ``sqlalchemy.create_engine``
+    * any valid arguments to ``sqlalchemy.orm.session_maker``
 
   * ``FLASK``
 
@@ -105,100 +94,222 @@ class Project(object):
 
   * ``CELERY``
 
-    * ``DOMAIN``: if specified, used to generate Celery worker hostnames
-      (defaults to the project name, sluggified).
-    * ``SUBDOMAIN``: if specified, used to generate Celery worker hostnames 
-      (defaults to the configuration file's name).
+    * ``MAIN`` 
     * any valid Celery configuration option
   
   """
 
-  config = {
+  #: Default configuration
+  default_conf = {
     'PROJECT': {
-      'NAME':                   '',
-      'MODULES':                '',
+      'MODULES':          '',
+      'DEBUG':            False,
+      'DISABLE_FLASK':    False,
+      'DISABLE_CELERY':   False,
     },
     'ENGINE': {
-      'URL':                    'sqlite://',
-      'AUTOCOMMIT':             True,
+      'URL':              'sqlite://',
+    },
+    'SESSION': {
+      'SMARTCOMMIT':      True,
     },
     'FLASK': {
-      'ROOT_FOLDER':            'app',
-      'STATIC_FOLDER':          'static',
-      'TEMPLATE_FOLDER':        'templates',
+      'NAME':             'app',
+      'ROOT_FOLDER':      'app',
+      'STATIC_FOLDER':    'static',
+      'TEMPLATE_FOLDER':  'templates',
     },
     'CELERY': {
-      'DOMAIN':                 '',
-      'SUBDOMAIN':              '',
+      'MAIN':             '__main__',
     },
   }
 
-  config_path = None
+  #: Dictionary of configuration values
+  conf = None
 
-  flask = None
-  celery = None
-  session = None
+  #: Path to current configuration file
+  conf_path = None
 
-  _current = None
-  _before_startup = None
-  _engine = None
-  _query_class = Query
+  #: Logger
+  logger = None
+
+  _flask = None
+  _celery = None
+  _session = None
 
   __state = {}
 
-  def __init__(self, config_path=None, make=True):
+  def __init__(self, conf_path=None):
 
     self.__dict__ = self.__state
 
-    if self.__class__._current:
+    if conf_path is None:
 
-      if config_path and config_path != self.config_path:
-        raise ProjectImportError('Cannot instantiante projects for different '
-                                 'configuration files in the same process.')
+      if not self.conf_path:
+        raise ProjectImportError('Project instantiation outside the Flasker '
+                                 'command line tool requires a '
+                                 'configuration file path.')
 
     else:
 
-      if config_path is None:
-        if self.config_path is None:
-          raise ProjectImportError('Project instantiation outside the Flasker '
-                                   'command line tool requires a '
-                                   'configuration file path.')
-        config_path = self.config_path
-      else:
-        self.__class__.config_path = config_path
+      if self.conf_path and conf_path != self.conf_path:
+        raise ProjectImportError('Cannot instantiante projects for different '
+                                 'configuration files in the same process.')
 
-      config = self._parse_config(config_path)
-      for key in config:
-        if key in self.config:
-          self.config[key].update(config[key])
+      elif not self.conf_path:
+
+        # load configuration
+        self.conf = parse_config(
+          conf_path,
+          default=self.default_conf,
+          case_sensitive=True
+        )
+        self.conf_path = abspath(conf_path)
+
+        # load logger
+        self.logger = getLogger(__name__)
+        if self.conf['PROJECT']['DEBUG']:
+          self.logger.setLevel(DEBUG)
+          self.logger.addHandler(StreamHandler())
         else:
-          self.config[key] = config[key]
+          self.logger.addHandler(NullHandler())
 
-      self.root_dir = dirname(abspath(config_path))
-      self.domain = (
-        self.config['CELERY']['DOMAIN'] or
-        sub(r'\W+', '_', self.config['PROJECT']['NAME'].lower())
-      )
-      self.subdomain = (
-        self.config['CELERY']['SUBDOMAIN'] or
-        splitext(config_path)[0].replace(sep, '-')
-      )
-
-      path.append(self.root_dir)
-
-      self.__class__._current = self
-      self._before_startup = []
-
-      if make:
-        self._make()
+        # load all project modules
+        self._funcs = []
+        path.append(dirname(self.conf_path))
+        project_modules = [
+          module_name.strip()
+          for module_name in self.conf['PROJECT']['MODULES'].split(',')
+        ]
+        for module_name in project_modules:
+          __import__(module_name)
+        self.logger.debug(
+          '%s modules imported (%s)' % (
+            len(project_modules),
+            ', '.join(project_modules),
+          )
+        )
+        for func in self._funcs:
+          func(self)
+        self.logger.debug(
+          '%s handlers found and run (%s)' % (
+            len(self._funcs), 
+            ', '.join(func.__name__ for func in self._funcs),
+          )
+        )
 
   def __repr__(self):
-    return '<Project %r, %r>' % (
-      self.config['PROJECT']['NAME'], self.config_path
-    )
+    return '<Project %r>' % (self.conf_path, )
 
-  def before_startup(self, func):
-    """Hook to run a function right before project starts.
+  @property
+  def flask(self):
+    """Flask application.
+
+    Lazily initialized.
+
+    """
+    if self._flask is None and not self.conf['PROJECT']['DISABLE_FLASK']:
+
+      from flask import Flask
+
+      flask_app = Flask(
+        self.conf['FLASK']['NAME'],
+        static_folder=self.conf['FLASK']['STATIC_FOLDER'],
+        template_folder=self.conf['FLASK']['TEMPLATE_FOLDER'],
+        instance_path=join(
+          dirname(self.conf_path),
+          self.conf['FLASK']['ROOT_FOLDER'],
+        ),
+        instance_relative_config=True,
+      )
+
+      flask_app.config.update({
+        k: v
+        for k, v in self.conf['FLASK'].items()
+        if not k in self.default_conf['FLASK']
+      })
+
+      self._flask = flask_app
+      self.logger.debug('flask app loaded')
+    return self._flask
+
+  @property
+  def celery(self):
+    """Celery application.
+
+    Lazily initialized.
+
+    """
+    if self._celery is None and not self.conf['PROJECT']['DISABLE_CELERY']:
+
+      from celery import Celery
+      from celery.task import periodic_task
+
+      celery_app = Celery(self.conf['CELERY']['MAIN'])
+
+      celery_app.conf.update({
+        k: v
+        for k, v in self.conf['CELERY'].items()
+        if not k in self.default_conf['CELERY']
+      })
+
+      # proxy for easy access
+      celery_app.periodic_task = periodic_task
+
+      # maybe not required with lazy session initialization
+      # TODO: check this
+      # @worker_process_init.connect
+      # def create_worker_connection(*args, **kwargs):
+      #   self._create_session()
+
+      self.logger.debug('celery app loaded')
+      self._celery = celery_app
+    return self._celery
+
+  @property
+  def session(self):
+    """SQLAlchemy scoped sessionmaker.
+
+    Lazily initialized.
+
+    """
+    if self._session is None:
+
+      from celery.signals import task_postrun
+      from flask.signals import request_tearing_down
+
+      from sqlalchemy import create_engine  
+      from sqlalchemy.exc import InvalidRequestError
+      from sqlalchemy.orm import scoped_session, sessionmaker
+
+      engine = create_engine(
+        self.conf['ENGINE']['URL'],
+        **{
+          k.lower(): v 
+          for k, v in self.conf['ENGINE'].items()
+          if not k in self.default_conf['ENGINE']
+        }
+      )
+      session = scoped_session(
+        sessionmaker(
+          bind=engine,
+          **{
+            k.lower(): v
+            for k, v in self.conf['SESSION'].items()
+            if not k in self.default_conf['SESSION']
+          }
+        )
+      )
+
+      task_postrun.connect(_remove_session)
+      request_tearing_down.connect(_remove_session)
+
+      self.logger.debug('session loaded')
+      self._session = session
+    return self._session
+
+  def run_after_module_imports(self, func):
+    """Hook to run a function right after all project modules are imported.
 
     :param func: the function to be called right before startup. It will be
       passed the project as single argument.
@@ -208,76 +319,31 @@ class Project(object):
     the project have been created.
     
     """
-    self._before_startup.append(func)
+    self._funcs.append(func)
 
-  def _make(self):
-    """Create all project components."""
-
-    # core
-    for mod in  ['flask', 'celery']:
-      __import__('flasker.core.%s' % mod)
-
-    # project modules
-    project_modules = self.config['PROJECT']['MODULES'].split(',') or []
-    for mod in project_modules:
-      __import__(mod.strip())
-
-    # database
-    self._setup_database_connection()
-
-    # final hook
-    for func in self._before_startup or []:
-      func(self)
-
-  def _setup_database_connection(self):
-    """Setup the database engine."""
-    engine_ops = dict((k.lower(), v) for k,v in self.config['ENGINE'].items())
-    engine_ops.pop('autocommit')
-    self.__class__._engine = create_engine(engine_ops.pop('url'), **engine_ops)
-    self.__class__.session = scoped_session(
-      sessionmaker(bind=self._engine, query_cls=self._query_class)
-    )
-
-  def _dismantle_database_connections(self):
+  def _remove_session(self):
     """Remove database connections."""
     try:
-      if self.config['ENGINE']['AUTOCOMMIT']:
+      if self.conf['SESSION']['SMARTCOMMIT']:
         self.session.commit()
+        self.logger.debug('session committed')
     except InvalidRequestError as e:
       self.session.rollback()
       self.session.expunge_all()
       raise e
     finally:
       self.session.remove()
+      self.logger.debug('session removed')
 
-  def _parse_config(self, config_path):
-    """Read the configuration file and return values as a dictionary.
+  def _reset(self):
+    """Reset current project."""
+    self.__class__.__state = {}
 
-    Raises ProjectImportError if no configuration file can be read at the
-    file path entered.
-
-    """
-    parser = SafeConfigParser()
-    parser.optionxform = str    # setting options to case-sensitive
-    try:
-      with open(config_path) as f:
-        parser.readfp(f)
-    except IOError as e:
-      raise ProjectImportError(
-        'Unable to parse configuration file at %s.' % config_path
-      )
-    conf = dict(
-      (s, dict((k, convert(v, allow_json=True)) for (k, v) in parser.items(s)))
-      for s in parser.sections()
-    )
-    if not conf['PROJECT']['NAME']:
-      raise ProjectImportError('Missing project name.')
-    return conf
-
-
-def _get_current_project():
-  return Project._current or Project()
 
 #: Proxy to the current project
-current_project = LocalProxy(_get_current_project)
+current_project = LocalProxy(Project)
+
+def _remove_session(*args, **kwargs):
+  """Globally namespaced function for signals to work."""
+  current_project._remove_session()
 

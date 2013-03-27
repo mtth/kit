@@ -33,38 +33,19 @@ class Test_Project(object):
       raise Exception('Missing configuration file')
 
   def teardown(self):
-    Project._current = None
-    Project.config_path = None
+    Project._Project__state = {}
 
   @staticmethod
-  def check_thread(creator, opj, strict):
+  def check_thread(creator, opj):
     pj = creator()
-    if strict:
-      eq_(pj, opj)
-    else:
-      eq_(pj.__dict__, opj.__dict__)
+    eq_(pj.__dict__, opj.__dict__)
     eq_(pj.flask, opj.flask)
     eq_(pj.celery, opj.celery)
     eq_(pj.session, opj.session)
 
-  def test_before_startup(self):
-    pj = Project(self.cp, False)
-    before_startup = []
-
-    @pj.before_startup
-    def before_startup_handler(project):
-      before_startup.append(1)
-
-    pj._make()
-    eq_(len(before_startup), 1)
-
   def test_config_path(self):
     pj = Project(self.cp)
-    eq_(self.cp, pj.config_path)
-
-  def test_registered(self):
-    pj = Project(self.cp)
-    eq_(pj, Project._current)
+    eq_(self.cp, pj.conf_path)
 
   @raises(ProjectImportError)
   def test_unique_project(self):
@@ -77,6 +58,9 @@ class Test_Project(object):
 
   def test_components(self):
     pj = Project(self.cp)
+    eq_(pj._flask, None)
+    eq_(pj._celery, None)
+    eq_(pj._session, None)
     eq_(type(pj.flask), Flask)
     eq_(type(pj.celery), Celery)
     eq_(type(pj.session), scoped_session)
@@ -88,25 +72,24 @@ class Test_Project(object):
 
   def test_proxy(self):
     pj = Project(self.cp)
-    eq_(current_project, pj)
+    eq_(current_project.__dict__, pj.__dict__)
 
   def test_threaded_project(self):
     pj = Project(self.cp)
-    th = Thread(target=self.check_thread, args=(lambda: Project(), pj, 0))
+    th = Thread(target=self.check_thread, args=(lambda: Project(), pj))
     th.start()
     th.join()
 
   def test_threaded_proxy(self):
     pj = Project(self.cp)
-    th = Thread(target=self.check_thread, args=(lambda: current_project, pj, 1))
+    th = Thread(target=self.check_thread, args=(lambda: current_project, pj))
     th.start()
     th.join()
 
   def test_app_server(self):
     pj = Project(self.cp)
     client = pj.flask.test_client()
-    json = loads(client.get('/').data)
-    eq_(json, {'message': 'Welcome!'})
+    eq_(client.get('/').data, 'Hello World!')
 
 
 # class Test_ConsoleTool(object):

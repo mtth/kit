@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='flasker',
-    version='0.1.41',
+    version='0.1.44',
     description='Flask, SQLAlchemy, and Celery integration',
     long_description=open('README.rst').read(),
     author='Matthieu Monsch',
@@ -13,7 +13,7 @@ setup(
     license='MIT',
     packages=find_packages(),
     classifiers=[
-      'Development Status :: 3 - Alpha',
+      'Development Status :: 4 - Beta',
       'Intended Audience :: Developers',
       'License :: OSI Approved :: MIT License',
       'Topic :: System :: Distributed Computing',
@@ -22,9 +22,7 @@ setup(
     install_requires=[
       'celery',
       'flask',
-      'flask-login',
       'sqlalchemy',
-      'redis',
       'flower'
     ],
     package_data={'flasker': [

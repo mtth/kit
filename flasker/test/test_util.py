@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from tempfile import NamedTemporaryFile
 from nose.tools import eq_, raises
 
 from flasker.util import *
@@ -53,7 +54,6 @@ def test_convert_manual():
 def check_convert(example, rtype, allow_json):
   eq_(convert(example[0], rtype=rtype, allow_json=allow_json), example[1])
 
-
 def test_partition_list():
   col = range(103)
   for i, (q, p) in enumerate(partition(col, size=5)):
@@ -64,13 +64,30 @@ def test_partition_list():
     else:
       eq_(len(q), 3)
 
-
 def test_prod():
   eq_(prod(range(1, 5)), 2 * 3 * 4)
 
-
 def test_uncamelcase():
   eq_(uncamelcase('CalvinAndHobbes'), 'calvin_and_hobbes')
+
+def test_parse_config():
+  f = NamedTemporaryFile()
+  f.write('[SECTION_A]\n'
+          'FIRST = 3\n'
+          'SECOND = hi')
+  f.seek(0)
+  eq_(parse_config(f), {'SECTION_A': {'first': 3, 'second': 'hi'}})
+  f.seek(0)
+  eq_(
+    parse_config(f, case_sensitive=True),
+    {'SECTION_A': {'FIRST': 3, 'SECOND': 'hi'}}
+  )
+  f.seek(0)
+  eq_(
+    parse_config(f, default={'SECTION_A': {'third': 0.0}, 'C': {'O': 2}}),
+    {'SECTION_A': {'first': 3, 'second': 'hi', 'third': 0.0}, 'C': {'O': 2}}
+  )
+  f.close()
 
 
 class Test_Dict(object):
@@ -128,6 +145,21 @@ class Test_Dict(object):
   def test_unflatten(self):
     for example in self.examples:
       eq_(Dict.unflatten(example['f']), example['u'])
+
+  def test_update(self):
+    a = {'a': 1, 'b': {'c': 0}}
+    b = {'a': 2, 'b': {'d': 1}}
+    c = Dict.update(a, b)
+    eq_(c, {'a': 2, 'b': {'c': 0, 'd': 1}})
+    eq_(a, c)
+    eq_(b, {'a': 2, 'b': {'d': 1}})
+
+  def test_update_with_copy(self):
+    a = {'a': 1, 'b': {'c': 0}}
+    b = {'a': 2, 'b': {'d': 1}}
+    c = Dict.update(a, b, copy=True)
+    eq_(a, {'a': 1, 'b': {'c': 0}})
+    eq_(b, {'a': 2, 'b': {'d': 1}})
   
 
 class Test_Cacheable(object):
@@ -176,7 +208,21 @@ class Test_Cacheable(object):
 
 
 def test_to_json():
-  # TODO
-  pass
 
+  class Foo(Jsonifiable):
+    def __init__(self, n, nested=0):
+      self.n = n
+      if nested > 0:
+        self.d = {str(n): Foo(n + 1, nested - 1)}
+        self.f = Foo(n + 1, nested - 1)
+        self.l = [Foo(n + 1, nested - 1)]
+        self._p = 33
+  foo = Foo(0, 2)
+  j = foo.to_json()
+  eq_(j, {'n': 0, 'd': {'0': {}}, 'f': {}, 'l': [{}]})
+  j['n'] = 1
+  j['d'] = {'1': {}}
+  eq_(foo.to_json(depth=2), {'n': 0, 'd': {'0': j}, 'f': j, 'l': [j]})
+  Foo.__json__ = ['n']
+  eq_(foo.to_json(depth=2), {'n': 0})
 

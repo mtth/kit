@@ -6,15 +6,14 @@ Celery_.
 
 - What Flasker is!
   
-    - A one stop ``.cfg`` configuration file for Flask, Celery and the
-      SQLAlchemy engine.
+    - A one stop ``.cfg`` configuration file for Flask, Celery and SQLAlchemy.
     
     - A simple pattern to organize your project via the
       ``flasker.current_project`` proxy (cf. `Quickstart`_).
 
-    - A command line tool from where you can create new projects, launch the
-      Flask buit in Werkzeug_ server, start Celery workers and the Flower_
-      tool, and run a shell in the current project context.
+    - A command line tool from where you can launch the Flask buit in Werkzeug_
+      server, start Celery workers and the Flower_ tool, and run a shell in the
+      current project context.
 
 - What Flasker isn't?
 
@@ -45,28 +44,35 @@ Quickstart
 ----------
 
 This short guide will show you how to get an application combining Flask,
-Celery and SQLAlchemy running in seconds (the code is available on GitHub in
+Celery and SQLAlchemy running in moments (the code is available on GitHub in
 ``examples/basic/``).
 
-We start from an empty directory ``project/`` and inside we create a basic
-configuration file ``project.cfg``:
+The basic folder hierarchy for a Flasker project looks something like this:
+
+.. code:: bash
+
+  project/
+    conf.cfg    # configuration
+    app.py      # code
+
+Where ``conf.cfg`` is:
 
 .. code:: cfg
 
   [PROJECT]
-  NAME = My Flasker Project
   MODULES = app
 
-The ``MODULES`` option contains the list of python modules which will be
-included in the project. Inside each of these modules you can use the
+The ``MODULES`` option contains the list of python modules which belong
+to the project. Inside each of these modules we can use the
 ``flasker.current_project`` proxy to get access to the current project
 instance (which gives access to the configured Flask application, the Celery
-application and the SQLAlchemy database session registry). For now we only
-add a single module ``app``:
+application and the SQLAlchemy database session registry). This is the
+only option required in a Flasker project configuration file.
+
+Here is a sample ``app.py``:
 
 .. code:: python
 
-   from flask import jsonify
    from flasker import current_project
 
    flask_app = current_project.flask    # Flask app
@@ -77,10 +83,10 @@ add a single module ``app``:
 
    @flask_app.route('/')
    def index():
-    return jsonify({'message': 'Welcome!'})
+    return 'Hello World!'
 
-Finally, we save this file to ``project/app.py`` and we're all set! To start
-the server, we run (from the command line in the ``project/`` directory):
+Once these two files are in place, we can already start the server! We 
+simply run (from the command line in the ``project/`` directory):
 
 .. code:: bash
 
@@ -94,31 +100,34 @@ results):
 .. code:: python
 
    In [1]: import requests
-   In [2]: requests.get('http://localhost:5000/').json()
-   Out[2]: {u'message': u'Welcome!'}
+   In [2]: print requests.get('http://localhost:5000/').text
+   Hello World!
 
-Right now, the Flask app is running using the default configuration. We can
-change this by adding configuration options to the ``project.cfg`` file. For
-example, we will enable testing and debugging for easier bug tracking. At the
-same time, we tell our project to store the database on disk (instead of the
-default in memory SQLite store used by Flasker). Our configuration file now
-looks like this:
+
+Configuring your project
+------------------------
+
+In the previous example, the project was using the default configuration,
+this can easily be changed by adding options to the ``conf.cfg`` file. 
+Here is an example of a customized configuration file:
 
 .. code:: cfg
 
   [PROJECT]
-  NAME = My Flasker Project
   MODULES = app
   [ENGINE]
-  URL = sqlite:///db.sqlite
+  URL = sqlite:///db.sqlite   # the engine to bind the session on
   [FLASK]
-  DEBUG = true
+  DEBUG = true                # generic Flask options
   TESTING = true
 
-Likewise, we could configure celery by adding options to a section ``CELERY``.
-Any valid Flask, Celery or engine configuration option can go in their
-respective section. There are also a few other options available which are
-detailed in the project documentation.
+For an exhaustive list of all the options available, please refer to the
+documentation on GitHub Pages.
+
+Finally, of course, all your code doesn't have to be in a single file. You can
+specify a list of modules to import in the ``MODULES`` option, which will all
+be imported on project startup. For an example of a more complex application,
+you can check out the code in ``examples/flisker``.
 
 
 Next steps

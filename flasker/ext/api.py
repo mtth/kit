@@ -122,8 +122,8 @@ class API(object):
       parser=Parser(**parser_options)
     )
 
-    @project.before_startup
-    def handler(project):
+    @project.run_after_module_imports
+    def api_after_imports(project):
 
       if index_view:
 
@@ -138,6 +138,9 @@ class API(object):
           })
 
       project.flask.register_blueprint(blueprint)
+      project.logger.debug('api blueprint registered')
+
+    project.logger.debug('api extension initialized')
 
 
 class _ApiViewMeta(_ViewMeta):

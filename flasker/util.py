@@ -2,7 +2,9 @@
 
 """General helpers."""
 
-from collections import defaultdict, namedtuple
+from collections import defaultdict, Mapping, namedtuple
+from ConfigParser import SafeConfigParser
+from copy import deepcopy
 from csv import DictReader
 from datetime import datetime
 from decimal import Decimal
@@ -185,7 +187,7 @@ def uncamelcase(name):
   return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-class Dict(dict):
+class Dict(object):
 
   """Expands the dictionary class with a few helper methods.
 
@@ -220,7 +222,7 @@ class Dict(dict):
     
     """
     values = [
-        cls(value)
+        value
         for value in dct.itervalues()
         if isinstance(value, dict)
     ]
@@ -285,6 +287,26 @@ class Dict(dict):
       else:
         d[key[-1]] = dct[sep.join(key)]
     return result
+
+  @classmethod
+  def update(cls, a, b, copy=False):
+    """Update for nested dictionaries.
+
+    :param copy: whether or not to do a deepcopy of each dictionary before
+      updating.
+    :type copy: bool
+    :rtype: dict
+
+    """
+    if copy:
+      a = deepcopy(a)
+      b = deepcopy(b)
+    for k, v in b.iteritems():
+      if isinstance(v, Mapping):
+        a[k] = cls.update(a.get(k, {}), v)
+      else:
+        a[k] = b[k]
+    return a
 
   @classmethod
   def table(cls, mode='horizontal', left_columns=None):
@@ -406,6 +428,42 @@ class SmartDictReader(DictReader):
       self.rows_imported += 1
       return processed_row
 
+
+def parse_config(file_or_filepath, default=None, allow_json=False,
+  case_sensitive=False, parser_type=SafeConfigParser):
+  """Returns a dictionary of values from a configuration file.
+
+  :param file_or_filepath: file or filepath to configuration file
+  :type file_or_filepath: str or file
+  :param default: dictionary of default values to use
+  :type default: dict
+  :param allow_json: allow loading of json options
+  :type allow_json: bool
+  :param case_sensitive: keep option names' case
+  :type case_sensitive: bool
+  :param parser_type: base parser type to use for parsing the file
+  :type parser_type: ConfigParser.RawConfigParser
+  :rtype: dict
+
+  """
+  parser = parser_type()
+  if case_sensitive:
+    parser.optionxform = str
+  if isinstance(file_or_filepath, str):
+    with open(file_or_filepath) as f:
+      parser.readfp(f)
+  else:
+    parser.readfp(file_or_filepath)
+  conf = {
+    s: {
+      k: convert(v, allow_json=allow_json)
+      for (k, v) in parser.items(s)
+    }
+    for s in parser.sections()
+  }
+  if default:
+    conf = Dict.update(default, conf, copy=True)
+  return conf
 
 # ===
 # 
@@ -561,7 +619,7 @@ class _CachedProperty(property):
 
 # Jsonifying
 
-def to_json(value, depth=0):
+def to_json(value, depth=1):
   if hasattr(value, 'to_json'):
     return value.to_json(depth - 1)
   if isinstance(value, dict):
@@ -611,11 +669,11 @@ class Jsonifiable(object):
 
     """
     rv = {}
-    if depth == 0:
+    if depth < 1:
       return rv
     for varname in self.__json__:
       try:
-        rv[varname] = to_json(getattr(self, varname), depth - 1)
+        rv[varname] = to_json(getattr(self, varname), depth)
       except ValueError as e:
         rv[varname] = e.message
     return rv
