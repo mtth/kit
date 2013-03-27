@@ -35,7 +35,6 @@ For convenience, both these variables are also available directly in the
 
 from __future__ import absolute_import
 
-from collections import defaultdict
 from logging import getLogger, NullHandler, StreamHandler, DEBUG
 from os.path import abspath, dirname, join, sep, split, splitext
 from sys import path

@@ -6,15 +6,14 @@ Celery_.
 
 - What Flasker is!
   
-    - A one stop ``.cfg`` configuration file for Flask, Celery and the
-      SQLAlchemy engine.
+    - A one stop ``.cfg`` configuration file for Flask, Celery and SQLAlchemy.
     
     - A simple pattern to organize your project via the
       ``flasker.current_project`` proxy (cf. `Quickstart`_).
 
-    - A command line tool from where you can create new projects, launch the
-      Flask buit in Werkzeug_ server, start Celery workers and the Flower_
-      tool, and run a shell in the current project context.
+    - A command line tool from where you can launch the Flask buit in Werkzeug_
+      server, start Celery workers and the Flower_ tool, and run a shell in the
+      current project context.
 
 - What Flasker isn't?
 
@@ -41,28 +40,51 @@ Using ``easy_install``:
    $ easy_install flasker
 
 
+Overview
+--------
+
+The typical folder hierarchy for a Flasker project looks something like this:
+
+.. code:: bash
+
+  project/
+    conf.cfg
+    app/
+      models.py
+      tasks.py
+      views.py
+      static/
+      templates/
+    db/
+      db.sqlite
+
+Where ``conf.cfg`` contains:
+
+.. code:: cfg
+
+  [PROJECT]
+  MODULES = app.models, app.tasks, app.views
+  [ENGINE]
+  URL = sqlite:///db/db.sqlite
+
+In this basic example there are only two options specified:
+
+* ``MODULES`` contains the list of python modules which belong
+  to the project. Inside each of these modules you can use the
+  ``flasker.current_project`` proxy to get access to the current project
+  instance (which gives access to the configured Flask application, the Celery
+  application and the SQLAlchemy database session registry).
+
+* ``URL`` tells SQLAlchemy which engine to bind the session on. By
+  default Flasker will tell SQLAlchemy to use the in-memory SQLite store.
+
+
 Quickstart
 ----------
 
 This short guide will show you how to get an application combining Flask,
 Celery and SQLAlchemy running in seconds (the code is available on GitHub in
 ``examples/basic/``).
-
-We start from an empty directory ``project/`` and inside we create a basic
-configuration file ``project.cfg``:
-
-.. code:: cfg
-
-  [PROJECT]
-  NAME = My Flasker Project
-  MODULES = app
-
-The ``MODULES`` option contains the list of python modules which will be
-included in the project. Inside each of these modules you can use the
-``flasker.current_project`` proxy to get access to the current project
-instance (which gives access to the configured Flask application, the Celery
-application and the SQLAlchemy database session registry). For now we only
-add a single module ``app``:
 
 .. code:: python
 
