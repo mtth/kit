@@ -37,10 +37,6 @@ from __future__ import absolute_import
 
 from collections import defaultdict
 from os.path import abspath, dirname, join, sep, split, splitext
-from re import match, sub
-from sqlalchemy import create_engine  
-from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import scoped_session, sessionmaker
 from sys import path
 from werkzeug.local import LocalProxy
 
@@ -205,10 +201,6 @@ class Project(object):
         if not k in self.default_conf['FLASK']
       })
 
-      @flask_app.teardown_request
-      def teardown_request_handler(exception=None):
-        self._remove_session()
-
       self._flask = flask_app
     return self._flask
 
@@ -222,7 +214,6 @@ class Project(object):
     if self._celery is None and not self.conf['PROJECT']['DISABLE_CELERY']:
 
       from celery import Celery
-      from celery.signals import task_postrun, worker_process_init
       from celery.task import periodic_task
 
       celery_app = Celery(self.conf['CELERY']['MAIN'])
@@ -242,10 +233,6 @@ class Project(object):
       # def create_worker_connection(*args, **kwargs):
       #   self._create_session()
 
-      @task_postrun.connect
-      def task_postrun_handler(*args, **kwargs):
-        self._remove_session()
-
       self._celery = celery_app
     return self._celery
 
@@ -257,6 +244,14 @@ class Project(object):
 
     """
     if self._session is None:
+
+      from celery.signals import task_postrun
+      from flask.signals import request_tearing_down
+
+      from sqlalchemy import create_engine  
+      from sqlalchemy.exc import InvalidRequestError
+      from sqlalchemy.orm import scoped_session, sessionmaker
+
       engine = create_engine(
         self.conf['ENGINE']['URL'],
         **{
@@ -275,6 +270,9 @@ class Project(object):
           }
         )
       )
+
+      task_postrun.connect(_remove_session)
+      request_tearing_down.connect(_remove_session)
 
       self._session = session
     return self._session
@@ -311,4 +309,8 @@ class Project(object):
 
 #: Proxy to the current project
 current_project = LocalProxy(Project)
+
+def _remove_session(*args, **kwargs):
+  """Globally namespaced function for signals to work."""
+  current_project._remove_session()
 

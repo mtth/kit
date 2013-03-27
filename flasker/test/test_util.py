@@ -89,6 +89,7 @@ def test_parse_config():
   )
   f.close()
 
+
 class Test_Dict(object):
 
   def setup(self):
@@ -207,7 +208,21 @@ class Test_Cacheable(object):
 
 
 def test_to_json():
-  # TODO
-  pass
 
+  class Foo(Jsonifiable):
+    def __init__(self, n, nested=0):
+      self.n = n
+      if nested > 0:
+        self.d = {str(n): Foo(n + 1, nested - 1)}
+        self.f = Foo(n + 1, nested - 1)
+        self.l = [Foo(n + 1, nested - 1)]
+        self._p = 33
+  foo = Foo(0, 2)
+  j = foo.to_json()
+  eq_(j, {'n': 0, 'd': {'0': {}}, 'f': {}, 'l': [{}]})
+  j['n'] = 1
+  j['d'] = {'1': {}}
+  eq_(foo.to_json(depth=2), {'n': 0, 'd': {'0': j}, 'f': j, 'l': [j]})
+  Foo.__json__ = ['n']
+  eq_(foo.to_json(depth=2), {'n': 0})
 

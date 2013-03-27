@@ -36,12 +36,9 @@ class Test_Project(object):
     Project._Project__state = {}
 
   @staticmethod
-  def check_thread(creator, opj, strict):
+  def check_thread(creator, opj):
     pj = creator()
-    if strict:
-      eq_(pj, opj)
-    else:
-      eq_(pj.__dict__, opj.__dict__)
+    eq_(pj.__dict__, opj.__dict__)
     eq_(pj.flask, opj.flask)
     eq_(pj.celery, opj.celery)
     eq_(pj.session, opj.session)
@@ -61,6 +58,9 @@ class Test_Project(object):
 
   def test_components(self):
     pj = Project(self.cp)
+    eq_(pj._flask, None)
+    eq_(pj._celery, None)
+    eq_(pj._session, None)
     eq_(type(pj.flask), Flask)
     eq_(type(pj.celery), Celery)
     eq_(type(pj.session), scoped_session)
@@ -76,13 +76,13 @@ class Test_Project(object):
 
   def test_threaded_project(self):
     pj = Project(self.cp)
-    th = Thread(target=self.check_thread, args=(lambda: Project(), pj, 0))
+    th = Thread(target=self.check_thread, args=(lambda: Project(), pj))
     th.start()
     th.join()
 
   def test_threaded_proxy(self):
     pj = Project(self.cp)
-    th = Thread(target=self.check_thread, args=(lambda: current_project, pj, 0))
+    th = Thread(target=self.check_thread, args=(lambda: current_project, pj))
     th.start()
     th.join()
 

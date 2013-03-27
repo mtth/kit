@@ -17,7 +17,7 @@ from code import interact
 from functools import wraps
 from os import listdir
 from os.path import splitext
-from re import findall
+from re import findall, match, sub
 
 from flasker import current_project as pj
 from flasker.project import Project, ProjectImportError
@@ -147,6 +147,9 @@ shell_parser.set_defaults(handler=shell_handler)
 
 worker_parser = subparsers.add_parser('worker', help='start worker')
 
+worker_parser.add_argument('domain',
+  help='worker domain name'
+)
 worker_parser.add_argument('-o', '--only-direct',
   action='store_true',
   help='only listen to direct queue'
@@ -183,10 +186,9 @@ def worker_handler(parsed_args):
   * w2.default.my_project
 
   """
-  domain = sub(r'\W+', '_', pj.conf['PROJECT']['NAME'].lower())
-  subdomain = splitext(pj.conf_path)[0].replace(sep, '-')
+  domain = parsed_args.domain
   pj_worker_names = [d.keys()[0] for d in pj.celery.control.ping()]
-  worker_pattern = r'w(\d+)\.%s.%s' % (subdomain, domain)
+  worker_pattern = r'w(\d+)\.%s' % (domain, )
   worker_numbers = [
     findall(worker_pattern, worker_name) or ['0']
     for worker_name in pj_worker_names
@@ -198,7 +200,7 @@ def worker_handler(parsed_args):
   if parsed_args.verbose_help:
     pj.celery.worker_main(['worker', '-h'])
   else:
-    hostname = 'w%s.%s.%s' % (wkn, subdomain, domain)
+    hostname = 'w%s.%s' % (wkn, domain)
     options = ['worker', '--hostname=%s' % hostname]
     if parsed_args.only_direct:
       options.append('--queues=%s.dq' % hostname)
