@@ -442,7 +442,7 @@ def parse_config(filepath, default=None, allow_json=False,
   :param case_sensitive: keep option names' case
   :type case_sensitive: bool
   :param parser_type: base parser type to use for parsing the file
-  :type parser_type: ConfigParser.RawConfiParser
+  :type parser_type: ConfigParser.RawConfigParser
   :rtype: dict
 
   """

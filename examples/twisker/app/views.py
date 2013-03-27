@@ -13,7 +13,7 @@ app = pj.flask
 
 client = Api()
 
-@pj.before_startup
+@pj.run_after_module_imports
 def preproc(project):
   project.r = t.request
 

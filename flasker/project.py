@@ -35,6 +35,7 @@ For convenience, both these variables are also available directly in the
 
 from __future__ import absolute_import
 
+from collections import defaultdict
 from os.path import abspath, dirname, join, sep, split, splitext
 from re import match, sub
 from sqlalchemy import create_engine  
@@ -58,12 +59,8 @@ class Project(object):
   :param conf_path: path to the configuration file. The following sections
     are special: ``PROJECT``, ``ENGINE``, ``FLASK``, ``CELERY``. All but 
     ``PROJECT`` are optional. See below for a list of available options in each
-    section.  :type conf_path: str
-  :param make: whether or not to create all the project components. This should
-    always be true, except in some cases where it is useful to check
-    consistency of the configuration before doing so. ``_make`` should then be
-    called manually after these checks are done.
-  :type make: bool
+    section.
+  :type conf_path: str
 
   The following options are available each section of the configuration file
   (as a convenience, parameters stored as JSON strings are also accepted,
@@ -71,18 +68,22 @@ class Project(object):
 
   * ``PROJECT``
 
-    * ``NAME``: the name of the project, used for debugging and to generate a
-      default domain name for the Celery workers.
     * ``MODULES``: comma separated list of the project's modules. They must be
       importable from the configuration file's folder.
+    * ``DISABLE_FLASK``
+    * ``DISABLE_CELERY``
 
   * ``ENGINE``
 
     * ``URL``: the url to the database
-    * ``AUTOCOMMIT``: if ``True`` (default), all database transactions
+    * any valid arguments to ``sqlalchemy.create_engine``
+
+  * ``SESSION``
+
+    * ``SMARTCOMMIT``: if ``True`` (default), all database transactions
       will be committed after each Flask app request and Celery task
       completion. If ``False`` the session will simply be removed.
-    * any valid arguments to ``sqlalchemy.create_engine``
+    * any valid arguments to ``sqlalchemy.orm.session_maker``
 
   * ``FLASK``
 
@@ -96,10 +97,7 @@ class Project(object):
 
   * ``CELERY``
 
-    * ``DOMAIN``: if specified, used to generate Celery worker hostnames
-      (defaults to the project name, sluggified).
-    * ``SUBDOMAIN``: if specified, used to generate Celery worker hostnames 
-      (defaults to the configuration file's name).
+    * ``MAIN`` 
     * any valid Celery configuration option
   
   """
@@ -136,6 +134,7 @@ class Project(object):
 
   _flask = None
   _celery = None
+  _session = None
 
   __state = {}
 
@@ -167,33 +166,12 @@ class Project(object):
         self.conf_path = abspath(conf_path)
 
         # load all project modules
-        self._before_startup = []
+        self._funcs = []
         path.append(dirname(self.conf_path))
         project_modules = self.conf['PROJECT']['MODULES'].split(',')
         for mod in project_modules:
           __import__(mod.strip())
-
-        # create database engine and scoped session
-        self._engine = create_engine(
-          self.conf['ENGINE']['URL'],
-          **{
-            k.lower(): v 
-            for k, v in self.conf['ENGINE'].items()
-            if not k in self.default_conf['ENGINE']
-          }
-        )
-        self.session = scoped_session(
-          sessionmaker(
-            bind=self._engine,
-            **{
-              k.lower(): v
-              for k, v in self.conf['SESSION'].items()
-              if not k in self.default_conf['SESSION']
-            }
-          )
-        )
-
-        for func in self._before_startup:
+        for func in self._funcs:
           func(self)
 
   def __repr__(self):
@@ -201,6 +179,11 @@ class Project(object):
 
   @property
   def flask(self):
+    """Flask application.
+
+    Lazily initialized.
+
+    """
     if self._flask is None and not self.conf['PROJECT']['DISABLE_FLASK']:
 
       from flask import Flask
@@ -224,13 +207,18 @@ class Project(object):
 
       @flask_app.teardown_request
       def teardown_request_handler(exception=None):
-        self._dismantle_database_connections()
+        self._remove_session()
 
       self._flask = flask_app
     return self._flask
 
   @property
   def celery(self):
+    """Celery application.
+
+    Lazily initialized.
+
+    """
     if self._celery is None and not self.conf['PROJECT']['DISABLE_CELERY']:
 
       from celery import Celery
@@ -248,25 +236,51 @@ class Project(object):
       # proxy for easy access
       celery_app.periodic_task = periodic_task
 
-      @worker_process_init.connect
-      def create_worker_connection(*args, **kwargs):
-        """Initialize database connection.
-
-        This has to be done after the worker processes have been started otherwise
-        the connection will fail.
-
-        """
-        self._setup_database_connection()
+      # maybe not required with lazy session initialization
+      # TODO: check this
+      # @worker_process_init.connect
+      # def create_worker_connection(*args, **kwargs):
+      #   self._create_session()
 
       @task_postrun.connect
       def task_postrun_handler(*args, **kwargs):
-        self._dismantle_database_connections()
+        self._remove_session()
 
       self._celery = celery_app
     return self._celery
 
-  def before_startup(self, func):
-    """Hook to run a function right before project starts.
+  @property
+  def session(self):
+    """SQLAlchemy scoped sessionmaker.
+
+    Lazily initialized.
+
+    """
+    if self._session is None:
+      engine = create_engine(
+        self.conf['ENGINE']['URL'],
+        **{
+          k.lower(): v 
+          for k, v in self.conf['ENGINE'].items()
+          if not k in self.default_conf['ENGINE']
+        }
+      )
+      session = scoped_session(
+        sessionmaker(
+          bind=engine,
+          **{
+            k.lower(): v
+            for k, v in self.conf['SESSION'].items()
+            if not k in self.default_conf['SESSION']
+          }
+        )
+      )
+
+      self._session = session
+    return self._session
+
+  def run_after_module_imports(self, func):
+    """Hook to run a function right after all project modules are imported.
 
     :param func: the function to be called right before startup. It will be
       passed the project as single argument.
@@ -276,9 +290,9 @@ class Project(object):
     the project have been created.
     
     """
-    self._before_startup.append(func)
+    self._funcs.append(func)
 
-  def _dismantle_database_connections(self):
+  def _remove_session(self):
     """Remove database connections."""
     try:
       if self.conf['SESSION']['SMARTCOMMIT']:

@@ -122,7 +122,7 @@ class API(object):
       parser=Parser(**parser_options)
     )
 
-    @project.before_startup
+    @project.run_after_module_imports
     def handler(project):
 
       if index_view:

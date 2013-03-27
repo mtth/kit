@@ -125,12 +125,15 @@ class ORM(object):
     self.backref = partial(_backref, query_class=Query)
     self.relationship = partial(_relationship, query_class=Query)
 
-    @project.before_startup
+    @project.run_after_module_imports
     def handler(project):
       self.Model.q = _QueryProperty(project)
       self.Model.c = _CountProperty(project)
       if create_all:
-        self.Model.metadata.create_all(project._engine, checkfirst=True)
+        self.Model.metadata.create_all(
+          project.session.get_bind(),
+          checkfirst=True
+        )
 
 
 class Query(_Query):
@@ -260,10 +263,6 @@ class _CountProperty(object):
       mapper = class_mapper(cls)
       if mapper:
         session = self.project.session()
-        # the following doesn't work on sqlite
-        #return Query(func.count(cls), session=session).select_from(cls)
-        # following doesn't work for composite primary keys...
-        # return Query(func.count(*mapper.primary_key), session=session)
         return Query(func.count(), session=session).select_from(cls)
     except UnmappedClassError:
       return None
