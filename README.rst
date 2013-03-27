@@ -100,8 +100,8 @@ results):
 .. code:: python
 
    In [1]: import requests
-   In [2]: requests.get('http://localhost:5000/')
-   Out[2]: Hello World!
+   In [2]: print requests.get('http://localhost:5000/').text
+   Hello World!
 
 
 Configuring your project

@@ -89,8 +89,7 @@ class Test_Project(object):
   def test_app_server(self):
     pj = Project(self.cp)
     client = pj.flask.test_client()
-    json = loads(client.get('/').data)
-    eq_(json, {'message': 'Welcome!'})
+    eq_(client.get('/').data, 'Hello World!')
 
 
 # class Test_ConsoleTool(object):
