@@ -55,13 +55,12 @@
 <li><p class="first">What Flasker is!</p>
 <blockquote>
 <div><ul class="simple">
-<li>A one stop <tt class="docutils literal"><span class="pre">.cfg</span></tt> configuration file for Flask, Celery and the
-SQLAlchemy engine.</li>
+<li>A one stop <tt class="docutils literal"><span class="pre">.cfg</span></tt> configuration file for Flask, Celery and SQLAlchemy.</li>
 <li>A simple pattern to organize your project via the
 <tt class="docutils literal"><span class="pre">flasker.current_project</span></tt> proxy (cf. <a class="reference internal" href="#quickstart">Quickstart</a>).</li>
-<li>A command line tool from where you can create new projects, launch the
-Flask buit in <a class="reference external" href="http://werkzeug.pocoo.org/">Werkzeug</a> server, start Celery workers and the <a class="reference external" href="https://github.com/mher/flower">Flower</a>
-tool, and run a shell in the current project context.</li>
+<li>A command line tool from where you can launch the Flask buit in <a class="reference external" href="http://werkzeug.pocoo.org/">Werkzeug</a>
+server, start Celery workers and the <a class="reference external" href="https://github.com/mher/flower">Flower</a> tool, and run a shell in the
+current project context.</li>
 </ul>
 </div></blockquote>
 </li>
@@ -88,22 +87,26 @@ read the documentation on <a class="reference external" href="http://mtth.github
 <div class="section" id="quickstart">
 <h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
 <p>This short guide will show you how to get an application combining Flask,
-Celery and SQLAlchemy running in seconds (the code is available on GitHub in
+Celery and SQLAlchemy running in moments (the code is available on GitHub in
 <tt class="docutils literal"><span class="pre">examples/basic/</span></tt>).</p>
-<p>We start from an empty directory <tt class="docutils literal"><span class="pre">project/</span></tt> and inside we create a basic
-configuration file <tt class="docutils literal"><span class="pre">project.cfg</span></tt>:</p>
-<div class="code cfg highlight-python"><pre>[PROJECT]
-NAME = My Flasker Project
-MODULES = app</pre>
+<p>The basic folder hierarchy for a Flasker project looks something like this:</p>
+<div class="code bash highlight-python"><pre>project/
+  conf.cfg    # configuration
+  app.py      # code</pre>
 </div>
-<p>The <tt class="docutils literal"><span class="pre">MODULES</span></tt> option contains the list of python modules which will be
-included in the project. Inside each of these modules you can use the
+<p>Where <tt class="docutils literal"><span class="pre">conf.cfg</span></tt> is:</p>
+<div class="code cfg highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">PROJECT</span><span class="p">]</span>
+<span class="n">MODULES</span> <span class="o">=</span> <span class="n">app</span>
+</pre></div>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">MODULES</span></tt> option contains the list of python modules which belong
+to the project. Inside each of these modules we can use the
 <tt class="docutils literal"><span class="pre">flasker.current_project</span></tt> proxy to get access to the current project
 instance (which gives access to the configured Flask application, the Celery
-application and the SQLAlchemy database session registry). For now we only
-add a single module <tt class="docutils literal"><span class="pre">app</span></tt>:</p>
-<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">jsonify</span>
-<span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">current_project</span>
+application and the SQLAlchemy database session registry). This is the
+only option required in a Flasker project configuration file.</p>
+<p>Here is a sample <tt class="docutils literal"><span class="pre">app.py</span></tt>:</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">current_project</span>
 
 <span class="n">flask_app</span> <span class="o">=</span> <span class="n">current_project</span><span class="o">.</span><span class="n">flask</span>    <span class="c"># Flask app</span>
 <span class="n">celery_app</span> <span class="o">=</span> <span class="n">current_project</span><span class="o">.</span><span class="n">celery</span>  <span class="c"># Celery app</span>
@@ -113,11 +116,11 @@ add a single module <tt class="docutils literal"><span class="pre">app</span></t
 
 <span class="nd">@flask_app.route</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
- <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s">&#39;message&#39;</span><span class="p">:</span> <span class="s">&#39;Welcome!&#39;</span><span class="p">})</span>
+ <span class="k">return</span> <span class="s">&#39;Hello World!&#39;</span>
 </pre></div>
 </div>
-<p>Finally, we save this file to <tt class="docutils literal"><span class="pre">project/app.py</span></tt> and we&#8217;re all set! To start
-the server, we run (from the command line in the <tt class="docutils literal"><span class="pre">project/</span></tt> directory):</p>
+<p>Once these two files are in place, we can already start the server! We
+simply run (from the command line in the <tt class="docutils literal"><span class="pre">project/</span></tt> directory):</p>
 <div class="code bash highlight-python"><pre>$ flasker server
 * Running on http://0.0.0.0:5000/</pre>
 </div>
@@ -125,28 +128,29 @@ the server, we run (from the command line in the <tt class="docutils literal"><s
 navigate to the same URL in the browser, we would get similarly exciting
 results):</p>
 <div class="code python highlight-python"><pre>In [1]: import requests
-In [2]: requests.get('http://localhost:5000/').json()
-Out[2]: {u'message': u'Welcome!'}</pre>
+In [2]: print requests.get('http://localhost:5000/').text
+Hello World!</pre>
 </div>
-<p>Right now, the Flask app is running using the default configuration. We can
-change this by adding configuration options to the <tt class="docutils literal"><span class="pre">project.cfg</span></tt> file. For
-example, we will enable testing and debugging for easier bug tracking. At the
-same time, we tell our project to store the database on disk (instead of the
-default in memory SQLite store used by Flasker). Our configuration file now
-looks like this:</p>
+</div>
+<div class="section" id="configuring-your-project">
+<h2>Configuring your project<a class="headerlink" href="#configuring-your-project" title="Permalink to this headline">¶</a></h2>
+<p>In the previous example, the project was using the default configuration,
+this can easily be changed by adding options to the <tt class="docutils literal"><span class="pre">conf.cfg</span></tt> file.
+Here is an example of a customized configuration file:</p>
 <div class="code cfg highlight-python"><pre>[PROJECT]
-NAME = My Flasker Project
 MODULES = app
 [ENGINE]
-URL = sqlite:///db.sqlite
+URL = sqlite:///db.sqlite   # the engine to bind the session on
 [FLASK]
-DEBUG = true
+DEBUG = true                # generic Flask options
 TESTING = true</pre>
 </div>
-<p>Likewise, we could configure celery by adding options to a section <tt class="docutils literal"><span class="pre">CELERY</span></tt>.
-Any valid Flask, Celery or engine configuration option can go in their
-respective section. There are also a few other options available which are
-detailed in the project documentation.</p>
+<p>For an exhaustive list of all the options available, please refer to the
+documentation on GitHub Pages.</p>
+<p>Finally, of course, all your code doesn&#8217;t have to be in a single file. You can
+specify a list of modules to import in the <tt class="docutils literal"><span class="pre">MODULES</span></tt> option, which will all
+be imported on project startup. For an example of a more complex application,
+you can check out the code in <tt class="docutils literal"><span class="pre">examples/flisker</span></tt>.</p>
 </div>
 <div class="section" id="next-steps">
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>

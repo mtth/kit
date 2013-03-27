@@ -257,6 +257,23 @@ This is resolved creating a new key <tt class="docutils literal"><span class="pr
 </dd></dl>
 
 <dl class="classmethod">
+<dt id="flasker.util.Dict.update">
+<em class="property">classmethod </em><tt class="descname">update</tt><big>(</big><em>a</em>, <em>b</em>, <em>copy=False</em><big>)</big><a class="headerlink" href="#flasker.util.Dict.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update for nested dictionaries.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>copy</strong> (<em>bool</em>) &#8211; whether or not to do a deepcopy of each dictionary before
+updating.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
 <dt id="flasker.util.Dict.table">
 <em class="property">classmethod </em><tt class="descname">table</tt><big>(</big><em>mode='horizontal'</em>, <em>left_columns=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.table" title="Permalink to this definition">¶</a></dt>
 <dd><p>To create nested HTML table headers.</p>
@@ -301,6 +318,30 @@ as second argument to the <tt class="docutils literal"><span class="pre">convert
 <li><tt class="docutils literal"><span class="pre">errors</span></tt>, a list of tuples <tt class="docutils literal"><span class="pre">(e,</span> <span class="pre">row)</span></tt> where <tt class="docutils literal"><span class="pre">e</span></tt> is error and <tt class="docutils literal"><span class="pre">row</span></tt>
 the full row for each error raised</li>
 </ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.parse_config">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">parse_config</tt><big>(</big><em>file_or_filepath</em>, <em>default=None</em>, <em>allow_json=False</em>, <em>case_sensitive=False</em>, <em>parser_type=&lt;class ConfigParser.SafeConfigParser at 0x101467e88&gt;</em><big>)</big><a class="headerlink" href="#flasker.util.parse_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dictionary of values from a configuration file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file_or_filepath</strong> (<em>str or file</em>) &#8211; file or filepath to configuration file</li>
+<li><strong>default</strong> (<em>dict</em>) &#8211; dictionary of default values to use</li>
+<li><strong>allow_json</strong> (<em>bool</em>) &#8211; allow loading of json options</li>
+<li><strong>case_sensitive</strong> (<em>bool</em>) &#8211; keep option names&#8217; case</li>
+<li><strong>parser_type</strong> (<em>ConfigParser.RawConfigParser</em>) &#8211; base parser type to use for parsing the file</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="class">

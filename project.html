@@ -161,23 +161,16 @@ notebook or to use a separate WSGI server).</p>
 </div>
 <dl class="class">
 <dt id="flasker.project.Project">
-<em class="property">class </em><tt class="descclassname">flasker.project.</tt><tt class="descname">Project</tt><big>(</big><em>config_path=None</em>, <em>make=True</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">flasker.project.</tt><tt class="descname">Project</tt><big>(</big><em>conf_path=None</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project" title="Permalink to this definition">¶</a></dt>
 <dd><p>Project class.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>config_path</strong> &#8211; path to the configuration file. The following sections
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>conf_path</strong> (<em>str</em>) &#8211; path to the configuration file. The following sections
 are special: <tt class="docutils literal"><span class="pre">PROJECT</span></tt>, <tt class="docutils literal"><span class="pre">ENGINE</span></tt>, <tt class="docutils literal"><span class="pre">FLASK</span></tt>, <tt class="docutils literal"><span class="pre">CELERY</span></tt>. All but 
 <tt class="docutils literal"><span class="pre">PROJECT</span></tt> are optional. See below for a list of available options in each
-section.  :type config_path: str</li>
-<li><strong>make</strong> (<em>bool</em>) &#8211; whether or not to create all the project components. This should
-always be true, except in some cases where it is useful to check
-consistency of the configuration before doing so. <tt class="docutils literal"><span class="pre">_make</span></tt> should then be
-called manually after these checks are done.</li>
-</ul>
-</td>
+section.</td>
 </tr>
 </tbody>
 </table>
@@ -186,18 +179,23 @@ called manually after these checks are done.</li>
 which can be useful for example to configure Celery queues):</p>
 <ul class="simple">
 <li><tt class="docutils literal"><span class="pre">PROJECT</span></tt><ul>
-<li><tt class="docutils literal"><span class="pre">NAME</span></tt>: the name of the project, used for debugging and to generate a
-default domain name for the Celery workers.</li>
 <li><tt class="docutils literal"><span class="pre">MODULES</span></tt>: comma separated list of the project&#8217;s modules. They must be
 importable from the configuration file&#8217;s folder.</li>
+<li><tt class="docutils literal"><span class="pre">DEBUG</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">DISABLE_FLASK</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">DISABLE_CELERY</span></tt></li>
 </ul>
 </li>
 <li><tt class="docutils literal"><span class="pre">ENGINE</span></tt><ul>
 <li><tt class="docutils literal"><span class="pre">URL</span></tt>: the url to the database</li>
-<li><tt class="docutils literal"><span class="pre">AUTOCOMMIT</span></tt>: if <tt class="docutils literal"><span class="pre">True</span></tt> (default), all database transactions
+<li>any valid arguments to <tt class="docutils literal"><span class="pre">sqlalchemy.create_engine</span></tt></li>
+</ul>
+</li>
+<li><tt class="docutils literal"><span class="pre">SESSION</span></tt><ul>
+<li><tt class="docutils literal"><span class="pre">SMARTCOMMIT</span></tt>: if <tt class="docutils literal"><span class="pre">True</span></tt> (default), all database transactions
 will be committed after each Flask app request and Celery task
 completion. If <tt class="docutils literal"><span class="pre">False</span></tt> the session will simply be removed.</li>
-<li>any valid arguments to <tt class="docutils literal"><span class="pre">sqlalchemy.create_engine</span></tt></li>
+<li>any valid arguments to <tt class="docutils literal"><span class="pre">sqlalchemy.orm.session_maker</span></tt></li>
 </ul>
 </li>
 <li><tt class="docutils literal"><span class="pre">FLASK</span></tt><ul>
@@ -211,18 +209,60 @@ to the application&#8217;s root folder (defaults to <tt class="docutils literal"
 </ul>
 </li>
 <li><tt class="docutils literal"><span class="pre">CELERY</span></tt><ul>
-<li><tt class="docutils literal"><span class="pre">DOMAIN</span></tt>: if specified, used to generate Celery worker hostnames
-(defaults to the project name, sluggified).</li>
-<li><tt class="docutils literal"><span class="pre">SUBDOMAIN</span></tt>: if specified, used to generate Celery worker hostnames 
-(defaults to the configuration file&#8217;s name).</li>
+<li><tt class="docutils literal"><span class="pre">MAIN</span></tt></li>
 <li>any valid Celery configuration option</li>
 </ul>
 </li>
 </ul>
+<dl class="attribute">
+<dt id="flasker.project.Project.default_conf">
+<tt class="descname">default_conf</tt><em class="property"> = {'PROJECT': {'DEBUG': False, 'DISABLE_FLASK': False, 'DISABLE_CELERY': False, 'MODULES': ''}, 'ENGINE': {'URL': 'sqlite://'}, 'FLASK': {'STATIC_FOLDER': 'static', 'ROOT_FOLDER': 'app', 'NAME': 'app', 'TEMPLATE_FOLDER': 'templates'}, 'SESSION': {'SMARTCOMMIT': True}, 'CELERY': {'MAIN': '__main__'}}</em><a class="headerlink" href="#flasker.project.Project.default_conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default configuration</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.project.Project.conf">
+<tt class="descname">conf</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.conf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dictionary of configuration values</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.project.Project.conf_path">
+<tt class="descname">conf_path</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.conf_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to current configuration file</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.project.Project.logger">
+<tt class="descname">logger</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Logger</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.project.Project.flask">
+<tt class="descname">flask</tt><a class="headerlink" href="#flasker.project.Project.flask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flask application.</p>
+<p>Lazily initialized.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.project.Project.celery">
+<tt class="descname">celery</tt><a class="headerlink" href="#flasker.project.Project.celery" title="Permalink to this definition">¶</a></dt>
+<dd><p>Celery application.</p>
+<p>Lazily initialized.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.project.Project.session">
+<tt class="descname">session</tt><a class="headerlink" href="#flasker.project.Project.session" title="Permalink to this definition">¶</a></dt>
+<dd><p>SQLAlchemy scoped sessionmaker.</p>
+<p>Lazily initialized.</p>
+</dd></dl>
+
 <dl class="method">
-<dt id="flasker.project.Project.before_startup">
-<tt class="descname">before_startup</tt><big>(</big><em>func</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project.before_startup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project.before_startup" title="Permalink to this definition">¶</a></dt>
-<dd><p>Hook to run a function right before project starts.</p>
+<dt id="flasker.project.Project.run_after_module_imports">
+<tt class="descname">run_after_module_imports</tt><big>(</big><em>func</em><big>)</big><a class="headerlink" href="#flasker.project.Project.run_after_module_imports" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hook to run a function right after all project modules are imported.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />

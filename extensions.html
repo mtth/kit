@@ -264,7 +264,7 @@ persistent by default (<tt class="docutils literal"><span class="pre">_cache</sp
 <p>Recall that the <tt class="docutils literal"><span class="pre">q</span></tt> and <tt class="docutils literal"><span class="pre">c</span></tt> query properties are also available.</p>
 <dl class="classmethod">
 <dt id="flasker.ext.orm.BaseModel.retrieve">
-<em class="property">classmethod </em><tt class="descname">retrieve</tt><big>(</big><em>flush_if_new=True</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.BaseModel.retrieve" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><tt class="descname">retrieve</tt><big>(</big><em>flush_if_new=True</em>, <em>from_id=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.ext.orm.BaseModel.retrieve" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given constructor arguments will return a match or create one.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -273,6 +273,8 @@ persistent by default (<tt class="docutils literal"><span class="pre">_cache</sp
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>flush_if_new</strong> (<em>bool</em>) &#8211; whether or not to flush the model if created (this
 can be used to generate its <tt class="docutils literal"><span class="pre">id</span></tt>).</li>
+<li><strong>from_id</strong> (<em>varies</em>) &#8211; instead of issuing a filter on kwargs, this will issue
+a get query by id using this parameter</li>
 <li><strong>kwargs</strong> &#8211; constructor arguments</li>
 </ul>
 </td>
