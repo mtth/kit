@@ -36,6 +36,7 @@ For convenience, both these variables are also available directly in the
 from __future__ import absolute_import
 
 from collections import defaultdict
+from logging import getLogger, StreamHandler, DEBUG
 from os.path import abspath, dirname, join, sep, split, splitext
 from sys import path
 from werkzeug.local import LocalProxy
@@ -66,6 +67,7 @@ class Project(object):
 
     * ``MODULES``: comma separated list of the project's modules. They must be
       importable from the configuration file's folder.
+    * ``DEBUG``
     * ``DISABLE_FLASK``
     * ``DISABLE_CELERY``
 
@@ -102,6 +104,7 @@ class Project(object):
   default_conf = {
     'PROJECT': {
       'MODULES':          '',
+      'DEBUG':            False,
       'DISABLE_FLASK':    False,
       'DISABLE_CELERY':   False,
     },
@@ -127,6 +130,9 @@ class Project(object):
 
   #: Path to current configuration file
   conf_path = None
+
+  #: Logger
+  logger = None
 
   _flask = None
   _celery = None
@@ -161,14 +167,35 @@ class Project(object):
         )
         self.conf_path = abspath(conf_path)
 
+        # load logger
+        self.logger = getLogger(__name__)
+        if self.conf['PROJECT']['DEBUG']:
+          self.logger.setLevel(DEBUG)
+        self.logger.addHandler(StreamHandler())
+
         # load all project modules
         self._funcs = []
         path.append(dirname(self.conf_path))
-        project_modules = self.conf['PROJECT']['MODULES'].split(',')
-        for mod in project_modules:
-          __import__(mod.strip())
+        project_modules = [
+          module_name.strip()
+          for module_name in self.conf['PROJECT']['MODULES'].split(',')
+        ]
+        for module_name in project_modules:
+          __import__(module_name)
+        self.logger.debug(
+          '%s modules imported (%s)' % (
+            len(project_modules),
+            ', '.join(project_modules),
+          )
+        )
         for func in self._funcs:
           func(self)
+        self.logger.debug(
+          '%s handlers found and run (%s)' % (
+            len(self._funcs), 
+            ', '.join(func.__name__ for func in self._funcs),
+          )
+        )
 
   def __repr__(self):
     return '<Project %r>' % (self.conf_path, )
@@ -202,6 +229,7 @@ class Project(object):
       })
 
       self._flask = flask_app
+      self.logger.debug('flask app loaded')
     return self._flask
 
   @property
@@ -233,6 +261,7 @@ class Project(object):
       # def create_worker_connection(*args, **kwargs):
       #   self._create_session()
 
+      self.logger.debug('celery app loaded')
       self._celery = celery_app
     return self._celery
 
@@ -274,6 +303,7 @@ class Project(object):
       task_postrun.connect(_remove_session)
       request_tearing_down.connect(_remove_session)
 
+      self.logger.debug('session loaded')
       self._session = session
     return self._session
 
@@ -295,12 +325,14 @@ class Project(object):
     try:
       if self.conf['SESSION']['SMARTCOMMIT']:
         self.session.commit()
+        self.logger.debug('session committed')
     except InvalidRequestError as e:
       self.session.rollback()
       self.session.expunge_all()
-      raise e
+      self.logger.error('error while committing: %s' % (e, ))
     finally:
       self.session.remove()
+      self.logger.debug('session removed')
 
   def _reset(self):
     """Reset current project."""

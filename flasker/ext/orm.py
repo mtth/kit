@@ -126,7 +126,7 @@ class ORM(object):
     self.relationship = partial(_relationship, query_class=Query)
 
     @project.run_after_module_imports
-    def handler(project):
+    def orm_after_imports(project):
       self.Model.q = _QueryProperty(project)
       self.Model.c = _CountProperty(project)
       if create_all:
@@ -134,6 +134,8 @@ class ORM(object):
           project.session.get_bind(),
           checkfirst=True
         )
+
+    project.logger.debug('orm extension initialized')
 
 
 class Query(_Query):
