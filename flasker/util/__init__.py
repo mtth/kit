@@ -2,6 +2,8 @@
 
 """General helpers."""
 
+from __future__ import absolute_import
+
 from collections import defaultdict, Mapping, namedtuple
 from copy import deepcopy
 from ConfigParser import SafeConfigParser
@@ -17,7 +19,7 @@ from sqlalchemy.orm import Query
 from time import time
 
 try:
-  from pandas import DataFrame, Series
+  from pandas import DataFrame
 except ImportError:
   pass
 

@@ -2,6 +2,8 @@
 
 """General helpers."""
 
+from __future__ import absolute_import
+
 from distutils.dir_util import copy_tree
 from flask import jsonify, request
 from flask.views import View as _View

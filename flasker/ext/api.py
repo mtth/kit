@@ -63,8 +63,8 @@ from time import time
 from werkzeug.exceptions import HTTPException
 
 from ..util import uncamelcase
-from ..util._flask import make_view, View as _View, _ViewMeta
-from ..util._sqlalchemy import Model, Query, query_to_models
+from ..util.flask import make_view, View as _View, _ViewMeta
+from ..util.sqlalchemy import Model, Query, query_to_models
 
 
 

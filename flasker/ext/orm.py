@@ -68,7 +68,7 @@ from sqlalchemy.orm import (backref as _backref, class_mapper,
   relationship as _relationship)
 from sqlalchemy.orm.exc import UnmappedClassError
 
-from ..util._sqlalchemy import Model, Query
+from ..util.sqlalchemy import Model, Query
 
 
 class ORM(object):
