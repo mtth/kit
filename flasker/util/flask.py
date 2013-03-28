@@ -32,7 +32,7 @@ class _ViewMeta(type):
         methods = set(key.upper() for key in dct if key in cls.http_methods)
         rv.methods = sorted(methods or [])
       
-      rv.bind_view(rv.__app__)
+      rv.register_view(rv.__app__)
 
     return rv
 
@@ -57,7 +57,7 @@ class View(_View):
   rules = None
 
   @classmethod
-  def bind_view(cls, app):
+  def register_view(cls, app):
     """Attach view to app or blueprint."""
     view = cls.as_view(cls.endpoint)
 

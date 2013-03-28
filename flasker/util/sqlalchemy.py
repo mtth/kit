@@ -22,7 +22,7 @@ try:
 except ImportError:
   pass
 
-from . import Cacheable, Loggable, uncamelcase
+from . import Cacheable, Loggable, uncamelcase, to_json
 
 
 # Base model

@@ -12,6 +12,8 @@ file ``.cfg`` file is found it will use it.
 
 """
 
+from __future__ import absolute_import
+
 from argparse import ArgumentParser, REMAINDER
 from code import interact
 from functools import wraps
@@ -19,8 +21,7 @@ from os import listdir
 from os.path import splitext
 from re import findall, match, sub
 
-from . import current_project as pj
-from .project import Project, ProjectImportError
+from flasker.project import current_project as pj, Project, ProjectImportError
 
 
 def _project_context(handler):

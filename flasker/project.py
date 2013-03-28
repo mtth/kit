@@ -229,8 +229,8 @@ class Project(object):
         if not k in self.default_conf['FLASK']
       })
 
-      self._flask = flask_app
       self.logger.debug('flask app loaded')
+      self._flask = flask_app
     return self._flask
 
   @property
