@@ -880,11 +880,16 @@ def query_to_models(query):
   :rtype: list
 
   """
-  return [
-    d['expr'].class_
-    for d in query.column_descriptions
-    if isinstance(d['expr'], Mapper)
-  ]
+  if hasattr(query, 'attr'):
+    # this is a subquery
+    return [query.attr.target_mapper]
+  else:
+    # this is a main query
+    return [
+      d['expr'].class_
+      for d in query.column_descriptions
+      if isinstance(d['expr'], Mapper)
+    ]
 
 def query_to_dataframe(query, connection=None, exclude=None, index=None,
                        columns=None, coerce_float=False):

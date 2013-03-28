@@ -59,23 +59,6 @@ also return custom queries:
   house = House.q.first()
   relationship_query = house.cats   # instance of flasker.ext.orm.Query
 
-Finally, there is a special property ``c`` exposed on all children of
-``orm.Model`` that returns an optimized count query (by default SQLAlchemy
-count queries use subqueries which are very slow).  This is useful when
-counting over large numbers of rows (10k and more), as the following benchmark
-shows (~250k rows):
-
-.. code:: python
-
-  In [1]: %time Cat.q.count()
-  CPU times: user 0.01 s, sys: 0.00 s, total: 0.01 s
-  Wall time: 1.36 s
-  Out[1]: 281992L
-
-  In [2]: %time Cat.c.scalar()
-  CPU times: user 0.00 s, sys: 0.00 s, total: 0.00 s
-  Wall time: 0.06 s
-  Out[2]: 281992L
 
 """
 
@@ -96,7 +79,7 @@ try:
 except ImportError:
   pass
 
-from ..util import (Cacheable, to_json, 
+from ..util import (Cacheable, to_json, query_to_models,
   JSONEncodedDict, Loggable, uncamelcase, query_to_dataframe, query_to_records)
 
 
@@ -111,10 +94,6 @@ class ORM(object):
     models which do not have one already.
   :type create_all: bool
 
-  When this object is initialized, it is responsible for adding the ``q`` and
-  ``c`` query proxies on the model and configuring the project to use the
-  custom :class:`flasker.ext.orm.Query` class.
-
   """
 
   def __init__(self, project, create_all=True):
@@ -127,9 +106,8 @@ class ORM(object):
 
     @project.run_after_module_imports
     def orm_after_imports(project):
-      self.Model.c = _CountProperty(project)
       self.Model.q = _QueryProperty(project)
-      self.Model.t = _TableProperty()
+      self.Model.t = _TableProperty(project)
       if create_all:
         self.Model.metadata.create_all(
           project.session.get_bind(),
@@ -175,6 +153,36 @@ class Query(_Query):
     if rv is None:
       abort(404)
     return rv
+
+  def fast_count(self):
+    """Fast counting, bypassing subqueries.
+
+    By default SQLAlchemy count queries use subqueries (which are very slow
+    on MySQL). This method is useful when counting over large numbers of rows
+    (10k and more), as the following benchmark shows (~250k rows):
+
+    .. code:: python
+
+      In [1]: %time Cat.q.count()
+      CPU times: user 0.01 s, sys: 0.00 s, total: 0.01 s
+      Wall time: 1.36 s
+      Out[1]: 281992L
+
+      In [2]: %time Cat.c.scalar()
+      CPU times: user 0.00 s, sys: 0.00 s, total: 0.00 s
+      Wall time: 0.06 s
+      Out[2]: 281992L
+
+    """
+    models = query_to_models(self)
+    if len(models) != 1:
+      # initial query is over more than one model
+      # not clear how to implement the count in that case
+      raise ValueError('Fast count unavailable for this query.')
+    count_query = Query(func.count(), session=self.session)
+    count_query = count_query.select_from(models[0])
+    count_query._criterion = self._criterion
+    return count_query.scalar()
 
   def random(self, n=1, dialect=None):
     """Returns n random model instances.
@@ -262,9 +270,9 @@ class _QueryProperty(object):
       return None
 
 
-class _CountProperty(object):
+class _TableProperty(object):
 
-  """To make count queries directly accessible on model classes."""
+  """Bound table for faster batch executes."""
 
   def __init__(self, project):
     self.project = project
@@ -273,21 +281,9 @@ class _CountProperty(object):
     try:
       mapper = class_mapper(cls)
       if mapper:
-        session = self.project.session()
-        return Query(func.count(), session=session).select_from(cls)
-    except UnmappedClassError:
-      return None
-
-
-class _TableProperty(object):
-
-  """Easier access to table for batch update queries."""
-
-  def __get__(self, obj, cls):
-    try:
-      mapper = class_mapper(cls)
-      if mapper:
-        return mapper.mapped_table
+        table = mapper.mapped_table
+        table.metadata.bind = self.project.session.connection()
+        return table
     except UnmappedClassError:
       return None
 
@@ -317,13 +313,10 @@ class BaseModel(Cacheable, Loggable):
   """
   __json__ = None
 
-  #: Proxy for count query
-  c = None
-
-  #: Proxy for query
+  #: Proxy for the query property
   q = None
 
-  #: Proxy for table
+  #: Proxy for the table property
   t = None
 
   _cache = Column(JSONEncodedDict)
@@ -388,15 +381,16 @@ class BaseModel(Cacheable, Loggable):
     }
 
   @classmethod
-  def retrieve(cls, flush_if_new=True, use_key=False, **kwargs):
+  def retrieve(cls, flush_if_new=True, from_key=False, **kwargs):
     """Given constructor arguments will return a match or create one.
 
     :param flush_if_new: whether or not to flush the model if created (this
       can be used to generate its ``id``).
     :type flush_if_new: bool
-    :param use_key: instead of issuing a filter on kwargs, this will issue
-      a get query by id using this parameter
-    :type use_key: bool
+    :param from_key: instead of issuing a filter on kwargs, this will issue
+      a get query by id using this parameter. Note that in this case, any other
+      keyword arguments will only be used if a new instance is created.
+    :type from_key: bool
     :param kwargs: constructor arguments
     :rtype: tuple
 
@@ -405,7 +399,7 @@ class BaseModel(Cacheable, Loggable):
     and ``False`` otherwise.
 
     """
-    if use_key:
+    if from_key:
       model_primary_key = tuple(
         kwargs[k.name]
         for k in class_mapper(cls).primary_key
@@ -418,7 +412,7 @@ class BaseModel(Cacheable, Loggable):
     else:
       instance = cls(**kwargs)
       if flush_if_new:
-        instance._flush()
+        instance.flush()
       return instance, True
 
   @declared_attr
@@ -433,10 +427,18 @@ class BaseModel(Cacheable, Loggable):
     )
     return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
 
-  def _flush(self):
-    """Add the model to the session and flush."""
+  def flush(self, merge=False):
+    """Add the model to the session and flush.
+    
+    :param merge: if ``True``, will merge instead of add.
+    :type merge: bool
+    
+    """
     session = self.q.session
-    session.add(self)
+    if merge:
+      session.merge(self)
+    else:
+      session.add(self)
     session.flush([self])
 
   def get_primary_key(self, as_tuple=False):

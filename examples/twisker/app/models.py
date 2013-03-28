@@ -71,7 +71,7 @@ class Tweet(orm.Model):
 
   user = orm.relationship(
     'User',
-    backref=orm.backref('tweets')
+    backref=orm.backref('tweets', lazy='dynamic')
   )
 
 
