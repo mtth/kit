@@ -25,8 +25,9 @@ class User(orm.Model):
   def import_new_user(cls, handle):
     u = client.GetUser(handle)
     user, flag = cls.retrieve(
-      from_id=u.screen_name,
+      use_key=True,
       **{
+        'handle': u.screen_name,
         'name': u.name,
         'friends_count': u.friends_count,
         'followers_count': u.followers_count,
@@ -44,8 +45,9 @@ class User(orm.Model):
     new_tweets = []
     for t in ts:
       tweet, flag = Tweet.retrieve(
-        from_id=t.id,
+        use_key=True,
         **{
+          'id': t.id,
           'text': t.text,
           'retweet_count': t.retweet_count,
           'source': t.source,
@@ -69,7 +71,7 @@ class Tweet(orm.Model):
 
   user = orm.relationship(
     'User',
-    backref=orm.backref('tweets')
+    backref=orm.backref('tweets', lazy='dynamic')
   )
 
 

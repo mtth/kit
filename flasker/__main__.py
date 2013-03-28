@@ -19,8 +19,8 @@ from os import listdir
 from os.path import splitext
 from re import findall, match, sub
 
-from flasker import current_project as pj
-from flasker.project import Project, ProjectImportError
+from . import current_project as pj
+from .project import Project, ProjectImportError
 
 
 def _project_context(handler):

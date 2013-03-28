@@ -56,15 +56,16 @@ for :class:`flasker.ext.api.BaseView` for the list of all available options.
 """
 
 from flask import Blueprint, jsonify, request
-from flasker.util import make_view, View as _View, _ViewMeta
 from os.path import abspath, dirname, join
 from sqlalchemy.ext.associationproxy import AssociationProxy
 from sqlalchemy.orm import class_mapper, mapperlib
 from time import time
 from werkzeug.exceptions import HTTPException
 
-from .orm import BaseModel, Query
-from ..util import uncamelcase, query_to_models
+from ..util import uncamelcase
+from ..util.flask import make_view, View as _View, _ViewMeta
+from ..util.sqlalchemy import Model, Query, query_to_models
+
 
 
 class APIError(HTTPException):
