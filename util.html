@@ -47,39 +47,11 @@
       <div class="content">
         
         
-  <div class="section" id="module-flasker.util">
-<span id="utilities"></span><h1>Utilities<a class="headerlink" href="#module-flasker.util" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="utilities">
+<h1>Utilities<a class="headerlink" href="#utilities" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-flasker.util">
+<span id="general-helpers"></span><h2>General helpers<a class="headerlink" href="#module-flasker.util" title="Permalink to this headline">¶</a></h2>
 <p>General helpers.</p>
-<dl class="function">
-<dt id="flasker.util.convert">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">convert</tt><big>(</big><em>value</em>, <em>rtype=None</em>, <em>allow_json=False</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.convert" title="Permalink to this definition">¶</a></dt>
-<dd><p>Converts a string to another value.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>value</strong> (<em>str</em>) &#8211; the value to be converted</li>
-<li><strong>rtype</strong> (<em>str</em>) &#8211; string representation of the type the value should be
-converted to. Accepted values are <tt class="docutils literal"><span class="pre">['int',</span> <span class="pre">'float',</span> <span class="pre">'bool',</span> <span class="pre">'unicode',</span>
-<span class="pre">'str',</span> <span class="pre">'json']</span></tt>.</li>
-<li><strong>allow_json</strong> (<em>bool</em>) &#8211; allow loading of json strings</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int, float, bool, str, unicode</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p>If <tt class="docutils literal"><span class="pre">rtype</span></tt> isn&#8217;t specified, the following conversions are attempted in
-order: <tt class="docutils literal"><span class="pre">int</span></tt>, <tt class="docutils literal"><span class="pre">float</span></tt>, <tt class="docutils literal"><span class="pre">bool</span></tt> and finally <tt class="docutils literal"><span class="pre">json.loads</span></tt> (only if
-<tt class="docutils literal"><span class="pre">allow_json</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt>). If all fail, the method returns the
-string <tt class="docutils literal"><span class="pre">value</span></tt> unchanged.</p>
-<p>Boolean conversions convert <tt class="docutils literal"><span class="pre">'true',</span> <span class="pre">'1'</span></tt> to <tt class="docutils literal"><span class="pre">True</span></tt>, and <tt class="docutils literal"><span class="pre">'false',</span> <span class="pre">'0'</span></tt>
-to <tt class="docutils literal"><span class="pre">False</span></tt> (case insensitive) and otherwise raises an error.</p>
-</dd></dl>
-
 <dl class="class">
 <dt id="flasker.util.Part">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Part</tt><a class="headerlink" href="#flasker.util.Part" title="Permalink to this definition">¶</a></dt>
@@ -134,6 +106,36 @@ it will be the first line number instead)</li>
 </dd></dl>
 
 <dl class="function">
+<dt id="flasker.util.convert">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">convert</tt><big>(</big><em>value</em>, <em>rtype=None</em>, <em>allow_json=False</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.convert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a string to another value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>value</strong> (<em>str</em>) &#8211; the value to be converted</li>
+<li><strong>rtype</strong> (<em>str</em>) &#8211; string representation of the type the value should be
+converted to. Accepted values are <tt class="docutils literal"><span class="pre">['int',</span> <span class="pre">'float',</span> <span class="pre">'bool',</span> <span class="pre">'unicode',</span>
+<span class="pre">'str',</span> <span class="pre">'json']</span></tt>.</li>
+<li><strong>allow_json</strong> (<em>bool</em>) &#8211; allow loading of json strings</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int, float, bool, str, unicode</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>If <tt class="docutils literal"><span class="pre">rtype</span></tt> isn&#8217;t specified, the following conversions are attempted in
+order: <tt class="docutils literal"><span class="pre">int</span></tt>, <tt class="docutils literal"><span class="pre">float</span></tt>, <tt class="docutils literal"><span class="pre">bool</span></tt> and finally <tt class="docutils literal"><span class="pre">json.loads</span></tt> (only if
+<tt class="docutils literal"><span class="pre">allow_json</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt>). If all fail, the method returns the
+string <tt class="docutils literal"><span class="pre">value</span></tt> unchanged.</p>
+<p>Boolean conversions convert <tt class="docutils literal"><span class="pre">'true',</span> <span class="pre">'1'</span></tt> to <tt class="docutils literal"><span class="pre">True</span></tt>, and <tt class="docutils literal"><span class="pre">'false',</span> <span class="pre">'0'</span></tt>
+to <tt class="docutils literal"><span class="pre">False</span></tt> (case insensitive) and otherwise raises an error.</p>
+</dd></dl>
+
+<dl class="function">
 <dt id="flasker.util.prod">
 <tt class="descclassname">flasker.util.</tt><tt class="descname">prod</tt><big>(</big><em>iterable</em>, <em>key=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#prod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.prod" title="Permalink to this definition">¶</a></dt>
 <dd><p>Cumulative product function (the equivalent of <tt class="docutils literal"><span class="pre">sum</span></tt>).</p>
@@ -166,15 +168,88 @@ identity is assumed</td>
 </table>
 </dd></dl>
 
-<dl class="class">
-<dt id="flasker.util.Dict">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Dict</tt><a class="reference internal" href="_modules/flasker/util.html#Dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Expands the dictionary class with a few helper methods.</p>
-<p>In particular, the goal of this class is to make multilevel dictionary
-actions simpler.</p>
-<dl class="classmethod">
-<dt id="flasker.util.Dict.depth">
-<em class="property">classmethod </em><tt class="descname">depth</tt><big>(</big><em>dct</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.depth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.depth" title="Permalink to this definition">¶</a></dt>
+<dl class="function">
+<dt id="flasker.util.parse_config">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">parse_config</tt><big>(</big><em>file_or_filepath</em>, <em>default=None</em>, <em>allow_json=False</em>, <em>case_sensitive=False</em>, <em>parser_type=&lt;class ConfigParser.SafeConfigParser at 0x101467e88&gt;</em><big>)</big><a class="headerlink" href="#flasker.util.parse_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dictionary of values from a configuration file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file_or_filepath</strong> (<em>str or file</em>) &#8211; file or filepath to configuration file</li>
+<li><strong>default</strong> (<em>dict</em>) &#8211; dictionary of default values to use</li>
+<li><strong>allow_json</strong> (<em>bool</em>) &#8211; allow loading of json options</li>
+<li><strong>case_sensitive</strong> (<em>bool</em>) &#8211; keep option names&#8217; case</li>
+<li><strong>parser_type</strong> (<em>ConfigParser.RawConfigParser</em>) &#8211; base parser type to use for parsing the file</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.exponential_smoothing">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">exponential_smoothing</tt><big>(</big><em>data</em>, <em>alpha=0.5</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#exponential_smoothing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.exponential_smoothing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Smoothing data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<tt class="docutils literal"><span class="pre">list</span></tt>) &#8211; list of tuples. The smoothing will be done on
+the first item of each tuple.</li>
+<li><strong>alpha</strong> (<tt class="docutils literal"><span class="pre">float</span></tt>) &#8211; the discount factor</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">list</span></tt></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.histogram">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">histogram</tt><big>(</big><em>data</em>, <em>key=None</em>, <em>bins=50</em>, <em>restrict=None</em>, <em>categories=None</em>, <em>order=0</em>, <em>expand=False</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#histogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.histogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a histogram of counts for the data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>iterable of tuples</em>) &#8211; the data to be binned</li>
+<li><strong>restrict</strong> (<em>function or None</em>) &#8211; if provided, only data elements which return <cite>True</cite>
+will be included in the histogram. Default is <cite>None</cite> (all elements
+are included).</li>
+<li><strong>categories</strong> (<em>function or None</em>) &#8211; if provided, elements will be counted in separate
+categories. This changes the format of the output to a dictionary
+with the different categories as keys in each bin.</li>
+<li><strong>bins</strong> (<em>int or list(int)</em>) &#8211; either an int (total number of bins, which will be 
+uniformly spread) or a list of increasing bin values. smaller
+values will be in the first bin, larger in the last one.</li>
+<li><strong>order</strong> (<em>string</em>) &#8211; 0 if data isn&#8217;t sorted, 1 if sorted in ascending, -1 if
+sorted in descending order.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Possible extension: allow categories to return a list of keys, which would
+allow elements to be included in several counts.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.dict_depth">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">dict_depth</tt><big>(</big><em>dct</em><big>)</big><a class="headerlink" href="#flasker.util.dict_depth" title="Permalink to this definition">¶</a></dt>
 <dd><p>Depth of a dictionary.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -188,9 +263,9 @@ actions simpler.</p>
 </table>
 </dd></dl>
 
-<dl class="classmethod">
-<dt id="flasker.util.Dict.width">
-<em class="property">classmethod </em><tt class="descname">width</tt><big>(</big><em>dct</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.width"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.width" title="Permalink to this definition">¶</a></dt>
+<dl class="function">
+<dt id="flasker.util.dict_width">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">dict_width</tt><big>(</big><em>dct</em><big>)</big><a class="headerlink" href="#flasker.util.dict_width" title="Permalink to this definition">¶</a></dt>
 <dd><p>Width of a dictionary.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -204,9 +279,9 @@ actions simpler.</p>
 </table>
 </dd></dl>
 
-<dl class="classmethod">
-<dt id="flasker.util.Dict.flatten">
-<em class="property">classmethod </em><tt class="descname">flatten</tt><big>(</big><em>dct</em>, <em>sep='_'</em>, <em>prefix=''</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.flatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.flatten" title="Permalink to this definition">¶</a></dt>
+<dl class="function">
+<dt id="flasker.util.dict_flatten">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">dict_flatten</tt><big>(</big><em>dct</em>, <em>sep='_'</em>, <em>prefix=''</em><big>)</big><a class="headerlink" href="#flasker.util.dict_flatten" title="Permalink to this definition">¶</a></dt>
 <dd><p>Flatten a dictionary.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -230,9 +305,9 @@ actions simpler.</p>
 </div>
 </dd></dl>
 
-<dl class="classmethod">
-<dt id="flasker.util.Dict.unflatten">
-<em class="property">classmethod </em><tt class="descname">unflatten</tt><big>(</big><em>dct</em>, <em>sep='_'</em>, <em>cname='all'</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.unflatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.unflatten" title="Permalink to this definition">¶</a></dt>
+<dl class="function">
+<dt id="flasker.util.dict_unflatten">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">dict_unflatten</tt><big>(</big><em>dct</em>, <em>sep='_'</em>, <em>cname='all'</em><big>)</big><a class="headerlink" href="#flasker.util.dict_unflatten" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unflatten a dictionary.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -256,15 +331,15 @@ This is resolved creating a new key <tt class="docutils literal"><span class="pr
 </table>
 </dd></dl>
 
-<dl class="classmethod">
-<dt id="flasker.util.Dict.update">
-<em class="property">classmethod </em><tt class="descname">update</tt><big>(</big><em>a</em>, <em>b</em>, <em>copy=False</em><big>)</big><a class="headerlink" href="#flasker.util.Dict.update" title="Permalink to this definition">¶</a></dt>
+<dl class="function">
+<dt id="flasker.util.dict_update">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">dict_update</tt><big>(</big><em>a</em>, <em>b</em>, <em>copy=False</em><big>)</big><a class="headerlink" href="#flasker.util.dict_update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Update for nested dictionaries.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>copy</strong> (<em>bool</em>) &#8211; whether or not to do a deepcopy of each dictionary before
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>copy</strong> (<em>bool</em>) &#8211; whether or not to do a deepcopy of the dictionary before
 updating.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
@@ -273,13 +348,11 @@ updating.</td>
 </table>
 </dd></dl>
 
-<dl class="classmethod">
-<dt id="flasker.util.Dict.table">
-<em class="property">classmethod </em><tt class="descname">table</tt><big>(</big><em>mode='horizontal'</em>, <em>left_columns=None</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#Dict.table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Dict.table" title="Permalink to this definition">¶</a></dt>
+<dl class="function">
+<dt id="flasker.util.dict_table">
+<tt class="descclassname">flasker.util.</tt><tt class="descname">dict_table</tt><big>(</big><em>mode='horizontal'</em>, <em>left_columns=None</em><big>)</big><a class="headerlink" href="#flasker.util.dict_table" title="Permalink to this definition">¶</a></dt>
 <dd><p>To create nested HTML table headers.</p>
 <p>Not functional anymore.</p>
-</dd></dl>
-
 </dd></dl>
 
 <dl class="class">
@@ -320,28 +393,71 @@ the full row for each error raised</li>
 </ul>
 </dd></dl>
 
-<dl class="function">
-<dt id="flasker.util.parse_config">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">parse_config</tt><big>(</big><em>file_or_filepath</em>, <em>default=None</em>, <em>allow_json=False</em>, <em>case_sensitive=False</em>, <em>parser_type=&lt;class ConfigParser.SafeConfigParser at 0x101467e88&gt;</em><big>)</big><a class="headerlink" href="#flasker.util.parse_config" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a dictionary of values from a configuration file.</p>
+<dl class="class">
+<dt id="flasker.util.RunningStat">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">RunningStat</tt><a class="headerlink" href="#flasker.util.RunningStat" title="Permalink to this definition">¶</a></dt>
+<dd><p>To compute running means and variances efficiently.</p>
+<p>Usage:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">rs</span> <span class="o">=</span> <span class="n">RunningStat</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+  <span class="n">rs</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+<span class="n">rs</span><span class="o">.</span><span class="n">var</span>
+</pre></div>
+</div>
+<dl class="attribute">
+<dt id="flasker.util.RunningStat.avg">
+<tt class="descname">avg</tt><a class="headerlink" href="#flasker.util.RunningStat.avg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current mean.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.util.RunningStat.var">
+<tt class="descname">var</tt><a class="headerlink" href="#flasker.util.RunningStat.var" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current variance.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flasker.util.RunningStat.sdv">
+<tt class="descname">sdv</tt><a class="headerlink" href="#flasker.util.RunningStat.sdv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current standard deviation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.RunningStat.push">
+<tt class="descname">push</tt><big>(</big><em>n</em><big>)</big><a class="headerlink" href="#flasker.util.RunningStat.push" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new element to the statistic.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>file_or_filepath</strong> (<em>str or file</em>) &#8211; file or filepath to configuration file</li>
-<li><strong>default</strong> (<em>dict</em>) &#8211; dictionary of default values to use</li>
-<li><strong>allow_json</strong> (<em>bool</em>) &#8211; allow loading of json options</li>
-<li><strong>case_sensitive</strong> (<em>bool</em>) &#8211; keep option names&#8217; case</li>
-<li><strong>parser_type</strong> (<em>ConfigParser.RawConfigParser</em>) &#8211; base parser type to use for parsing the file</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
-</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int, float</em>) &#8211; number to add</td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.Jsonifiable">
+<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Jsonifiable</tt><a class="reference internal" href="_modules/flasker/util.html#Jsonifiable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Jsonifiable" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSONification mixin.</p>
+<dl class="method">
+<dt id="flasker.util.Jsonifiable.to_json">
+<tt class="descname">to_json</tt><big>(</big><em>depth=1</em><big>)</big><a class="headerlink" href="#flasker.util.Jsonifiable.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all keys and properties of an instance in a dictionary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>depth</strong> (<em>int</em>) &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="class">
@@ -409,28 +525,6 @@ refresh several or all cached properties, use the <tt class="docutils literal"><
 </dd></dl>
 
 <dl class="class">
-<dt id="flasker.util.Jsonifiable">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Jsonifiable</tt><a class="reference internal" href="_modules/flasker/util.html#Jsonifiable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Jsonifiable" title="Permalink to this definition">¶</a></dt>
-<dd><p>JSONification mixin.</p>
-<dl class="method">
-<dt id="flasker.util.Jsonifiable.to_json">
-<tt class="descname">to_json</tt><big>(</big><em>depth=1</em><big>)</big><a class="headerlink" href="#flasker.util.Jsonifiable.to_json" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns all keys and properties of an instance in a dictionary.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>depth</strong> (<em>int</em>) &#8211; </td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
 <dt id="flasker.util.Loggable">
 <em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">Loggable</tt><a class="reference internal" href="_modules/flasker/util.html#Loggable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.Loggable" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convenient logging mixin.</p>
@@ -469,140 +563,35 @@ be lost.</p>
 
 </dd></dl>
 
-<dl class="class">
-<dt id="flasker.util.JSONEncodedDict">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">JSONEncodedDict</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#JSONEncodedDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.JSONEncodedDict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Implements dictionary column field type for SQLAlchemy.</p>
-<p>This can be used as a Column type during table creation:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">some_column_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedDict</span><span class="p">)</span>
-</pre></div>
 </div>
-<p>It also implements limited  mutability tracking to know when to update the
-database: set, del and update actions are tracked. If another method to
-update the dictionary is used, it will not automatically flag the
-dictionary for update (for example if a deeply nested key is updated).
-In such a case, the <tt class="docutils literal"><span class="pre">changed</span></tt> method needs the be called manually
-after the operation.</p>
-</dd></dl>
-
+<div class="section" id="module-flasker.util.flask">
+<span id="flask-helpers"></span><h2>Flask helpers<a class="headerlink" href="#module-flasker.util.flask" title="Permalink to this headline">¶</a></h2>
+<p>General helpers.</p>
 <dl class="class">
-<dt id="flasker.util.JSONEncodedList">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">JSONEncodedList</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.JSONEncodedList" title="Permalink to this definition">¶</a></dt>
-<dd><p>Implements list column field type for SQLAlchemy.</p>
-<p>This can be used as a Column type during table creation:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">some_column_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedList</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Currently only set, delete, append and extend events are tracked. Others
-will require a call to <tt class="docutils literal"><span class="pre">changed</span></tt> to be persisted.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="flasker.util.query_to_models">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_models</tt><big>(</big><em>query</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_models" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the model classes associated with a query.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="flasker.util.query_to_dataframe">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_dataframe</tt><big>(</big><em>query</em>, <em>connection=None</em>, <em>exclude=None</em>, <em>index=None</em>, <em>columns=None</em>, <em>coerce_float=False</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_dataframe" title="Permalink to this definition">¶</a></dt>
-<dd><p>Load a Pandas dataframe from an SQLAlchemy query.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</li>
-<li><strong>connection</strong> (<em>sqlalchemy.engine.base.Connection</em>) &#8211; the connection to use to execute the query. By default
-the method will use the query&#8217;s session&#8217;s current connection. Note that
-connection is left open afterwards.</li>
-<li><strong>exclude</strong> (<em>list</em>) &#8211; a list of column names to exclude from the dataframe</li>
-<li><strong>index</strong> (<em>str</em>) &#8211; the column to use as index</li>
-<li><strong>names</strong> (<em>list</em>) &#8211; a list of column names. If unspecified, the method will use
-the table&#8217;s keys from the query&#8217;s metadata. If the passed data do not have
-named associated with them, this argument provides names for the columns.
-Otherwise this argument indicates the order of the columns in the result
-(any names not found in the data will become all-NA columns)</li>
-<li><strong>coerce_float</strong> (<em>bool</em>) &#8211; Attempt to convert values to non-string, non-numeric
-objects (like decimal.Decimal) to floating point.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="flasker.util.query_to_records">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">query_to_records</tt><big>(</big><em>query</em>, <em>connection=None</em><big>)</big><a class="headerlink" href="#flasker.util.query_to_records" title="Permalink to this definition">¶</a></dt>
-<dd><p>Raw execute of the query into a generator.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</li>
-<li><strong>connection</strong> (<em>sqlalchemy.engine.base.Connection</em>) &#8211; the connection to use to execute the query. By default
-the method will use the query&#8217;s session&#8217;s current connection. Note that
-connection is left open afterwards.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">generator</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p>About 5 times faster than loading the objects. Useful if only interested in
-raw columns of the model:</p>
-<div class="highlight-python"><pre># for ~300k models
-In [1]: %time [m.id for s in Model.q]
-CPU times: user 48.22 s, sys: 2.62 s, total: 50.84 s
-Wall time: 52.19 s
-In [2]: %time [m['id'] for s in query_to_records(Model.q)]
-CPU times: user 9.12 s, sys: 0.20 s, total: 9.32 s
-Wall time: 10.32 s</pre>
-</div>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.util.View">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">View</tt><a class="headerlink" href="#flasker.util.View" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.util.flask.View">
+<em class="property">class </em><tt class="descclassname">flasker.util.flask.</tt><tt class="descname">View</tt><a class="headerlink" href="#flasker.util.flask.View" title="Permalink to this definition">¶</a></dt>
 <dd><p>Base view class.</p>
 <p>Not to be used directly, should be subclassed or called via the function
-<a class="reference internal" href="#flasker.util.make_view" title="flasker.util.make_view"><tt class="xref py py-func docutils literal"><span class="pre">make_view()</span></tt></a>.</p>
+<a class="reference internal" href="#flasker.util.flask.make_view" title="flasker.util.flask.make_view"><tt class="xref py py-func docutils literal"><span class="pre">make_view()</span></tt></a>.</p>
 <p>If bound to an app, will automatically register itself for the rules defined
 in the rules property.</p>
 <dl class="classmethod">
-<dt id="flasker.util.View.bind_view">
-<em class="property">classmethod </em><tt class="descname">bind_view</tt><big>(</big><em>app</em><big>)</big><a class="headerlink" href="#flasker.util.View.bind_view" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.util.flask.View.bind_view">
+<em class="property">classmethod </em><tt class="descname">bind_view</tt><big>(</big><em>app</em><big>)</big><a class="headerlink" href="#flasker.util.flask.View.bind_view" title="Permalink to this definition">¶</a></dt>
 <dd><p>Attach view to app or blueprint.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="flasker.util.View.dispatch_request">
-<tt class="descname">dispatch_request</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.View.dispatch_request" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.util.flask.View.dispatch_request">
+<tt class="descname">dispatch_request</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.flask.View.dispatch_request" title="Permalink to this definition">¶</a></dt>
 <dd><p>Dispatches requests to the corresponding method name.</p>
 <p>Similar to the <tt class="docutils literal"><span class="pre">flask.views.MethodView</span></tt> implementation: GET requests
 are passed to <tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt>, POST to <tt class="xref py py-meth docutils literal"><span class="pre">post()</span></tt>, etc.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="flasker.util.View.jsonify">
-<tt class="descname">jsonify</tt><big>(</big><em>data</em>, <em>data_key='data'</em>, <em>meta_key='meta'</em>, <em>include_request=True</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.View.jsonify" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.util.flask.View.jsonify">
+<tt class="descname">jsonify</tt><big>(</big><em>data</em>, <em>data_key='data'</em>, <em>meta_key='meta'</em>, <em>include_request=True</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.flask.View.jsonify" title="Permalink to this definition">¶</a></dt>
 <dd><p>Put results in dictionary with some meta information and jsonify.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -628,8 +617,8 @@ information</li>
 </dd></dl>
 
 <dl class="function">
-<dt id="flasker.util.make_view">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">make_view</tt><big>(</big><em>app</em>, <em>view_class=&lt;class 'flasker.util.View'&gt;</em>, <em>view_name='View'</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.make_view" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.util.flask.make_view">
+<tt class="descclassname">flasker.util.flask.</tt><tt class="descname">make_view</tt><big>(</big><em>app</em>, <em>view_class=&lt;class 'flasker.util.flask.View'&gt;</em>, <em>view_name='View'</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.flask.make_view" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return base view class bound to app.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -637,7 +626,7 @@ information</li>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>app</strong> (<em>Flask app or blueprint</em>) &#8211; the app (or blueprint) to be bound to</li>
-<li><strong>view_class</strong> (<a class="reference internal" href="#flasker.util.View" title="flasker.util.View"><em>flasker.util.View</em></a>) &#8211; base view class</li>
+<li><strong>view_class</strong> (<em>flasker.util.View</em>) &#8211; base view class</li>
 </ul>
 </td>
 </tr>
@@ -650,111 +639,357 @@ information</li>
 </dd></dl>
 
 <dl class="function">
-<dt id="flasker.util.generate_app">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">generate_app</tt><big>(</big><em>foldername='app'</em><big>)</big><a class="headerlink" href="#flasker.util.generate_app" title="Permalink to this definition">¶</a></dt>
+<dt id="flasker.util.flask.generate_app">
+<tt class="descclassname">flasker.util.flask.</tt><tt class="descname">generate_app</tt><big>(</big><em>foldername='app'</em><big>)</big><a class="headerlink" href="#flasker.util.flask.generate_app" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create bootstrap app.</p>
 </dd></dl>
 
-<dl class="function">
-<dt id="flasker.util.exponential_smoothing">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">exponential_smoothing</tt><big>(</big><em>data</em>, <em>alpha=0.5</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#exponential_smoothing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.exponential_smoothing" title="Permalink to this definition">¶</a></dt>
-<dd><p>Smoothing data.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>data</strong> (<tt class="docutils literal"><span class="pre">list</span></tt>) &#8211; list of tuples. The smoothing will be done on
-the first item of each tuple.</li>
-<li><strong>alpha</strong> (<tt class="docutils literal"><span class="pre">float</span></tt>) &#8211; the discount factor</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">list</span></tt></p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="flasker.util.histogram">
-<tt class="descclassname">flasker.util.</tt><tt class="descname">histogram</tt><big>(</big><em>data</em>, <em>key=None</em>, <em>bins=50</em>, <em>restrict=None</em>, <em>categories=None</em>, <em>order=0</em>, <em>expand=False</em><big>)</big><a class="reference internal" href="_modules/flasker/util.html#histogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.util.histogram" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a histogram of counts for the data.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>data</strong> (<em>iterable of tuples</em>) &#8211; the data to be binned</li>
-<li><strong>restrict</strong> (<em>function or None</em>) &#8211; if provided, only data elements which return <cite>True</cite>
-will be included in the histogram. Default is <cite>None</cite> (all elements
-are included).</li>
-<li><strong>categories</strong> (<em>function or None</em>) &#8211; if provided, elements will be counted in separate
-categories. This changes the format of the output to a dictionary
-with the different categories as keys in each bin.</li>
-<li><strong>bins</strong> (<em>int or list(int)</em>) &#8211; either an int (total number of bins, which will be 
-uniformly spread) or a list of increasing bin values. smaller
-values will be in the first bin, larger in the last one.</li>
-<li><strong>order</strong> (<em>string</em>) &#8211; 0 if data isn&#8217;t sorted, 1 if sorted in ascending, -1 if
-sorted in descending order.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p>Possible extension: allow categories to return a list of keys, which would
-allow elements to be included in several counts.</p>
-</dd></dl>
-
-<dl class="class">
-<dt id="flasker.util.RunningStat">
-<em class="property">class </em><tt class="descclassname">flasker.util.</tt><tt class="descname">RunningStat</tt><a class="headerlink" href="#flasker.util.RunningStat" title="Permalink to this definition">¶</a></dt>
-<dd><p>To compute running means and variances efficiently.</p>
-<p>Usage:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">rs</span> <span class="o">=</span> <span class="n">RunningStat</span><span class="p">()</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
-  <span class="n">rs</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-<span class="n">rs</span><span class="o">.</span><span class="n">var</span>
-</pre></div>
 </div>
-<dl class="attribute">
-<dt id="flasker.util.RunningStat.avg">
-<tt class="descname">avg</tt><a class="headerlink" href="#flasker.util.RunningStat.avg" title="Permalink to this definition">¶</a></dt>
-<dd><p>Current mean.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.util.RunningStat.var">
-<tt class="descname">var</tt><a class="headerlink" href="#flasker.util.RunningStat.var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Current variance.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.util.RunningStat.sdv">
-<tt class="descname">sdv</tt><a class="headerlink" href="#flasker.util.RunningStat.sdv" title="Permalink to this definition">¶</a></dt>
-<dd><p>Current standard deviation.</p>
+<div class="section" id="module-flasker.util.sqlalchemy">
+<span id="sqlalchemy-helpers"></span><h2>SQLAlchemy helpers<a class="headerlink" href="#module-flasker.util.sqlalchemy" title="Permalink to this headline">¶</a></h2>
+<p>SQAlchemy helpers.</p>
+<dl class="class">
+<dt id="flasker.util.sqlalchemy.Model">
+<em class="property">class </em><tt class="descclassname">flasker.util.sqlalchemy.</tt><tt class="descname">Model</tt><a class="headerlink" href="#flasker.util.sqlalchemy.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>The custom SQLAlchemy base.</p>
+<p>Along with the methods described below, the following conveniences are
+provided:</p>
+<ul class="simple">
+<li>Automatic table naming (to the model&#8217;s class name uncamelcased with an
+extra s appended for good measure). To disable this behavior, simply
+override the <tt class="docutils literal"><span class="pre">__tablename__</span></tt> argument (setting it to <tt class="docutils literal"><span class="pre">None</span></tt> for
+single table inheritance).</li>
+<li>Default implementation of <tt class="docutils literal"><span class="pre">__repr__</span></tt> with model class and primary keys</li>
+<li>Caching (inherited from <a class="reference internal" href="#flasker.util.Cacheable" title="flasker.util.Cacheable"><tt class="xref py py-class docutils literal"><span class="pre">flasker.util.Cacheable</span></tt></a>). The cache is
+persistent by default (<tt class="docutils literal"><span class="pre">_cache</span></tt> is actually a
+<tt class="xref py py-class docutils literal"><span class="pre">flasker.util.JSONEncodedDict</span></tt> column).</li>
+<li>Logging (inherited from <a class="reference internal" href="#flasker.util.Loggable" title="flasker.util.Loggable"><tt class="xref py py-class docutils literal"><span class="pre">flasker.util.Loggable</span></tt></a>)</li>
+</ul>
+<dl class="classmethod">
+<dt id="flasker.util.sqlalchemy.Model.retrieve">
+<em class="property">classmethod </em><tt class="descname">retrieve</tt><big>(</big><em>flush_if_new=True</em>, <em>from_key=False</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Model.retrieve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given constructor arguments will return a match or create one.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>flush_if_new</strong> (<em>bool</em>) &#8211; whether or not to flush the model if created (this
+can be used to generate its <tt class="docutils literal"><span class="pre">id</span></tt>).</li>
+<li><strong>from_key</strong> (<em>bool</em>) &#8211; instead of issuing a filter on kwargs, this will issue
+a get query by id using this parameter. Note that in this case, any other
+keyword arguments will only be used if a new instance is created.</li>
+<li><strong>kwargs</strong> &#8211; constructor arguments</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">tuple</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>This method returns a tuple <tt class="docutils literal"><span class="pre">(model,</span> <span class="pre">flag)</span></tt> where <tt class="docutils literal"><span class="pre">model</span></tt> is of the
+corresponding class and <tt class="docutils literal"><span class="pre">flag</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt> if the model was just created
+and <tt class="docutils literal"><span class="pre">False</span></tt> otherwise.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="flasker.util.RunningStat.push">
-<tt class="descname">push</tt><big>(</big><em>n</em><big>)</big><a class="headerlink" href="#flasker.util.RunningStat.push" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add a new element to the statistic.</p>
+<dt id="flasker.util.sqlalchemy.Model.flush">
+<tt class="descname">flush</tt><big>(</big><em>merge=False</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Model.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the model to the session and flush.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int, float</em>) &#8211; number to add</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>merge</strong> (<em>bool</em>) &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, will merge instead of add.</td>
 </tr>
 </tbody>
 </table>
 </dd></dl>
 
+<dl class="method">
+<dt id="flasker.util.sqlalchemy.Model.get_primary_key">
+<tt class="descname">get_primary_key</tt><big>(</big><em>as_tuple=False</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Model.get_primary_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dictionary of primary keys for the given model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>as_tuple</strong> (<em>bool</em>) &#8211; if set to <tt class="docutils literal"><span class="pre">True</span></tt>, this method will return a tuple with
+the model&#8217;s primary key values. Otherwise a dictionary is returned.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict, tuple</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
+<dl class="method">
+<dt id="flasker.util.sqlalchemy.Model.to_json">
+<tt class="descname">to_json</tt><big>(</big><em>depth=1</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Model.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serializes the model into a dictionary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>depth</strong> (<em>int</em>) &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+<p>The following attributes are included in the returned JSON:</p>
+<ul class="simple">
+<li>all non private columns</li>
+<li>all non private properties</li>
+<li>all non private relationships which have their <tt class="docutils literal"><span class="pre">lazy</span></tt> attribute set to
+one of <tt class="docutils literal"><span class="pre">False,</span> <span class="pre">'joined',</span> <span class="pre">'immediate'</span></tt></li>
+</ul>
+<p>A consequence of this is that this method will never issue extra queries
+to populate the JSON. Furthermore, all the attribute names to be
+included are computed at class declaration so this method is very fast.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">To change which attributes are included in the dictionary, you can 
+override the <tt class="docutils literal"><span class="pre">__json__</span></tt> attribute.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.sqlalchemy.query_to_models">
+<tt class="descclassname">flasker.util.sqlalchemy.</tt><tt class="descname">query_to_models</tt><big>(</big><em>query</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.query_to_models" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the model classes associated with a query.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.sqlalchemy.query_to_dataframe">
+<tt class="descclassname">flasker.util.sqlalchemy.</tt><tt class="descname">query_to_dataframe</tt><big>(</big><em>query</em>, <em>connection=None</em>, <em>exclude=None</em>, <em>index=None</em>, <em>columns=None</em>, <em>coerce_float=False</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.query_to_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a Pandas dataframe from an SQLAlchemy query.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</li>
+<li><strong>connection</strong> (<em>sqlalchemy.engine.base.Connection</em>) &#8211; the connection to use to execute the query. By default
+the method will create a new connection using the session&#8217;s bound engine
+and properly close it afterwards.</li>
+<li><strong>exclude</strong> (<em>list</em>) &#8211; a list of column names to exclude from the dataframe</li>
+<li><strong>index</strong> (<em>str</em>) &#8211; the column to use as index</li>
+<li><strong>names</strong> (<em>list</em>) &#8211; a list of column names. If unspecified, the method will use
+the table&#8217;s keys from the query&#8217;s metadata. If the passed data do not have
+named associated with them, this argument provides names for the columns.
+Otherwise this argument indicates the order of the columns in the result
+(any names not found in the data will become all-NA columns)</li>
+<li><strong>coerce_float</strong> (<em>bool</em>) &#8211; Attempt to convert values to non-string, non-numeric
+objects (like decimal.Decimal) to floating point.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flasker.util.sqlalchemy.query_to_records">
+<tt class="descclassname">flasker.util.sqlalchemy.</tt><tt class="descname">query_to_records</tt><big>(</big><em>query</em>, <em>connection=None</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.query_to_records" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raw execute of the query into a generator.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>query</strong> (<em>sqlalchemy.orm.query.Query</em>) &#8211; the query to be executed</li>
+<li><strong>connection</strong> (<em>sqlalchemy.engine.base.Connection</em>) &#8211; the connection to use to execute the query. By default
+the method will create a new connection using the session&#8217;s bound engine
+and properly close it afterwards.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">generator</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>About 5 times faster than loading the objects. Useful if only interested in
+raw columns of the model:</p>
+<div class="highlight-python"><pre># for ~300k models
+In [1]: %time [m.id for s in Model.q]
+CPU times: user 48.22 s, sys: 2.62 s, total: 50.84 s
+Wall time: 52.19 s
+In [2]: %time [m['id'] for s in query_to_records(Model.q)]
+CPU times: user 9.12 s, sys: 0.20 s, total: 9.32 s
+Wall time: 10.32 s</pre>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.sqlalchemy.Query">
+<em class="property">class </em><tt class="descclassname">flasker.util.sqlalchemy.</tt><tt class="descname">Query</tt><big>(</big><em>entities</em>, <em>session=None</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base query class.</p>
+<p>All queries and relationships/backrefs defined using this extension will
+return an instance of this class.</p>
+<dl class="method">
+<dt id="flasker.util.sqlalchemy.Query.get_or_404">
+<tt class="descname">get_or_404</tt><big>(</big><em>model_id</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Query.get_or_404" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like get but aborts with 404 if not found.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>model_id</strong> (<em>varies</em>) &#8211; the model&#8217;s primary key</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">model or HTTPError</td>
+</tr>
+</tbody>
+</table>
+<p>This method is from Flask-SQLAlchemy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.sqlalchemy.Query.first_or_404">
+<tt class="descname">first_or_404</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Query.first_or_404" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like first but aborts with 404 if not found.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">model or HTTPError</td>
+</tr>
+</tbody>
+</table>
+<p>This method is from Flask-SQLAlchemy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.sqlalchemy.Query.fast_count">
+<tt class="descname">fast_count</tt><big>(</big><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Query.fast_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fast counting, bypassing subqueries.</p>
+<p>By default SQLAlchemy count queries use subqueries (which are very slow
+on MySQL). This method is useful when counting over large numbers of rows
+(10k and more), as the following benchmark shows (~250k rows):</p>
+<div class="code python highlight-python"><pre>In [1]: %time Cat.q.count()
+CPU times: user 0.01 s, sys: 0.00 s, total: 0.01 s
+Wall time: 1.36 s
+Out[1]: 281992L
+
+In [2]: %time Cat.c.scalar()
+CPU times: user 0.00 s, sys: 0.00 s, total: 0.00 s
+Wall time: 0.06 s
+Out[2]: 281992L</pre>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.sqlalchemy.Query.random">
+<tt class="descname">random</tt><big>(</big><em>n=1</em>, <em>dialect=None</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Query.random" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns n random model instances.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>n</strong> (<em>int</em>) &#8211; the number of instances to return</li>
+<li><strong>dialect</strong> (<em>str</em>) &#8211; the engine dialect (the implementation of random differs
+between MySQL and SQLite among others). By default will look up on the
+query for the dialect used. If no random function is available for the 
+chosen dialect, the fallback implementation uses total row count to 
+generate random offsets.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">model instances</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.sqlalchemy.Query.to_dataframe">
+<tt class="descname">to_dataframe</tt><big>(</big><em>lazy=True</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Query.to_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads a dataframe with the records from the query and returns it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lazy</strong> (<em>bool</em>) &#8211; whether or not to load the underlying objects. If set to
+<tt class="docutils literal"><span class="pre">False</span></tt>, the dataframe will be populated with the contents of
+<tt class="docutils literal"><span class="pre">to_json</span></tt> of the models, otherwise it will only contain the columns
+existing in the database (default behavior). If lazy is <tt class="docutils literal"><span class="pre">True</span></tt>, this
+method also accepts the same keyword arguments as
+<tt class="xref py py-func docutils literal"><span class="pre">flasker.util.query_to_dataframe()</span></tt>. For convenience, if no
+<tt class="docutils literal"><span class="pre">exclude</span></tt> kwarg is specified, it will default to <tt class="docutils literal"><span class="pre">['_cache']</span></tt>.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">pandas.DataFrame</td>
+</tr>
+</tbody>
+</table>
+<p>Requires the <tt class="docutils literal"><span class="pre">pandas</span></tt> library to be installed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flasker.util.sqlalchemy.Query.to_records">
+<tt class="descname">to_records</tt><big>(</big><em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.Query.to_records" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raw execute of the query into a generator.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">generator</td>
+</tr>
+</tbody>
+</table>
+<p>This method accepts the same keyword arguments as 
+<tt class="xref py py-func docutils literal"><span class="pre">flasker.util.query_to_records()</span></tt>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.sqlalchemy.JSONEncodedDict">
+<em class="property">class </em><tt class="descclassname">flasker.util.sqlalchemy.</tt><tt class="descname">JSONEncodedDict</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.JSONEncodedDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements dictionary column field type for SQLAlchemy.</p>
+<p>This can be used as a Column type during table creation:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">some_column_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedDict</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It also implements limited  mutability tracking to know when to update the
+database: set, del and update actions are tracked. If another method to
+update the dictionary is used, it will not automatically flag the
+dictionary for update (for example if a deeply nested key is updated).
+In such a case, the <tt class="docutils literal"><span class="pre">changed</span></tt> method needs the be called manually
+after the operation.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flasker.util.sqlalchemy.JSONEncodedList">
+<em class="property">class </em><tt class="descclassname">flasker.util.sqlalchemy.</tt><tt class="descname">JSONEncodedList</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#flasker.util.sqlalchemy.JSONEncodedList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements list column field type for SQLAlchemy.</p>
+<p>This can be used as a Column type during table creation:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">some_column_name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSONEncodedList</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Currently only set, delete, append and extend events are tracked. Others
+will require a call to <tt class="docutils literal"><span class="pre">changed</span></tt> to be persisted.</p>
+</dd></dl>
+
+</div>
 </div>
 
 
