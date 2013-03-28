@@ -893,8 +893,8 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
   :param query: the query to be executed
   :type query: sqlalchemy.orm.query.Query
   :param connection: the connection to use to execute the query. By default
-    the method will use the query's session's current connection. Note that
-    connection is left open afterwards.
+    the method will create a new connection using the session's bound engine
+    and properly close it afterwards.
   :type connection: sqlalchemy.engine.base.Connection
   :param exclude: a list of column names to exclude from the dataframe
   :type exclude: list
@@ -912,7 +912,7 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
   :rtype: pandas.DataFrame
   
   """
-  connection = connection or query._connection_from_session()
+  connection = connection or query.session.get_bind()
   exclude = exclude or []
   result = connection.execute(query.statement)
   columns = columns or result.keys()
@@ -923,6 +923,7 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
     index=index,
     coerce_float=coerce_float,
   )
+  result.close()
   return dataframe
 
 def query_to_records(query, connection=None):
@@ -931,8 +932,8 @@ def query_to_records(query, connection=None):
   :param query: the query to be executed
   :type query: sqlalchemy.orm.query.Query
   :param connection: the connection to use to execute the query. By default
-    the method will use the query's session's current connection. Note that
-    connection is left open afterwards.
+    the method will create a new connection using the session's bound engine
+    and properly close it afterwards.
   :type connection: sqlalchemy.engine.base.Connection
   :rtype: generator
 
@@ -948,11 +949,12 @@ def query_to_records(query, connection=None):
     Wall time: 10.32 s
   
   """
-  connection = connection or query._connection_from_session()
+  connection = connection or query.session.get_bind()
   result = connection.execute(query.statement)
   keys = result.keys()
   for record in result:
     yield {k:v for k, v in zip(keys, record)}
+  result.close()
 
 
 # ===

@@ -23,7 +23,8 @@ setup(
       'celery',
       'flask',
       'sqlalchemy',
-      'flower'
+      'flower',
+      'blinker',
     ],
     package_data={'flasker': [
       'ext/templates/**/*',

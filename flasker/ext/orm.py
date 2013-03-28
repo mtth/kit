@@ -127,8 +127,9 @@ class ORM(object):
 
     @project.run_after_module_imports
     def orm_after_imports(project):
-      self.Model.q = _QueryProperty(project)
       self.Model.c = _CountProperty(project)
+      self.Model.q = _QueryProperty(project)
+      self.Model.t = _TableProperty()
       if create_all:
         self.Model.metadata.create_all(
           project.session.get_bind(),
@@ -221,7 +222,11 @@ class Query(_Query):
     """
     if lazy:
       kwargs.setdefault('exclude', ['_cache'])
-      return query_to_dataframe(self, **kwargs)
+      return query_to_dataframe(
+        self,
+        connection=self._connection_from_session(),
+        **kwargs
+      )
     else:
       return DataFrame([model.to_json() for model in self])
 
@@ -234,7 +239,11 @@ class Query(_Query):
     :func:`flasker.util.query_to_records`.
     
     """
-    return query_to_records(self, **kwargs)
+    return query_to_records(
+      self,
+      connection=self._connection_from_session(),
+      **kwargs
+    )
 
 
 class _QueryProperty(object):
@@ -270,6 +279,19 @@ class _CountProperty(object):
       return None
 
 
+class _TableProperty(object):
+
+  """Easier access to table for batch update queries."""
+
+  def __get__(self, obj, cls):
+    try:
+      mapper = class_mapper(cls)
+      if mapper:
+        return mapper.mapped_table
+    except UnmappedClassError:
+      return None
+
+
 class BaseModel(Cacheable, Loggable):
 
   """The custom SQLAlchemy base.
@@ -295,8 +317,14 @@ class BaseModel(Cacheable, Loggable):
   """
   __json__ = None
 
+  #: Proxy for count query
   c = None
+
+  #: Proxy for query
   q = None
+
+  #: Proxy for table
+  t = None
 
   _cache = Column(JSONEncodedDict)
   _json_depth = 0
@@ -360,15 +388,15 @@ class BaseModel(Cacheable, Loggable):
     }
 
   @classmethod
-  def retrieve(cls, flush_if_new=True, from_id=None, **kwargs):
+  def retrieve(cls, flush_if_new=True, use_key=False, **kwargs):
     """Given constructor arguments will return a match or create one.
 
     :param flush_if_new: whether or not to flush the model if created (this
       can be used to generate its ``id``).
     :type flush_if_new: bool
-    :param from_id: instead of issuing a filter on kwargs, this will issue
+    :param use_key: instead of issuing a filter on kwargs, this will issue
       a get query by id using this parameter
-    :type from_id: varies
+    :type use_key: bool
     :param kwargs: constructor arguments
     :rtype: tuple
 
@@ -377,22 +405,21 @@ class BaseModel(Cacheable, Loggable):
     and ``False`` otherwise.
 
     """
-    if from_id:
-      instance = cls.q.get(from_id)
+    if use_key:
+      model_primary_key = tuple(
+        kwargs[k.name]
+        for k in class_mapper(cls).primary_key
+      )
+      instance = cls.q.get(model_primary_key)
     else:
       instance = cls.q.filter_by(**kwargs).first()
     if instance:
       return instance, False
-    if from_id:
-      key_names = [k.name for k in class_mapper(cls).primary_key]
-      if len(key_names) == 1:
-        kwargs.update({key_names[0]: from_id})
-      else:
-        kwargs.update(dict(zip(key_names, from_id)))
-    instance = cls(**kwargs)
-    if flush_if_new:
-      instance._flush()
-    return instance, True
+    else:
+      instance = cls(**kwargs)
+      if flush_if_new:
+        instance._flush()
+      return instance, True
 
   @declared_attr
   def __tablename__(cls):
