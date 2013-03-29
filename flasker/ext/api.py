@@ -153,6 +153,10 @@ class _ApiViewMeta(_ViewMeta):
     model = dct.get('__model__', None)
 
     if model is not None:
+
+      if not issubclass(model, Model):
+        raise ValueError('Api views can only be used with Orm models.')
+
       dct.setdefault('endpoint', model.__tablename__)
       base_url = dct.setdefault('base_url', model.__tablename__)
 
@@ -248,7 +252,7 @@ class View(_View):
 
         make_view(
           blueprint,
-          view_class=_RelationshipView,
+          view_class=RelationshipView,
           view_name='%s_%s' % (cls.endpoint, key),
           parent_model=model,
           assoc_key=key,
@@ -263,37 +267,40 @@ class View(_View):
 
   def get(self, **kwargs):
     """GET request handler."""
-    query = self.__model__.q
-    col, match = self.parser.parse(query, model_id=kwargs)
-    return self.jsonify(
-      self.parser.serialize(col),
-      match=match
-    )
+    if kwargs:
+      model = self.__model__.retrieve(from_key=True, **kwargs)
+      if not model:
+        raise APIError(404, 'Not found')
+      return self.parser.jsonify(model)
+    else:
+      return self.parser.jsonify(self.__model__.q)
 
   def post(self):
     """POST request handler."""
     if not self.validate(json):
       raise APIError(400, 'Invalid POST parameters')
     model = self.__model__(**request.json)
-    model._flush()
-    return self.jsonify(self.parser.serialize([model]))
+    model.flush()
+    return self.parser.jsonify(model)
 
   def put(self, **kwargs):
     """PUT request handler."""
-    query = self.__model__.q
-    model = self.parser.parse(query, model_id=kwargs, expect_one=True)
+    model = self.__model__.retrieve(from_key=True, **kwargs)
+    if not model:
+      raise APIError(404, 'Not found')
     if not self.validate(json, model):
       raise APIError(400, 'Invalid PUT parameters')
     for k, v in request.json.items():
       setattr(model, k, v)
-    return self.jsonify(self.parser.serialize([model]))
+    return self.parser.jsonify(model)
 
   def delete(self, **kwargs):
     """DELETE request handler."""
-    query = self.__model__.q
-    model = self.parser.parse(query, model_id=kwargs, expect_one=True)
+    model = self.__model__.retrieve(from_key=True, **kwargs)
+    if not model:
+      raise APIError(404, 'Not found')
     pj.session.delete(model)
-    return self.jsonify(self.parser.serialize([model]))
+    return self.parser.jsonify(model)
 
   def validate(self, json, model=None):
     """Validation method.
@@ -311,9 +318,9 @@ class View(_View):
 
     """
     return True
+  
 
-
-class _RelationshipView(_View):
+class RelationshipView(_View):
 
   """Relationship View."""
 
@@ -323,14 +330,24 @@ class _RelationshipView(_View):
   def get(self, **kwargs):
     """GET request handler."""
     position = kwargs.pop('position', None)
-    parent = self.parser.parse(
-      self.parent_model.q, model_id=kwargs, expect_one=True
-    )
+    parent = self.parent_model.retrieve(from_key=True, **kwargs)
+    if not parent:
+      raise APIError(404, 'Parent not found')
     collection =  getattr(parent, self.assoc_key)
-    col, match = self.parser.parse(
-      collection, model_position=position, fast_count=False
-    )
-    return self.jsonify(self.parser.serialize(col), match=match)
+
+    if position:
+      position = int(position) - 1 # model_position is 1 indexed
+      if isinstance(collection, Query):
+        model = collection.offset(position).limit(1).first()
+      else:
+        collection = collection[position:(position + 1)]
+        model = collection[0] if collection else None
+        if not model:
+          raise APIError(404, 'Not found')
+      return self.parser.jsonify(model)
+
+    else:
+      return self.parser.jsonify(collection)
 
 
 class Parser(object):
@@ -345,43 +362,75 @@ class Parser(object):
   :param max_limit: the maximum number of results returned by a query. ``0`` 
     means no limit.
   :type max_limit: int
-  :param expand: if ``True``, same model data will be repeated in the response
-    if the model is encountered multiple times, otherwise only the key will
-    be returned. This can be very useful for efficiency when used with a 
-    client-side library such as Backbone-Relational.
-  :type expand: bool
   :param sep: the separator used for filters and sort parameters
   :type sep: str
   
   """
 
   def __init__(self, default_depth=1, max_depth=0, default_limit=20,
-               max_limit=0, expand=True, sep=';'):
+               max_limit=0, sep=';'):
     self.options = {
       'default_depth': default_depth,
       'max_depth': max_depth,
       'default_limit': default_limit,
       'max_limit': max_limit,
-      'expand': expand,
       'sep': sep,
     }
 
-  def parse(self, collection, model_id=None, model_position=None,
-              expect_one=False):
+  def jsonify(self, data, data_key='data', meta_key='meta',
+    include_request=True, include_time=True, include_matches=True, **kwargs):
+    """Put results in dictionary with some meta information and jsonify.
+
+    :param data: data
+    :type data: collection or model
+    :param data_key: key where data will go
+    :type data_key: str
+    :param meta_key: key where metadata will go
+    :type meta_key: str
+    :param include_request: whether or not to include the issued request
+      information
+    :type include_request: bool
+    :rtype: Flask response
+    
+    Any keyword arguments will be included with the metadata.
+    
+    """
+    depth = request.args.get('depth', self.options['default_depth'], int)
+    max_depth = self.options['max_depth']
+    if max_depth:
+      depth = min(depth, max_depth)
+
+    start = time()
+
+    if isinstance(data, Model):
+      data = data.to_json(depth=depth)
+      match = {}
+    else:
+      col, matches = self._get_collection(data)
+      data = [e.to_json(depth=depth) for e in col if e]
+      match = {'total': matches, 'returned': len(data)}
+
+    rv = {data_key: data, meta_key: kwargs}
+
+    if include_matches and match:
+      rv[meta_key]['matches'] = match
+    if include_request:
+      rv[meta_key]['request'] = {
+        'base_url': request.base_url,
+        'method': request.method,
+        'values': request.values,
+      }
+    if include_time:
+      rv[meta_key]['parsing_time'] = time() - start
+
+    return jsonify(rv)
+
+  def _get_collection(self, collection):
     """Parse query and return JSON.
 
     :param collection: the query or list to be transformed to JSON
     :type collection: flasker.ext.orm.Query, list
-    :param model_id: model identifier. If specified, the parser will call
-      ``get`` on the query with this id.
-    :type model_id: dict
-    :param model_position: position of the model in the collection (1 indexed).
-    :type model_position: int
-    :param expect_one: can be used when ``model_id`` is specified to change the
-      return value of this method. Instead of returning a collection, it will
-      return the unique match found or raise an error otherwise.
-    :type expect_one: bool
-    :rtype: tuple or model
+    :rtype: tuple
 
     Returns a tuple ``(collection, match)``:
 
@@ -391,139 +440,72 @@ class Parser(object):
       of results for the filtered, offsetted and limited query.
 
     """
+    model = self._get_model_class(collection)
+    raw_filters = request.args.getlist('filter')
+    raw_sorts = request.args.getlist('sort')
+    offset = request.args.get('offset', 0, int)
+    limit = request.args.get('limit', self.options['default_limit'], int)
+    max_limit = self.options['max_limit']
+    if max_limit:
+      limit = min(limit, max_limit) if limit else max_limit
 
-    if not collection:
-      return [], None
+    if isinstance(collection, Query):
 
-    if model_id or model_position:
+      sep = self.options['sep']
 
-      if model_id:
-        if not isinstance(collection, Query):
-          #TODO: adapt for lists
-          raise APIError(400, 'Only queries with model_id')
-        model_class = self._get_model_class(collection)
-        model_key = tuple(
-          model_id[k.name]
-          for k in class_mapper(model_class).primary_key
-        )
-        model = collection.get(model_key)
-        if expect_one:
-          if model:
-            return model
-          else:
-            raise APIError(400, 'Resource not found')
+      for raw_filter in raw_filters:
+        try:
+          key, op, value = raw_filter.split(sep, 3)
+        except ValueError:
+          raise APIError(400, 'Invalid filter: %s' % raw_filter)
+        column = getattr(model, key, None)
+        if not column: # TODO check if is actual column
+          raise APIError(400, 'Invalid filter column: %s' % key)
+        if op == 'in':
+          filt = column.in_(value.split(','))
         else:
-          collection = [model] if model else []
+          try:
+            attr = filter(
+              lambda e: hasattr(column, e % op),
+              ['%s', '%s_', '__%s__']
+            )[0] % op
+          except IndexError:
+            raise APIError(400, 'Invalid filter operator: %s' % op)
+          if value == 'null':
+            value = None
+          filt = getattr(column, attr)(value)
+        collection = collection.filter(filt)
 
-      else:
-        position = int(model_position) - 1 # model_position is 1 indexed
-        if isinstance(collection, Query):
-          collection = collection.offset(position).limit(1).all()
+      for raw_sort in raw_sorts:
+        try:
+          key, order = raw_sort.split(sep)
+        except ValueError:
+          raise APIError(400, 'Invalid sort: %s' % raw_sort)
+        if not order in ['asc', 'desc']:
+          raise APIError(400, 'Invalid sort order: %s' % order)
+        column = getattr(model, key, None)
+        if column:
+          collection = collection.order_by(getattr(column, order)())
         else:
-          collection = collection[position:(position + 1)]
+          raise APIError(400, 'Invalid sort column: %s' % key)
 
-      match = {'total': len(collection), 'returned': len(collection)}
+      matches = collection.fast_count()
+      if offset:
+        collection = collection.offset(offset)
+      if limit:
+        collection = collection.limit(limit)
 
     else:
-      model = self._get_model_class(collection)
+      if raw_filters or raw_sorts:
+        raise APIError(400, 'Filter and sorts not implemented for lists')
 
-      raw_filters = request.args.getlist('filter')
-      raw_sorts = request.args.getlist('sort')
-      offset = request.args.get('offset', 0, int)
-      limit = request.args.get('limit', self.options['default_limit'], int)
-      max_limit = self.options['max_limit']
-      if max_limit:
-        limit = min(limit, max_limit) if limit else max_limit
-
-      if isinstance(collection, Query):
-
-        sep = self.options['sep']
-
-        filters = []
-        for raw_filter in raw_filters:
-          try:
-            key, op, value = raw_filter.split(sep, 3)
-          except ValueError:
-            raise APIError(400, 'Invalid filter: %s' % raw_filter)
-          column = getattr(model, key, None)
-          if not column: # TODO check if is actual column
-            raise APIError(400, 'Invalid filter column: %s' % key)
-          if op == 'in':
-            filt = column.in_(value.split(','))
-          else:
-            try:
-              attr = filter(
-                lambda e: hasattr(column, e % op),
-                ['%s', '%s_', '__%s__']
-              )[0] % op
-            except IndexError:
-              raise APIError(400, 'Invalid filter operator: %s' % op)
-            if value == 'null':
-              value = None
-            filt = getattr(column, attr)(value)
-          collection = collection.filter(filt)
-
-        match = {'total': collection.fast_count()}
-
-        for raw_sort in raw_sorts:
-          try:
-            key, order = raw_sort.split(sep)
-          except ValueError:
-            raise APIError(400, 'Invalid sort: %s' % raw_sort)
-          if not order in ['asc', 'desc']:
-            raise APIError(400, 'Invalid sort order: %s' % order)
-          column = getattr(model, key, None)
-          if column:
-            collection = collection.order_by(getattr(column, order)())
-          else:
-            raise APIError(400, 'Invalid sort column: %s' % key)
-
-        if offset:
-          collection = collection.offset(offset)
-
-        if limit:
-          collection = collection.limit(limit)
-          match['returned'] = collection.count()
-        else:
-          match['returned'] = collection.fast_count()
-
+      matches = len(collection)
+      if limit:
+        collection = collection[offset:(offset + limit)]
       else:
+        collection = collection[offset:]
 
-        if raw_filters or raw_sorts:
-          raise APIError(400, 'Filter and sorts not implemented for lists')
-
-        match = {'total': len(collection)}
-
-        if limit:
-          collection = collection[offset:(offset + limit)]
-        else:
-          collection = collection[offset:]
-
-        match['returned'] = len(collection)
-
-    return collection, match
-
-  def serialize(self, collection):
-    """Serializes a list or query to a dictionary.
-
-    :param collection: the collection to be serialized
-    :type collection: iterable
-    :param content_key: key to wrap content in
-    :type content_key: str
-    :rtype: dict
-    
-    The keyword arguments are ignored if ``content_key`` is ``None`` and
-    used to update the returned dictionary otherwise.
-
-    """
-
-    expand = request.args.get('expand', self.options['expand'], int)
-    depth = request.args.get('depth', self.options['default_depth'], int)
-    max_depth = self.options['max_depth']
-    if max_depth:
-      depth = min(depth, max_depth)
-
-    return [e.to_json(depth=depth) for e in collection if e]
+    return collection, matches
 
   def _get_model_class(self, collection):
     """Return corresponding model class from collection."""

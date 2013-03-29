@@ -114,12 +114,13 @@ class Model(Cacheable, Loggable):
     }
 
   @classmethod
-  def retrieve(cls, flush_if_new=True, from_key=False, **kwargs):
+  def retrieve(cls, from_key=False, if_not_found='pass', **kwargs):
     """Given constructor arguments will return a match or create one.
 
-    :param flush_if_new: whether or not to flush the model if created (this
-      can be used to generate its ``id``).
-    :type flush_if_new: bool
+    :param if_not_found: whether or not to create and flush the model if 
+      created (this can be used to generate its ``id``). Acceptable values:
+      'flush' (create and flush), 'create' (only create), 'pass' (do nothing).
+    :type if_not_found: str
     :param from_key: instead of issuing a filter on kwargs, this will issue
       a get query by id using this parameter. Note that in this case, any other
       keyword arguments will only be used if a new instance is created.
@@ -140,12 +141,15 @@ class Model(Cacheable, Loggable):
       instance = cls.q.get(model_primary_key)
     else:
       instance = cls.q.filter_by(**kwargs).first()
-    if instance:
-      return instance, False
+    if if_not_found == 'pass':
+      return instance
     else:
-      instance = cls(**kwargs)
-      if flush_if_new:
-        instance.flush()
+      if instance:
+        return instance, False
+      else:
+        instance = cls(**kwargs)
+        if if_not_found == 'flush':
+          instance.flush()
       return instance, True
 
   def __repr__(self):

@@ -25,7 +25,8 @@ class User(orm.Model):
   def import_new_user(cls, handle):
     u = client.GetUser(handle)
     user, flag = cls.retrieve(
-      use_key=True,
+      from_key=True,
+      if_not_found='flush',
       **{
         'handle': u.screen_name,
         'name': u.name,
@@ -45,7 +46,8 @@ class User(orm.Model):
     new_tweets = []
     for t in ts:
       tweet, flag = Tweet.retrieve(
-        use_key=True,
+        from_key=True,
+        if_not_found='flush',
         **{
           'id': t.id,
           'text': t.text,
