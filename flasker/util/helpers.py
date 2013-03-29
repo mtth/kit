@@ -15,8 +15,6 @@ from re import sub
 from sqlalchemy.orm import Query
 
 
-# General utilities
-
 def convert(value, rtype=None, allow_json=False):
   """Converts a string to another value.
 
@@ -93,6 +91,17 @@ def uncamelcase(name):
   return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 def to_json(value, depth=1):
+  """Serialize an object.
+
+  :param value: the object to be serialized.
+  :type value: varies
+  :param depth: used when serializing nested objects with a ``to_json``
+    method. In that case, the ``depth`` parameter is decremented by one each
+    call. This paramater sets the initial value.
+  :type depth: int
+  :rtype: varies
+
+  """
   if hasattr(value, 'to_json'):
     return value.to_json(depth - 1)
   if isinstance(value, dict):
@@ -107,7 +116,7 @@ def to_json(value, depth=1):
     return str(value)
   if isinstance(value, Decimal):
     return float(value)
-  raise ValueError('not jsonifiable')
+  raise ValueError('Not jsonifiable')
 
 def parse_config(file_or_filepath, default=None, allow_json=False,
   case_sensitive=False, parser_type=SafeConfigParser):
@@ -141,11 +150,20 @@ def parse_config(file_or_filepath, default=None, allow_json=False,
     }
     for s in parser.sections()
   }
-  if default:
-    conf = md_update(default, conf, copy=True)
-  return conf
 
-# Data processing helpers
+  if default:
+    # nested dictionary update function
+    def update(a, b):
+      for k, v in b.iteritems():
+        if isinstance(v, Mapping):
+          a[k] = update(a.get(k, {}), v)
+        else:
+          a[k] = b[k]
+      return a
+
+    conf = update(deepcopy(default), conf)
+
+  return conf
 
 Part = namedtuple('Part', ['offset', 'limit'])
 
@@ -221,114 +239,6 @@ def prod(iterable, key=None):
       rv *= key(elem)
   return rv
 
-# Multidict operations
-
-def md_depth(dct):
-  """Depth of a dictionary.
-
-  :param dct: dictionary
-  :type dct: dict
-  :rtype: int
-  
-  """
-  values = [
-      value
-      for value in dct.itervalues()
-      if isinstance(value, dict)
-  ]
-  return max(md_depth(value) for value in values) + 1 if values else 1
-
-def md_width(dct):
-  """Width of a dictionary.
-
-  :param dct: dictionary
-  :type dct: dict
-  :rtype: int
-  
-  """
-  values = [
-      value
-      for value in dct.itervalues()
-      if isinstance(value, dict)
-  ]
-  return sum(md_width(value) for value in values) + len(dct) - len(values)
-
-def md_flatten(dct, sep='_', prefix=''):
-  """Flatten a dictionary.
-
-  :param dct: dictionary
-  :type dct: dict
-  :param sep: the separator used when concatenating keys
-  :type sep: str
-  :param prefix: a prefix to add to all new keys
-  :type prefix: str
-  :rtype: dict:
-
-  .. note::
-
-    All keys in the dictionary must be strings.
-
-  """
-  items = []
-  for key, value in dct.iteritems():
-    k = prefix + sep + key if prefix else key
-    if isinstance(value, dict) and value:
-      items.extend(md_flatten(value, sep, k).items())
-    else:
-      items.append((k, value))
-  return dict(items)
-
-def md_unflatten(dct, sep='_', cname='all'):
-  """Unflatten a dictionary.
-
-  :param dct: dictionary
-  :type dct: dict
-  :param sep: the separator used to split keys
-  :type sep: str
-  :param cname: a key name used when a value would be added on an already
-    expanded dictionary. A simple example is when trying to unflatten 
-    ``{'a': 1, 'a_b': 2}``: there is ambiguity on where to store the value
-    for key ``'a'`` because it already contains the dictionary ``{'b': 2}``.
-    This is resolved creating a new key ``cname`` in this latter dictionary.
-  :type cname: str
-  :rtype: dict:
-
-  """
-  result = {}
-  keys = []
-  for key in dct.iterkeys():
-    keys.append(key.split(sep))
-  keys.sort(key=len, reverse=True)
-  for key in keys:
-    d = result
-    for part in key[:-1]:
-      if part not in d:
-        d[part] = {}
-      d = d[part]
-    if key[-1] in d:
-      d[key[-1]][cname] = dct[sep.join(key)]
-    else:
-      d[key[-1]] = dct[sep.join(key)]
-  return result
-
-def md_update(a, b, copy=False):
-  """Update for nested dictionaries.
-
-  :param copy: whether or not to do a deepcopy of the dictionary before
-    updating.
-  :type copy: bool
-  :rtype: dict
-
-  """
-  if copy:
-    a = deepcopy(a)
-  for k, v in b.iteritems():
-    if isinstance(v, Mapping):
-      a[k] = md_update(a.get(k, {}), v)
-    else:
-      a[k] = b[k]
-  return a
-
 
 class SmartDictReader(DictReader):
 
@@ -394,3 +304,4 @@ class SmartDictReader(DictReader):
     else:
       self.rows_imported += 1
       return processed_row
+

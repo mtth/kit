@@ -57,15 +57,13 @@ for :class:`flasker.ext.api.BaseView` for the list of all available options.
 
 from flask import Blueprint, jsonify, request
 from os.path import abspath, dirname, join
-from sqlalchemy.ext.associationproxy import AssociationProxy
-from sqlalchemy.orm import class_mapper, mapperlib
+from sqlalchemy.orm import class_mapper
 from time import time
 from werkzeug.exceptions import HTTPException
 
 from ..util.flask import make_view, View as _View, _ViewMeta
 from ..util.helpers import uncamelcase
 from ..util.sqlalchemy import Model, Query, query_to_models
-
 
 
 class APIError(HTTPException):
@@ -127,7 +125,6 @@ class API(object):
     def api_after_imports(project):
 
       if index_view:
-
         @blueprint.route('/')
         def index():
           return jsonify({
@@ -146,14 +143,21 @@ class API(object):
 
 class _ApiViewMeta(_ViewMeta):
 
-  """To register classes with the API on definition."""
+  """To register classes with the API on definition.
+
+  Automatically creates the ``endpoint``, ``base_url`` and ``rules`` for the
+  view from the ``__model__`` attribute.
+
+  Each route is then registered on the bound application (the current API
+  blueprint here).
+  
+  """
 
   def __new__(cls, name, bases, dct):
 
     model = dct.get('__model__', None)
 
     if model is not None:
-
       if not issubclass(model, Model):
         raise ValueError('Api views can only be used with Orm models.')
 
@@ -214,9 +218,7 @@ class View(_View):
     super(View, cls).register_view(blueprint)
 
     if cls.subviews:
-      
       model = cls.__model__
-
       all_keys = set(
         model._get_relationships(
           lazy=['dynamic', True, 'select'],
@@ -234,7 +236,6 @@ class View(_View):
         keys = all_keys & keys
 
       for key in keys:
-
         collection_route = '/%s%s/%s' % (
           cls.base_url,
           ''.join(
@@ -249,13 +250,12 @@ class View(_View):
           ),
           key
         )
-
         make_view(
           blueprint,
-          view_class=RelationshipView,
+          view_class=_RelationshipView,
           view_name='%s_%s' % (cls.endpoint, key),
-          parent_model=model,
-          assoc_key=key,
+          __model__=model,
+          __assoc_key__=key,
           parser=cls.parser,
           endpoint='%s_%s' % (cls.endpoint, key),
           methods=['GET', ],
@@ -320,20 +320,20 @@ class View(_View):
     return True
   
 
-class RelationshipView(_View):
+class _RelationshipView(_View):
 
   """Relationship View."""
 
-  parent_model = None
-  assoc_key = None
+  __model__ = None
+  __assoc_key__ = None
 
   def get(self, **kwargs):
     """GET request handler."""
     position = kwargs.pop('position', None)
-    parent = self.parent_model.retrieve(from_key=True, **kwargs)
+    parent = self.__model__.retrieve(from_key=True, **kwargs)
     if not parent:
       raise APIError(404, 'Parent not found')
-    collection =  getattr(parent, self.assoc_key)
+    collection =  getattr(parent, self.__assoc_key__)
 
     if position:
       position = int(position) - 1 # model_position is 1 indexed
@@ -357,6 +357,8 @@ class Parser(object):
   :param default_depth: the default depth models are jsonified to. ``0`` yields 
     an empty dictionary
   :type default_depth: int
+  :param max_depth: the maximum depth allowed in a query. ``0`` means no limit.
+  :type max_depth: int
   :param default_limit: the default number of results returned per query 
   :type default_limit: int
   :param max_limit: the maximum number of results returned by a query. ``0`` 
@@ -364,6 +366,9 @@ class Parser(object):
   :type max_limit: int
   :param sep: the separator used for filters and sort parameters
   :type sep: str
+
+  This class has a single method :meth:``jsonify`` which is used to parse a
+  model or collection and return the serialized response.
   
   """
 
@@ -379,17 +384,24 @@ class Parser(object):
 
   def jsonify(self, data, data_key='data', meta_key='meta',
     include_request=True, include_time=True, include_matches=True, **kwargs):
-    """Put results in dictionary with some meta information and jsonify.
+    """Parses the data and returns the serialized response.
 
-    :param data: data
-    :type data: collection or model
-    :param data_key: key where data will go
+    :param data: data. At this time, only instances, and lists of instances of
+      ``flasker.util.sqlalchemy.Model``, along with instances of 
+      ``flasker.util.sqlalchemy.Query`` are valid.
+    :type data: model or collection
+    :param data_key: key where the serialized data will go
     :type data_key: str
-    :param meta_key: key where metadata will go
+    :param meta_key: key where the metadata will go
     :type meta_key: str
     :param include_request: whether or not to include the issued request
       information
     :type include_request: bool
+    :param include_time: whether or not to include processing time
+    :type include_time: bool
+    :param include_matches: whether or not to include the total number of
+      results from the data (useful if ``data`` is a collection)
+    :type include_matches: bool
     :rtype: Flask response
     
     Any keyword arguments will be included with the metadata.
@@ -404,7 +416,7 @@ class Parser(object):
 
     if isinstance(data, Model):
       data = data.to_json(depth=depth)
-      match = {}
+      match = 1
     else:
       col, matches = self._get_collection(data)
       data = [e.to_json(depth=depth) for e in col if e]
@@ -412,7 +424,7 @@ class Parser(object):
 
     rv = {data_key: data, meta_key: kwargs}
 
-    if include_matches and match:
+    if include_matches:
       rv[meta_key]['matches'] = match
     if include_request:
       rv[meta_key]['request'] = {
@@ -435,9 +447,7 @@ class Parser(object):
     Returns a tuple ``(collection, match)``:
 
     * ``collection`` is the filtered, sorted, offsetted, limited collection.
-    * ``match`` is a dictionary with two keys: ``total`` with the total number
-      of results from the filtered query and ``returned`` with the total number
-      of results for the filtered, offsetted and limited query.
+    * ``match`` is the total number of results from the filtered query 
 
     """
     model = self._get_model_class(collection)

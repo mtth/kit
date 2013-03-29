@@ -89,13 +89,14 @@ class ORM(object):
     project.conf['SESSION']['QUERY_CLS'] = Query
 
     self.Model = declarative_base(cls=Model)
+    self.Model.q = _QueryProperty(project)
+    self.Model.t = _TableProperty(project)
+
     self.backref = partial(_backref, query_class=Query)
     self.relationship = partial(_relationship, query_class=Query)
 
     @project.run_after_module_imports
     def orm_after_imports(project):
-      self.Model.q = _QueryProperty(project)
-      self.Model.t = _TableProperty(project)
       if create_all:
         self.Model.metadata.create_all(
           project.session.get_bind(),
