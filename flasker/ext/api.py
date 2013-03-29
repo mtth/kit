@@ -200,14 +200,14 @@ class View(_View):
   subviews = []
 
   @classmethod
-  def bind_view(cls, blueprint):
+  def register_view(cls, blueprint):
     """Create the URL routes for the view.
     
     Standard :class:`flasker.util.View` implementation plus subview support.
     
     """
 
-    super(View, cls).bind_view(blueprint)
+    super(View, cls).register_view(blueprint)
 
     if cls.subviews:
       
@@ -367,7 +367,7 @@ class Parser(object):
     }
 
   def parse(self, collection, model_id=None, model_position=None,
-              fast_count=True, expect_one=False):
+              expect_one=False):
     """Parse query and return JSON.
 
     :param collection: the query or list to be transformed to JSON
@@ -377,12 +377,6 @@ class Parser(object):
     :type model_id: dict
     :param model_position: position of the model in the collection (1 indexed).
     :type model_position: int
-    :param fast_count: if ``True``, will issue a separate count query to get
-      the total number of matches. Because of a limitation on how count is 
-      handled using subqueries, this results in much faster results. However
-      this can only be used if the initial ``collection`` argument is an
-      unfiltered query.
-    :type fast_count: bool
     :param expect_one: can be used when ``model_id`` is specified to change the
       return value of this method. Instead of returning a collection, it will
       return the unique match found or raise an error otherwise.
@@ -467,18 +461,9 @@ class Parser(object):
             if value == 'null':
               value = None
             filt = getattr(column, attr)(value)
-          filters.append(filt)
+          collection = collection.filter(filt)
 
-        if fast_count:
-          count_query = model.c
-          for filt in filters:
-            collection = collection.filter(filt)
-            count_query = count_query.filter(filt)
-          match = {'total': count_query.scalar()}
-        else:
-          for filt in filters:
-            collection = collection.filter(filt)
-          match = {'total': collection.count()}
+        match = {'total': collection.fast_count()}
 
         for raw_sort in raw_sorts:
           try:
@@ -498,8 +483,9 @@ class Parser(object):
 
         if limit:
           collection = collection.limit(limit)
-
-        match['returned'] = collection.count()
+          match['returned'] = collection.count()
+        else:
+          match['returned'] = collection.fast_count()
 
       else:
 
@@ -537,11 +523,7 @@ class Parser(object):
     if max_depth:
       depth = min(depth, max_depth)
 
-    return [
-      e.to_json(depth=depth, expand=expand)
-      for e in collection
-      if e
-    ]
+    return [e.to_json(depth=depth) for e in collection if e]
 
   def _get_model_class(self, collection):
     """Return corresponding model class from collection."""
