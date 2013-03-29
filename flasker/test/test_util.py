@@ -3,7 +3,8 @@
 from tempfile import NamedTemporaryFile
 from nose.tools import eq_, raises
 
-from flasker.util import *
+from flasker.util.helpers import *
+from flasker.util.mixins import *
 
 
 def test_convert_auto():
@@ -130,26 +131,26 @@ class Test_Dict(object):
 
   def test_depth(self):
     for example, depth in zip(self.examples, [3,2]):
-      eq_(dict_depth(example['u']), depth)
-      eq_(dict_depth(example['f']), 1)
+      eq_(md_depth(example['u']), depth)
+      eq_(md_depth(example['f']), 1)
 
   def test_width(self):
     for example, width in zip(self.examples, [4,2]):
       for v in example.values():
-        eq_(dict_width(v), width)
+        eq_(md_width(v), width)
   
   def test_flatten(self):
     example = self.examples[0]
-    eq_(dict_flatten(example['u']), example['f'])
+    eq_(md_flatten(example['u']), example['f'])
 
   def test_unflatten(self):
     for example in self.examples:
-      eq_(dict_unflatten(example['f']), example['u'])
+      eq_(md_unflatten(example['f']), example['u'])
 
   def test_update(self):
     a = {'a': 1, 'b': {'c': 0}}
     b = {'a': 2, 'b': {'d': 1}}
-    c = dict_update(a, b)
+    c = md_update(a, b)
     eq_(c, {'a': 2, 'b': {'c': 0, 'd': 1}})
     eq_(a, c)
     eq_(b, {'a': 2, 'b': {'d': 1}})
@@ -157,7 +158,7 @@ class Test_Dict(object):
   def test_update_with_copy(self):
     a = {'a': 1, 'b': {'c': 0}}
     b = {'a': 2, 'b': {'d': 1}}
-    c = dict_update(a, b, copy=True)
+    c = md_update(a, b, copy=True)
     eq_(a, {'a': 1, 'b': {'c': 0}})
     eq_(b, {'a': 2, 'b': {'d': 1}})
   

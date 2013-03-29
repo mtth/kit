@@ -62,8 +62,8 @@ from sqlalchemy.orm import class_mapper, mapperlib
 from time import time
 from werkzeug.exceptions import HTTPException
 
-from ..util import uncamelcase
 from ..util.flask import make_view, View as _View, _ViewMeta
+from ..util.helpers import uncamelcase
 from ..util.sqlalchemy import Model, Query, query_to_models
 
 

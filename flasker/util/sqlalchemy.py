@@ -22,7 +22,8 @@ try:
 except ImportError:
   pass
 
-from . import Cacheable, Loggable, uncamelcase, to_json
+from .helpers import uncamelcase, to_json
+from .mixins import Cacheable, Loggable
 
 
 # Base model

@@ -33,14 +33,12 @@ For convenience, both these variables are also available directly in the
 
 """
 
-from __future__ import absolute_import
-
 from logging import getLogger, NullHandler, StreamHandler, DEBUG
 from os.path import abspath, dirname, join, sep, split, splitext
 from sys import path
 from werkzeug.local import LocalProxy
 
-from .util import parse_config
+from .util.helpers import parse_config
 
 
 class ProjectImportError(Exception):

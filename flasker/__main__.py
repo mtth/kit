@@ -12,8 +12,6 @@ file ``.cfg`` file is found it will use it.
 
 """
 
-from __future__ import absolute_import
-
 from argparse import ArgumentParser, REMAINDER
 from code import interact
 from functools import wraps
