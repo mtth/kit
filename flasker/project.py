@@ -150,7 +150,7 @@ class Project(object):
 
     else:
 
-      if self.conf_path and conf_path != self.conf_path:
+      if self.conf_path and abspath(conf_path) != self.conf_path:
         raise ProjectImportError('Cannot instantiante projects for different '
                                  'configuration files in the same process.')
 
