@@ -1,6 +1,12 @@
 Flasker
 =======
 
+**Flasker is now deprecated.**
+
+Consider using Kit_ instead, which allows YAML configuration files, running
+multiple projects side by side and more.
+
+
 A configurable, lightweight framework that integrates Flask_, SQLAlchemy_ and
 Celery_.
 
@@ -208,4 +214,5 @@ Flasker also comes with extensions for commonly needed functionalities:
 .. _IPython: http://ipython.org/
 .. _Werkzeug: http://werkzeug.pocoo.org/
 .. _Requests: http://docs.python-requests.org/en/latest/
+.. _Kit: http://github.com/mtth/kit
 
