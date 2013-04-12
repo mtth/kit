@@ -1,10 +1,9 @@
 Flasker
 =======
 
-**Flasker is now deprecated.**
+  Edit (04/12/2013)
 
-Consider using Kit_ instead, which allows YAML configuration files, running
-multiple projects side by side and more.
+  I won't be updating this repository anymore as I am now using Kit_ instead.
 
 
 A configurable, lightweight framework that integrates Flask_, SQLAlchemy_ and
