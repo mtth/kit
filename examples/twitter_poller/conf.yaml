@@ -1,12 +1,12 @@
 modules: ['app.models', 'app.tasks']
 celery:
   autocommit: yes
-  conf:
+  config:
     broker_url: 'redis://'
     celery_result_backend: 'database'
     celery_result_dburi: 'redis://'
     celery_send_events: yes
-engine:
+sqlalchemy:
   url: 'sqlite:///db.sqlite'
 twitter:
   user_handle: 'justinbieber'

@@ -1,9 +1,10 @@
 debug: yes
 flask:
   autocommit: yes
-  conf:
+  config:
     debug: yes
     testing: yes
-engine:
+sqlalchemy:
   url: 'sqlite:///db.sqlite'
-  echo: yes
+  engine:
+    echo: yes
