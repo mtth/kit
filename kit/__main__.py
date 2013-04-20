@@ -32,19 +32,15 @@ from re import findall
 
 
 def run_shell(kit):
-  """Start a shell in the context of the kit.
-
-  This will use IPython if it is available.
-  
-  """
+  """Start a shell in the context of the kit (using IPython if available)."""
   context = {'kit': kit}
   try:
     import IPython
   except ImportError:
     interact(local=context)
   else:
-    sh = IPython.frontend.terminal.embed.InteractiveShellEmbed()
-    sh(local_ns=context)
+    interactive_shell = IPython.frontend.terminal.embed.InteractiveShellEmbed()
+    interactive_shell(local_ns=context)
 
 def run_server(kit, local, port, debug):
   """Start a Werkzeug server for the Flask application."""
@@ -55,8 +51,8 @@ def run_worker(kit, raw):
   """Starts a celery worker.
 
   If no hostname is provided, one will be generated automatically using the
-  project domain and subdomain and current worker count. For example, the first
-  two workers started for project ``my_project`` and configuration ``default``
+  configuration file path and kit project root. For example, the first two
+  workers started for project root ``my_project`` and configuration ``default``
   will have respective hostnames:
 
   * w1.default.my_project

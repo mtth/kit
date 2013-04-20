@@ -21,7 +21,6 @@ How to get Kit?
   pip install kit
 
 You can find the latest version on `Github <https://github.com/mtth/kit>`_.
-documentation and examples!
 
 """
 
@@ -38,7 +37,7 @@ except ImportError:
   pass
 
 
-__version__ = '0.1.16'
+__version__ = '0.1.17'
 
 
 class KitImportError(Exception):
