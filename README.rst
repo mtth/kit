@@ -21,7 +21,7 @@ Celery_.
       engine:
         pool_recycle: 3600
 
-* Run your project from the comand line:
+* Run your project from the command line:
 
   * Start the Werkzeug_ webserver:
 
