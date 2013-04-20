@@ -14,7 +14,7 @@ from tempfile import mkstemp
 from threading import Thread
 from time import sleep, time
 
-from kit.base import Kit, KitImportError
+from kit import Kit, KitImportError
 
 
 class Test_Project(object):
