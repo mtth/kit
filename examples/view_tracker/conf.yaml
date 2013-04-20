@@ -1,0 +1,9 @@
+debug: yes
+flask:
+  autocommit: yes
+  conf:
+    debug: yes
+    testing: yes
+engine:
+  url: 'sqlite:///db.sqlite'
+  echo: yes

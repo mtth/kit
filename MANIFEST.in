@@ -1,4 +1,2 @@
 include MANIFEST.in
 include README.rst
-recursive-include flasker/ext/templates *
-recursive-include flasker/data *
