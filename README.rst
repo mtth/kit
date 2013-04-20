@@ -27,7 +27,7 @@ Celery_.
 
     .. code:: bash
 
-      $ kit server -d -p 5050
+      $ kit server -d -p 5050 conf.yaml
        * Running on http://0.0.0.0:5050/
        * Restarting with reloader
 
@@ -35,7 +35,7 @@ Celery_.
 
     .. code:: bash
 
-      $ kit shell
+      $ kit shell conf.yaml
       ...
       In [1]: kit.session
       Out[1]: <sqlalchemy.orm.scoping.scoped_session at 0x10b2dccd0>
@@ -45,13 +45,13 @@ Celery_.
 
     .. code:: bash
 
-      $ kit worker my_project
+      $ kit worker conf.yaml
 
   * Start the Flower_ monitor tool:
 
     .. code:: bash
 
-      $ kit flower
+      $ kit flower conf.yaml
 
 
 Kit handles all the Flask, Celery, and SQLAlchemy setup. It only creates those
