@@ -10,12 +10,12 @@ to our view.
 """
 
 from datetime import datetime
-from kit import get_flask_app, get_session
+from kit import flasks, sessions
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
-app = get_flask_app(__name__)
-session = get_session('first')
+app = flasks(__name__)
+session = sessions('db')
 
 # SQLAlchemy
 # ==========

@@ -17,6 +17,13 @@ from sys import path as sys_path
 from yaml import load
 
 
+class KitError(Exception):
+
+  """Generic error class."""
+
+  pass
+
+
 class Kit(object):
 
   """Kit class.
@@ -28,14 +35,11 @@ class Kit(object):
 
   path = None
 
-  flask_apps = {}
-  celery_apps = {}
-  sessions = {}
+  _flasks = {}
+  _celeries = {}
+  _sessions = {}
 
-  _session_bindings = {
-    'flask': defaultdict(list),
-    'celery': defaultdict(list),
-  }
+  _session_bindings = {}
 
   __state = {}
 
@@ -43,13 +47,14 @@ class Kit(object):
     self.__dict__ = self.__state
     if path:
       if self.path and path != self.path:
-        raise Exception('wrong path: %s' % path)
+        raise KitError('Invalid path specified: %r' % path)
       elif not self.path:
         self.path = abspath(path)
         with open(path) as f:
           self.config = load(f)
-        self.config.setdefault('flask', {})
-        self.config.setdefault('celery', {})
+        self.config.setdefault('flasks', [])
+        self.config.setdefault('celeries', [])
+        self.config.setdefault('sessions', [])
         if self.root not in sys_path:
           sys_path.insert(0, self.root)
         for module in self.modules:
@@ -66,62 +71,75 @@ class Kit(object):
   @property
   def modules(self):
     """Modules to import."""
-    return self.config['flask'].keys() + self.config['celery'].keys()
+    return [e['name'] for e in self.config['flasks'] + self.config['celeries']]
 
-  def get_flask_app(self, name):
+  def get_flasks(self, name):
     """Flask application getter."""
-    if name not in self.flask_apps:
-      conf = self.config['flask'][name]
-      flask_app = Flask(name, **conf.get('kwargs', {}))
-      flask_app.config.update(
-        {k.upper(): v for k, v in conf.get('config', {}).items()}
-      )
-      self.flask_apps[name] = flask_app
-      for session_name in conf.get('bindings', []):
-        self.add_binding(self.get_session(session_name), flask_app)
-    return self.flask_apps[name]
+    if name is None:
+      return [self.get_flasks(e['name']) for e in self.config['flasks']]
 
-  def get_celery_app(self, name):
+    else:
+      print name
+      if name not in self._flasks:
+        conf = self._get_options('flasks', name)
+        flask_app = Flask(name, **conf.get('kwargs', {}))
+        flask_app.config.update(
+          {k.upper(): v for k, v in conf.get('config', {}).items()}
+        )
+        self._flasks[name] = flask_app
+
+      return self._flasks[name]
+
+  def get_celeries(self, name):
     """Celery application getter."""
-    if name not in self.celery_apps:
-      conf = self.config['celery'][name]
-      celery_app = Celery(name, **conf.get('kwargs', {}))
-      celery_app.conf.update(
-        {k.upper(): v for k, v in conf.get('config', {}).items()}
-      )
-      celery_app.periodic_task = periodic_task
-      self.celery_apps[name] = celery_app
-      for session_name in conf.get('bindings', []):
-        self.add_binding(self.get_session(session_name), celery_app)
-    return self.celery_apps[name]
+    if name is None:
+      return [self.get_celeries(e['name']) for e in self.config['celeries']]
 
-  def get_session(self, name):
+    else:
+      if name not in self._celeries:
+        conf = self._get_options('celeries', name)
+        celery_app = Celery(name, **conf.get('kwargs', {}))
+        celery_app.conf.update(
+          {k.upper(): v for k, v in conf.get('config', {}).items()}
+        )
+        celery_app.periodic_task = periodic_task
+        self._celeries[name] = celery_app
+
+      return self._celeries[name]
+
+  def get_sessions(self, name):
     """SQLAlchemy scoped sessionmaker getter."""
-    if name not in self.sessions:
-      conf = self.config['sqlalchemy'][name]
-      engine = create_engine(
-        conf.get('url', 'sqlite://'), **conf.get('engine', {})
-      )
-      session = scoped_session(
-        sessionmaker(bind=engine, **conf.get('session', {}))
-      )
-      self.sessions[name] = session
-    return self.sessions[name]
+    if name is None:
+      return [self.get_sessions(e['name']) for e in self.config['sessions']]
+
+    else:
+      if name not in self._sessions:
+        conf = self._get_options('sessions', name)
+        engine = create_engine(
+          conf.get('url', 'sqlite://'), **conf.get('engine', {})
+        )
+        session = scoped_session(
+          sessionmaker(bind=engine, **conf.get('kwargs', {}))
+        )
+        self._sessions[name] = session
+
+      return self._sessions[name]
+
+  def _get_options(self, category, name):
+    options = filter(
+      lambda e: e['name'] == name,
+      self.config[category]
+    )
+    if len(options) == 1:
+      return options[0]
+    elif len(options) > 1:
+      raise KitError('Duplicate %s name %r found.' % (category, name))
+    else:
+      raise KitError('Undefined %s name %r.' % (category, name))
 
   def get_bindings(self, app):
-    """App / session bindings."""
-    if isinstance(app, Celery):
-      return self._session_bindings['celery'][app.main]
-    else:
-      return self._session_bindings['flask'][app.name]
-
-  def add_binding(self, session, app):
-    """App / session bindings."""
-    if isinstance(app, Celery):
-      bindings = self._session_bindings['celery'][app.main]
-    else:
-      bindings = self._session_bindings['flask'][app.name]
-    bindings.append(session)
+    for name, session in self._session_bindings.items():
+      yield session, True
 
 
 def _remove_session(sender, *args, **kwargs):
@@ -132,11 +150,9 @@ def _remove_session(sender, *args, **kwargs):
   else:
     # sender is a flask application
     app = sender
-  kit = Kit()
-  bindings = kit.get_bindings(app)
-  for session in kit.sessions.values():
+  for session, commit in Kit().get_bindings(app):
     try:
-      if session in bindings:
+      if commit:
         session.commit()
     except InvalidRequestError:
       session.rollback()

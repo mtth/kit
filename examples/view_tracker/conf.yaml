@@ -1,11 +1,11 @@
-flask:
-  app:
+flasks:
+  - name: 'app'
     config:
       debug: yes
       testing: yes
-    bindings: ['first']
-sqlalchemy:
-  first:
+  - name: 'app3'
+sessions:
+  - name: 'db'
     url: 'sqlite:///db.sqlite'
     engine:
       echo: yes

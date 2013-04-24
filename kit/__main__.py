@@ -25,7 +25,7 @@ Options:
 
 from code import interact
 from docopt import docopt
-from kit import __version__, get_flask_app, get_celery_app, get_session
+from kit import __version__, flasks, celeries, sessions
 from kit.base import Kit
 from os import sep
 from os.path import abspath, basename, dirname, join, split, splitext
@@ -36,9 +36,6 @@ def run_shell(kit):
   """Start a shell in the context of the kit (using IPython if available)."""
   context = {
     'kit': kit,
-    'get_flask_app': get_flask_app,
-    'get_celery_app': get_celery_app,
-    'get_session': get_session,
   }
   try:
     import IPython
@@ -51,7 +48,7 @@ def run_shell(kit):
 def run_server(kit, name, local, port, debug):
   """Start a Werkzeug server for the Flask application."""
   host = '127.0.0.1' if local else '0.0.0.0'
-  kit.get_flask_app(name).run(host=host, port=port, debug=debug)
+  kit.get_flasks(name).run(host=host, port=port, debug=debug)
 
 def run_worker(kit, name, raw):
   """Starts a celery worker.
@@ -85,12 +82,12 @@ def run_worker(kit, name, raw):
   )
   hostname = 'w%s.%s' % (wkn, base_hostname)
   options = ['worker', '--hostname=%s' % hostname] + raw
-  kit.get_celery_app(name).worker_main(options)
+  kit.get_celeries(name).worker_main(options)
 
 def run_flower(kit, name, raw):
   """Start flower worker manager."""
   options = ['celery', 'flower'] + raw
-  kit.get_celery_app(name).start(options)
+  kit.get_celeries(name).start(options)
 
 def main():
   """Command line parser."""

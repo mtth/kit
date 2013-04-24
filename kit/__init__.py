@@ -27,17 +27,17 @@ You can find the latest version on `Github <https://github.com/mtth/kit>`_.
 __version__ = '0.1.18'
 
 
-def get_flask_app(name, path=None):
+def flasks(name=None, path=None):
 
   from .base import Kit
-  return Kit(path).get_flask_app(name)
+  return Kit(path).get_flasks(name)
 
-def get_celery_app(name, path=None):
-
-  from .base import Kit
-  return Kit(path).get_celery_app(name)
-
-def get_session(name, path=None):
+def celeries(name=None, path=None):
 
   from .base import Kit
-  return Kit(path).get_session(name)
+  return Kit(path).get_celeries(name)
+
+def sessions(name=None, path=None):
+
+  from .base import Kit
+  return Kit(path).get_sessions(name)
