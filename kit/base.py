@@ -39,8 +39,6 @@ class Kit(object):
   _celeries = {}
   _sessions = {}
 
-  _session_bindings = {}
-
   __state = {}
 
   def __init__(self, path=None):
@@ -71,7 +69,11 @@ class Kit(object):
   @property
   def modules(self):
     """Modules to import."""
-    return [e['name'] for e in self.config['flasks'] + self.config['celeries']]
+    return [
+      e['name']
+      for category in ['flasks', 'celeries', 'sessions']
+      for e in self.config[category]
+    ]
 
   def get_flasks(self, name):
     """Flask application getter."""
@@ -121,9 +123,9 @@ class Kit(object):
         session = scoped_session(
           sessionmaker(bind=engine, **conf.get('kwargs', {}))
         )
-        self._sessions[name] = session
+        self._sessions[name] = (session, conf.get('commit', False))
 
-      return self._sessions[name]
+      return self._sessions[name][0]
 
   def _get_options(self, category, name):
     options = filter(
@@ -137,10 +139,6 @@ class Kit(object):
     else:
       raise KitError('Undefined %s name %r.' % (category, name))
 
-  def get_bindings(self, app):
-    for name, session in self._session_bindings.items():
-      yield session, True
-
 
 def _remove_session(sender, *args, **kwargs):
   """Globally namespaced function for signals to work."""
@@ -150,7 +148,7 @@ def _remove_session(sender, *args, **kwargs):
   else:
     # sender is a flask application
     app = sender
-  for session, commit in Kit().get_bindings(app):
+  for session, commit in Kit()._sessions:
     try:
       if commit:
         session.commit()

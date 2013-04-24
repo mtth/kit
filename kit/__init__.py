@@ -41,3 +41,8 @@ def sessions(name=None, path=None):
 
   from .base import Kit
   return Kit(path).get_sessions(name)
+
+def view_config(path=None):
+
+  from .base import Kit
+  return Kit(path).config

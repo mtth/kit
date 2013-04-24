@@ -36,6 +36,9 @@ def run_shell(kit):
   """Start a shell in the context of the kit (using IPython if available)."""
   context = {
     'kit': kit,
+    'flasks': flasks,
+    'celeries': celeries,
+    'sessions': sessions,
   }
   try:
     import IPython
