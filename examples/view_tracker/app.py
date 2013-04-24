@@ -10,18 +10,12 @@ to our view.
 """
 
 from datetime import datetime
-from kit import Kit
+from kit import get_flask_app, get_session
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
-# Our tookit!
-# ===========
-# 
-# The kit instance exposes the configured Flask application, Celery
-# application and SQLAlchemy session maker through its attributes
-# `flask`, `celery`, `session` (only `flask` and `session` are used here).
-
-kit = Kit('conf.yaml')
+app = get_flask_app(__name__)
+session = get_session('first')
 
 # SQLAlchemy
 # ==========
@@ -45,7 +39,7 @@ class Visit(Base):
   id = Column(Integer, primary_key=True)
   date = Column(DateTime, default=datetime.now)
 
-Base.metadata.create_all(kit.session.get_bind())
+Base.metadata.create_all(session.get_bind())
 
 # Flask
 # =====
@@ -54,7 +48,7 @@ Base.metadata.create_all(kit.session.get_bind())
 # For more information on creating views and routing, refer to the excellent
 # Flask online documentation (http://flask.pocoo.org/docs/tutorial/).
 
-@kit.flask.route('/')
+@app.route('/')
 def index():
   """This view returns the number of times it has been visited.
 
@@ -64,11 +58,6 @@ def index():
   
   """
   visit = Visit()                           # we create a new visit
-  kit.session.add(visit)                    # we add it to our session
-  count = kit.session.query(Visit).count()  # the total number of visits
+  session.add(visit)                    # we add it to our session
+  count = session.query(Visit).count()  # the total number of visits
   return 'This page has been visited %s times now!' % (count, )
-
-
-if __name__ == '__main__':
-  kit.flask.run()     # this will start a development server for our Flask app
-

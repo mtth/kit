@@ -14,7 +14,7 @@ from tempfile import mkstemp
 from threading import Thread
 from time import sleep, time
 
-from kit import Kit, KitImportError
+from kit import Kit
 
 
 class Test_Project(object):
@@ -22,7 +22,7 @@ class Test_Project(object):
   def setup(self):
     self.handle, self.cp = mkstemp()
     with open(self.cp, 'w') as f:
-      f.write('modules: []\ndebug: on')
+      f.write('')
 
   def teardown(self):
     close(self.handle)
@@ -48,7 +48,7 @@ class Test_Project(object):
     pj = Kit(self.cp)
     another = Kit('/another/missing/path.cfg')
 
-  @raises(KitImportError)
+  @raises(Exception)
   def test_empty_config_path(self):
     pj = Kit()
 

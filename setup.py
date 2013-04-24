@@ -30,9 +30,12 @@ setup(
       'Programming Language :: Python',
     ],
     install_requires=[
-      'blinker',
       'pyyaml',
       'docopt',
+      'flask',
+      'celery',
+      'sqlalchemy',
+      'blinker',
     ],
     entry_points={'console_scripts': ['kit = kit.__main__:main']},
 )
