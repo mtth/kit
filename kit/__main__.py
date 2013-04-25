@@ -65,6 +65,7 @@ def run_worker(kit, name, raw):
   * w2.default.my_project
 
   """
+  celery_app = kit.get_celeries(name)
   base_hostname = '%s.%s.%s' % (
     splitext(split(kit.path)[1])[0],
     name,
@@ -74,7 +75,7 @@ def run_worker(kit, name, raw):
     ))),
   )
   worker_pattern = r'w(\d+)\.%s' % (base_hostname, )
-  kit_worker_names = [d.keys()[0] for d in kit.celery.control.ping()]
+  kit_worker_names = [d.keys()[0] for d in celery_app.control.ping()]
   worker_numbers = [
     findall(worker_pattern, worker_name) or ['0']
     for worker_name in kit_worker_names
@@ -85,7 +86,7 @@ def run_worker(kit, name, raw):
   )
   hostname = 'w%s.%s' % (wkn, base_hostname)
   options = ['worker', '--hostname=%s' % hostname] + raw
-  kit.get_celeries(name).worker_main(options)
+  celery_app.worker_main(options)
 
 def run_flower(kit, name, raw):
   """Start flower worker manager."""

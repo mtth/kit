@@ -81,7 +81,6 @@ class Kit(object):
       return [self.get_flasks(e['name']) for e in self.config['flasks']]
 
     else:
-      print name
       if name not in self._flasks:
         conf = self._get_options('flasks', name)
         flask_app = Flask(name, **conf.get('kwargs', {}))
@@ -123,7 +122,7 @@ class Kit(object):
         session = scoped_session(
           sessionmaker(bind=engine, **conf.get('kwargs', {}))
         )
-        self._sessions[name] = (session, conf.get('commit', False))
+        self._sessions[name] = (session, conf.get('commit', True))
 
       return self._sessions[name][0]
 
@@ -148,7 +147,7 @@ def _remove_session(sender, *args, **kwargs):
   else:
     # sender is a flask application
     app = sender
-  for session, commit in Kit()._sessions:
+  for session, commit in Kit()._sessions.values():
     try:
       if commit:
         session.commit()

@@ -8,7 +8,7 @@ from json import dumps, loads
 from random import randint
 from sqlalchemy import Column, func
 from sqlalchemy.ext.associationproxy import AssociationProxy
-from sqlalchemy.ext.declarative import declared_attr 
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.orm import class_mapper, Query as _Query
 from sqlalchemy.orm.attributes import InstrumentedAttribute
@@ -114,45 +114,6 @@ class Model(Cacheable, Loggable):
       if show_private or not varname.startswith('_')
     }
 
-  @classmethod
-  def retrieve(cls, from_key=False, if_not_found='pass', **kwargs):
-    """Given constructor arguments will return a match or create one.
-
-    :param if_not_found: whether or not to create and flush the model if 
-      created (this can be used to generate its ``id``). Acceptable values:
-      'flush' (create and flush), 'create' (only create), 'pass' (do nothing).
-    :type if_not_found: str
-    :param from_key: instead of issuing a filter on kwargs, this will issue
-      a get query by id using this parameter. Note that in this case, any other
-      keyword arguments will only be used if a new instance is created.
-    :type from_key: bool
-    :param kwargs: constructor arguments
-    :rtype: tuple
-
-    This method returns a tuple ``(model, flag)`` where ``model`` is of the
-    corresponding class and ``flag`` is ``True`` if the model was just created
-    and ``False`` otherwise.
-
-    """
-    if from_key:
-      model_primary_key = tuple(
-        kwargs[k.name]
-        for k in class_mapper(cls).primary_key
-      )
-      instance = cls.q.get(model_primary_key)
-    else:
-      instance = cls.q.filter_by(**kwargs).first()
-    if if_not_found == 'pass':
-      return instance
-    else:
-      if instance:
-        return instance, False
-      else:
-        instance = cls(**kwargs)
-        if if_not_found == 'flush':
-          instance.flush()
-      return instance, True
-
   def __repr__(self):
     primary_keys = ', '.join(
       '%s=%r' % (k, getattr(self, k))
@@ -169,28 +130,6 @@ class Model(Cacheable, Loggable):
   def _cache(cls):
     """Automatically create the table name."""
     return Column(JSONEncodedDict)
-
-  def delete(self):
-    """Mark the model for deletion.
-
-    It will be removed from the database on the next commit.
-
-    """
-    self.q.session.delete(self)
-
-  def flush(self, merge=False):
-    """Add the model to the session and flush.
-    
-    :param merge: if ``True``, will merge instead of add.
-    :type merge: bool
-    
-    """
-    session = self.q.session
-    if merge:
-      session.merge(self)
-    else:
-      session.add(self)
-    session.flush([self])
 
   def get_primary_key(self, as_tuple=False):
     """Returns a dictionary of primary keys for the given model.
@@ -405,7 +344,7 @@ class Query(_Query):
       # initial query is over more than one model
       # not clear how to implement the count in that case
       raise ValueError('Fast count unavailable for this query.')
-    count_query = Query(func.count(), session=self.session)
+    count_query = self.__class__(func.count(), session=self.session)
     count_query = count_query.select_from(models[0])
     count_query._criterion = self._criterion
     return count_query.scalar()
@@ -425,8 +364,7 @@ class Query(_Query):
     
     """
     if dialect is None:
-      conn = self._connection_from_session()
-      dialect = conn.dialect.name
+      dialect = self.get_bind().dialect.name
     if dialect == 'mysql':
       rv = self.order_by(func.rand()).limit(n).all()
     elif dialect in ['sqlite', 'postgresql']:
@@ -438,7 +376,7 @@ class Query(_Query):
       return rv[0]
     return rv
 
-  def to_dataframe(self, lazy=True, **kwargs):
+  def to_dataframe(self, load_objects=False, **kwargs):
     """Loads a dataframe with the records from the query and returns it.
 
     :param lazy: whether or not to load the underlying objects. If set to
@@ -454,11 +392,11 @@ class Query(_Query):
     Requires the ``pandas`` library to be installed.
 
     """
-    if lazy:
+    if not load_objects:
       kwargs.setdefault('exclude', ['_cache'])
       return query_to_dataframe(
         self,
-        connection=self._connection_from_session(),
+        connection=self.session.connection(),
         **kwargs
       )
     else:
@@ -475,7 +413,7 @@ class Query(_Query):
     """
     return query_to_records(
       self,
-      connection=self._connection_from_session(),
+      connection=self.session.connection(),
       **kwargs
     )
 

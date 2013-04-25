@@ -63,50 +63,48 @@ also return custom queries:
 """
 
 from functools import partial
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy.orm import (backref as _backref, class_mapper,
   relationship as _relationship)
 from sqlalchemy.orm.exc import UnmappedClassError
 
-from ..util.sqlalchemy import Model, Query
+from ..util.sqlalchemy import Model as _Model, Query
 
-    
 
 class ORM(object):
 
   """The main ORM object.
 
-  :param project: the project against which the extension will be registered
-  :type project: kit.project.Project
-  :param create_all: whether or not to automatically create tables for the
-    models defined (``True`` by default). Tables will only be created for
-    models which do not have one already.
-  :type create_all: bool
+  The session will be reconfigured to use ``query_class``.
 
   """
 
-  def __init__(self, kit):
+  def __init__(self, session, query_class=Query):
 
-    conf = kit.config['sqlalchemy']
+    session.configure(query_cls=query_class)
 
-    if 'session' in conf:
-      conf['session']['query_cls'] = Query
-    else:
-      conf['session'] = {'query_cls': Query}
+    self.session = session
+    self._registry = {}
 
-    self.Model = declarative_base(cls=Model)
-    self.Model.q = _QueryProperty(kit)
-    self.Model.t = _TableProperty(kit)
+    self.Model = declarative_base(cls=Model, class_registry=self._registry)
+    self.Model.q = _QueryProperty(session)
+    self.Model.t = _TableProperty(session)
 
-    self.backref = partial(_backref, query_class=Query)
-    self.relationship = partial(_relationship, query_class=Query)
+    self.backref = partial(_backref, query_class=query_class)
+    self.relationship = partial(_relationship, query_class=query_class)
 
-    kit.logger.debug('orm extension initialized')
+  def get_all_models(self):
+    """All mapped models."""
+    return {
+      k: v
+      for k, v in self._registry.items()
+      if isinstance(v, DeclarativeMeta)
+    }
 
-  def create_all(self, kit, checkfirst=True):
+  def create_all(self, checkfirst=True):
     """Create tables for all mapped models."""
     self.Model.metadata.create_all(
-      kit.session.get_bind(),
+      self.session.get_bind(),
       checkfirst=checkfirst
     )
 
@@ -115,14 +113,14 @@ class _QueryProperty(object):
 
   """To make queries accessible directly on model classes."""
 
-  def __init__(self, kit):
-    self.kit = kit
+  def __init__(self, session):
+    self.session = session
 
   def __get__(self, obj, cls):
     try:
       mapper = class_mapper(cls)
       if mapper:
-        return Query(mapper, session=self.kit.session())
+        return Query(mapper, session=self.session())
     except UnmappedClassError:
       return None
 
@@ -131,16 +129,86 @@ class _TableProperty(object):
 
   """Bound table for faster batch executes."""
 
-  def __init__(self, kit):
-    self.kit = kit
+  def __init__(self, session):
+    self.session = session
 
   def __get__(self, obj, cls):
     try:
       mapper = class_mapper(cls)
       if mapper:
         table = mapper.mapped_table
-        table.metadata.bind = self.kit.session.connection()
+        # We bind the metadata to a connection to allow use of `execute`
+        # directly on the statement objects. This connection will be closed
+        # when the session is removed.
+        table.metadata.bind = self.session.connection()
         return table
     except UnmappedClassError:
       return None
 
+
+class Model(_Model):
+
+  """Adding a few methods using the bound session."""
+
+  @classmethod
+  def retrieve(cls, from_key=False, if_not_found='flush', **kwargs):
+    """Given constructor arguments will return a match or create one.
+
+    :param if_not_found: whether or not to create and flush the model if 
+      created (this can be used to generate its ``id``). Acceptable values:
+      'flush' (create and flush), 'create' (only create), 'pass' (do nothing).
+    :type if_not_found: str
+    :param from_key: instead of issuing a filter on kwargs, this will issue
+      a get query by id using this parameter. Note that in this case, any other
+      keyword arguments will only be used if a new instance is created.
+    :type from_key: bool
+    :param kwargs: constructor arguments
+    :rtype: tuple
+
+    This method returns a tuple ``(model, flag)`` where ``model`` is of the
+    corresponding class and ``flag`` is ``True`` if the model was just created
+    and ``False`` otherwise.
+
+    """
+    if from_key:
+      model_primary_key = tuple(
+        kwargs[k.name]
+        for k in class_mapper(cls).primary_key
+      )
+      instance = cls.q.get(model_primary_key)
+    else:
+      instance = cls.q.filter_by(**kwargs).first()
+    if if_not_found == 'pass':
+      return instance
+    elif if_not_found in ['flush', 'create']:
+      if instance:
+        return instance, False
+      else:
+        instance = cls(**kwargs)
+        if if_not_found == 'flush':
+          instance.flush()
+      return instance, True
+    else:
+      raise ValueError('Invalid if_not_found argument.')
+
+  def delete(self):
+    """Mark the model for deletion.
+
+    It will be removed from the database on the next commit.
+
+    """
+    self.q.session.delete(self)
+
+  def flush(self, merge=False):
+    """Add the model to the session and flush.
+    
+    :param merge: if ``True``, will merge instead of add.
+    :type merge: bool
+    
+    """
+    session = self.q.session
+    if merge:
+      session.merge(self)
+    else:
+      session.add(self)
+    session.flush([self])
