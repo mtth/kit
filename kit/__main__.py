@@ -80,7 +80,7 @@ def run_worker(kit, raw):
     for index, flask_app in enumerate(kit.celeries):
       print '%02s %s' % (index, flask_app.name)
       app = kit.celeries[int(raw_input('Which app would you like to run? '))]
-  app = kit.get_celeries(name)
+  name = app.main
   base_hostname = '%s.%s.%s' % (
     splitext(split(kit.path)[1])[0],
     name,

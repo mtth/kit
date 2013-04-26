@@ -102,7 +102,7 @@ class API(object):
 
   """
 
-  def __init__(self, kit, url_prefix='api', parser_options=None):
+  def __init__(self, flask_app, url_prefix='api', parser_options=None):
 
     parser_options = parser_options or {}
 
@@ -110,7 +110,7 @@ class API(object):
 
     self.blueprint = Blueprint(
       url_prefix,
-      '%s.%s' % (kit.flask.name, url_prefix),
+      '%s.%s' % (flask_app.name, url_prefix),
       url_prefix='/%s' % url_prefix,
     )
 
@@ -120,9 +120,7 @@ class API(object):
       parser=Parser(**parser_options)
     )
 
-    kit.logger.debug('api extension initialized')
-
-  def register(self, kit, index_view=True):
+  def register(self, flask_app, index_view=True):
 
     if index_view:
       @self.blueprint.route('/')
@@ -130,13 +128,12 @@ class API(object):
         return jsonify({
           'available_endpoints': sorted(
             '%s (%s)' % (r.rule, ', '.join(str(meth) for meth in r.methods))
-            for r in kit.flask.url_map.iter_rules()
+            for r in flask_app.url_map.iter_rules()
             if r.endpoint.startswith('%s.' % self.url_prefix)
           )
         })
 
-    kit.flask.register_blueprint(self.blueprint)
-    kit.logger.debug('api blueprint registered')
+    flask_app.register_blueprint(self.blueprint)
 
 
 class _ApiViewMeta(_ViewMeta):
