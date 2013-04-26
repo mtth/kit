@@ -1,0 +1,9 @@
+flasks:
+  - modules: ['app']
+    config:
+      debug: yes
+      testing: yes
+sessions:
+  - url: 'sqlite:///db.sqlite'
+    engine:
+      echo: yes

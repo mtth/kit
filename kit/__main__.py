@@ -4,9 +4,9 @@
 
 Usage:
   kit shell CONF
-  kit server [-dlp PORT] CONF APP
-  kit worker CONF APP [(-- [RAW] ...)]
-  kit flower CONF APP [(-- [RAW] ...)]
+  kit server [-dlp PORT] CONF
+  kit worker CONF [(-- [RAW] ...)]
+  kit flower CONF [(-- [RAW] ...)]
   kit -h | --help | --version
 
 Arguments:
@@ -25,7 +25,7 @@ Options:
 
 from code import interact
 from docopt import docopt
-from kit import __version__, flasks, celeries, sessions
+from kit import __version__, Flask, Celery, get_sessions
 from kit.base import Kit
 from os import sep
 from os.path import abspath, basename, dirname, join, split, splitext
@@ -36,9 +36,6 @@ def run_shell(kit):
   """Start a shell in the context of the kit (using IPython if available)."""
   context = {
     'kit': kit,
-    'flasks': flasks,
-    'celeries': celeries,
-    'sessions': sessions,
   }
   try:
     import IPython
@@ -48,12 +45,21 @@ def run_shell(kit):
     interactive_shell = IPython.frontend.terminal.embed.InteractiveShellEmbed()
     interactive_shell(local_ns=context)
 
-def run_server(kit, name, local, port, debug):
+def run_server(kit, local, port, debug):
   """Start a Werkzeug server for the Flask application."""
   host = '127.0.0.1' if local else '0.0.0.0'
-  kit.get_flasks(name).run(host=host, port=port, debug=debug)
+  if not len(kit.flasks):
+    print 'No Flask app found!'
+    return
+  elif len(kit.flasks) == 1:
+    app = kit.flasks[0]
+  else:
+    for index, flask_app in enumerate(kit.flasks):
+      print '%02s %s' % (index, flask_app.name)
+      app = kit.flasks[int(raw_input('Which app would you like to run? '))]
+  app.run(host=host, port=port, debug=debug)
 
-def run_worker(kit, name, raw):
+def run_worker(kit, raw):
   """Starts a celery worker.
 
   If no hostname is provided, one will be generated automatically using the
@@ -65,7 +71,16 @@ def run_worker(kit, name, raw):
   * w2.default.my_project
 
   """
-  celery_app = kit.get_celeries(name)
+  if not len(kit.celeries):
+    print 'No Celery app found!'
+    return
+  elif len(kit.celeries) == 1:
+    app = kit.celeries[0]
+  else:
+    for index, flask_app in enumerate(kit.celeries):
+      print '%02s %s' % (index, flask_app.name)
+      app = kit.celeries[int(raw_input('Which app would you like to run? '))]
+  app = kit.get_celeries(name)
   base_hostname = '%s.%s.%s' % (
     splitext(split(kit.path)[1])[0],
     name,
@@ -75,7 +90,7 @@ def run_worker(kit, name, raw):
     ))),
   )
   worker_pattern = r'w(\d+)\.%s' % (base_hostname, )
-  kit_worker_names = [d.keys()[0] for d in celery_app.control.ping()]
+  kit_worker_names = [d.keys()[0] for d in app.control.ping()]
   worker_numbers = [
     findall(worker_pattern, worker_name) or ['0']
     for worker_name in kit_worker_names
@@ -86,32 +101,33 @@ def run_worker(kit, name, raw):
   )
   hostname = 'w%s.%s' % (wkn, base_hostname)
   options = ['worker', '--hostname=%s' % hostname] + raw
-  celery_app.worker_main(options)
+  app.worker_main(options)
 
-def run_flower(kit, name, raw):
+def run_flower(kit, raw):
   """Start flower worker manager."""
   options = ['celery', 'flower'] + raw
-  kit.get_celeries(name).start(options)
+  if not len(kit.celeries):
+    print 'No Celery app found!'
+  else:
+    kit.celeries[0].start(options)
 
 def main():
   """Command line parser."""
   arguments = docopt(__doc__, version=__version__)
   kit = Kit(arguments['CONF'])
-  name = arguments['APP']
   if arguments['shell']:
     run_shell(kit)
   elif arguments['server']:
     run_server(
       kit,
-      name,
       local=arguments['--local'],
       port=int(arguments['--port']),
       debug=arguments['--debug'],
     )
   elif arguments['worker']:
-    run_worker(kit, name, raw=arguments['RAW'])
+    run_worker(kit, raw=arguments['RAW'])
   elif arguments['flower']:
-    run_flower(kit, name, raw=arguments['RAW'])
+    run_flower(kit, raw=arguments['RAW'])
 
 if __name__ == '__main__':
   main()

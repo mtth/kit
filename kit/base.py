@@ -34,10 +34,11 @@ class Kit(object):
   """
 
   path = None
+  flasks = []
+  celeries = []
 
-  _flasks = {}
-  _celeries = {}
-  _sessions = {}
+  _registry = {'flasks': {}, 'celeries': {}}
+  _sessions = []
 
   __state = {}
 
@@ -50,9 +51,8 @@ class Kit(object):
         self.path = abspath(path)
         with open(path) as f:
           self.config = load(f)
-        self.config.setdefault('flasks', [])
-        self.config.setdefault('celeries', [])
-        self.config.setdefault('sessions', [])
+          self.config.setdefault('flasks', [])
+          self.config.setdefault('celeries', [])
         if self.root not in sys_path:
           sys_path.insert(0, self.root)
         for module in self.modules:
@@ -68,76 +68,71 @@ class Kit(object):
 
   @property
   def modules(self):
-    """Modules to import."""
     return [
-      e['name']
-      for category in ['flasks', 'celeries', 'sessions']
-      for e in self.config[category]
+      module
+      for app_conf in self.config['flasks'] + self.config['celeries']
+      for module in app_conf.get('modules', [])
     ]
 
-  def get_flasks(self, name):
-    """Flask application getter."""
-    if name is None:
-      return [self.get_flasks(e['name']) for e in self.config['flasks']]
+  def get_flask_app(self, module_name):
+    """Application getter."""
+    if module_name not in self._registry['flasks']:
+      name, conf = self._get_options('flasks', module_name)
+      flask_app = Flask(name, **conf.get('kwargs', {}))
+      flask_app.config.update(
+        {k.upper(): v for k, v in conf.get('config', {}).items()}
+      )
+      self.flasks.append(flask_app)
+      for module in conf['modules']:
+        self._registry['flasks'][module] = flask_app
+    return self._registry['flasks'][module_name]
 
-    else:
-      if name not in self._flasks:
-        conf = self._get_options('flasks', name)
-        flask_app = Flask(name, **conf.get('kwargs', {}))
-        flask_app.config.update(
-          {k.upper(): v for k, v in conf.get('config', {}).items()}
-        )
-        self._flasks[name] = flask_app
-
-      return self._flasks[name]
-
-  def get_celeries(self, name):
+  def get_celery_app(self, module_name):
     """Celery application getter."""
-    if name is None:
-      return [self.get_celeries(e['name']) for e in self.config['celeries']]
+    if module_name not in self._registry['celeries']:
+      name, conf = self._get_options('celeries', module_name)
+      celery_app = Celery(name, **conf.get('kwargs', {}))
+      celery_app.conf.update(
+        {k.upper(): v for k, v in conf.get('config', {}).items()}
+      )
+      celery_app.periodic_task = periodic_task
+      self.celeries.append(celery_app)
+      for module in conf['modules']:
+        self._registry['celeries'][module] = celery_app
+    return self._registry['celeries'][module_name]
 
-    else:
-      if name not in self._celeries:
-        conf = self._get_options('celeries', name)
-        celery_app = Celery(name, **conf.get('kwargs', {}))
-        celery_app.conf.update(
-          {k.upper(): v for k, v in conf.get('config', {}).items()}
-        )
-        celery_app.periodic_task = periodic_task
-        self._celeries[name] = celery_app
-
-      return self._celeries[name]
-
-  def get_sessions(self, name):
+  def get_sessions(self):
     """SQLAlchemy scoped sessionmaker getter."""
-    if name is None:
-      return [self.get_sessions(e['name']) for e in self.config['sessions']]
-
-    else:
-      if name not in self._sessions:
-        conf = self._get_options('sessions', name)
+    if not self._sessions:
+      for conf in self.config['sessions']:
         engine = create_engine(
           conf.get('url', 'sqlite://'), **conf.get('engine', {})
         )
         session = scoped_session(
           sessionmaker(bind=engine, **conf.get('kwargs', {}))
         )
-        self._sessions[name] = (session, conf.get('commit', True))
+        self._sessions.append((session, conf.get('commit', True)))
+    return zip(*self._sessions)[0]
 
-      return self._sessions[name][0]
-
-  def _get_options(self, category, name):
-    options = filter(
-      lambda e: e['name'] == name,
-      self.config[category]
+  def _get_options(self, kind, module_name):
+    configs = filter(
+      lambda e: module_name in e.get('modules', []),
+      self.config[kind]
     )
-    if len(options) == 1:
-      return options[0]
-    elif len(options) > 1:
-      raise KitError('Duplicate %s name %r found.' % (category, name))
+    if len(configs) == 1:
+      config = configs[0]
+      def letters_generator():
+        for letters in map(set, zip(*config['modules'])):
+          if len(letters) == 1:
+            yield letters.pop()
+          else:
+            return
+      name = ''.join(letters_generator())
+      return name, config
+    elif len(configs) > 1:
+      raise KitError('Duplicate %s name %r found.' % (kind, name))
     else:
-      raise KitError('Undefined %s name %r.' % (category, name))
-
+      raise KitError('Undefined %s name %r.' % (kind, name))
 
 def _remove_session(sender, *args, **kwargs):
   """Globally namespaced function for signals to work."""
@@ -147,7 +142,7 @@ def _remove_session(sender, *args, **kwargs):
   else:
     # sender is a flask application
     app = sender
-  for session, commit in Kit()._sessions.values():
+  for session, commit in Kit()._sessions:
     try:
       if commit:
         session.commit()
