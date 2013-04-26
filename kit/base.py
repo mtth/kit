@@ -47,19 +47,32 @@ class Kit(object):
     if path:
       if self.path and path != self.path:
         raise KitError('Invalid path specified: %r' % path)
+
       elif not self.path:
         self.path = abspath(path)
+
         with open(path) as f:
           self.config = load(f)
           self.config.setdefault('flasks', [])
           self.config.setdefault('celeries', [])
+          self.config.setdefault('sessions', [])
+
         if self.root not in sys_path:
           sys_path.insert(0, self.root)
-        for module in self.modules:
+
+        for module in self._modules:
           __import__(module)
 
   def __repr__(self):
     return '<Kit %r>' % (self.path, )
+
+  @property
+  def _modules(self):
+    return [
+      module
+      for app_conf in self.config['flasks'] + self.config['celeries']
+      for module in app_conf.get('modules', [])
+    ]
 
   @property
   def root(self):
@@ -67,12 +80,18 @@ class Kit(object):
     return abspath(join(dirname(self.path), self.config.get('root', '.')))
 
   @property
-  def modules(self):
-    return [
-      module
-      for app_conf in self.config['flasks'] + self.config['celeries']
-      for module in app_conf.get('modules', [])
-    ]
+  def sessions(self):
+    """SQLAlchemy scoped sessionmaker getter."""
+    if not self._sessions:
+      for conf in self.config['sessions']:
+        engine = create_engine(
+          conf.get('url', 'sqlite://'), **conf.get('engine', {})
+        )
+        session = scoped_session(
+          sessionmaker(bind=engine, **conf.get('kwargs', {}))
+        )
+        self._sessions.append((session, conf.get('commit', True)))
+    return list(zip(*self._sessions)[0])
 
   def get_flask_app(self, module_name):
     """Application getter."""
@@ -100,19 +119,6 @@ class Kit(object):
       for module in conf['modules']:
         self._registry['celeries'][module] = celery_app
     return self._registry['celeries'][module_name]
-
-  def get_sessions(self):
-    """SQLAlchemy scoped sessionmaker getter."""
-    if not self._sessions:
-      for conf in self.config['sessions']:
-        engine = create_engine(
-          conf.get('url', 'sqlite://'), **conf.get('engine', {})
-        )
-        session = scoped_session(
-          sessionmaker(bind=engine, **conf.get('kwargs', {}))
-        )
-        self._sessions.append((session, conf.get('commit', True)))
-    return zip(*self._sessions)[0]
 
   def _get_options(self, kind, module_name):
     configs = filter(
