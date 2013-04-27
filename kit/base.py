@@ -130,18 +130,18 @@ class Kit(object):
     )
     if len(configs) == 1:
       config = configs[0]
-      def letters_generator():
-        for letters in map(set, zip(*config['modules'])):
+      def letters_generator(modules):
+        for letters in map(set, zip(*modules)):
           if len(letters) == 1:
             yield letters.pop()
           else:
             return
-      name = ''.join(letters_generator())
+      name = ''.join(letters_generator(config['modules'])).rstrip('.')
       return name, config
     elif len(configs) > 1:
-      raise KitError('Duplicate %s name %r found.' % (kind, name))
+      raise KitError('Duplicate %s for module %r found.' % (kind, module_name))
     else:
-      raise KitError('Undefined %s name %r.' % (kind, name))
+      raise KitError('Undefined %s for module  %r.' % (kind, module_name))
 
 def _remove_session(sender, *args, **kwargs):
   """Globally namespaced function for signals to work."""
