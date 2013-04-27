@@ -3,16 +3,15 @@
 """SQLAlchemy models."""
 
 from datetime import datetime
-from kit import get_sessions
+from kit import get_session
 from kit.ext.orm import ORM
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Unicode
 
-session = get_sessions()[0]
+session = get_session('db')
 orm = ORM(session)
 
 class Tweet(orm.Model):
 
-  _cache = None
   id = Column(Integer, primary_key=True)
   text = Column(Unicode(140))
   created_at = Column(DateTime(timezone=False))
@@ -20,7 +19,6 @@ class Tweet(orm.Model):
 
 class RetweetCount(orm.Model):
 
-  _cache = None
   id = Column(Integer, primary_key=True)
   date = Column(DateTime, default=datetime.now)
   tweet_id = Column(ForeignKey('tweets.id'))

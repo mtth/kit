@@ -15,7 +15,7 @@ from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 
 app = Flask(__name__)
-session = get_sessions()[0]
+session = get_session('db')
 
 # SQLAlchemy
 # ==========

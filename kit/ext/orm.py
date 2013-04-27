@@ -79,7 +79,7 @@ class ORM(object):
 
   """
 
-  def __init__(self, session, query_class=Query):
+  def __init__(self, session, query_class=Query, persistent_cache=False):
 
     session.configure(query_cls=query_class)
 
@@ -89,6 +89,8 @@ class ORM(object):
     self.Model = declarative_base(cls=Model, class_registry=self._registry)
     self.Model.q = _QueryProperty(session)
     self.Model.t = _TableProperty(session)
+    if not persistent_cache:
+      self.Model._cache = {}
 
     self.backref = partial(_backref, query_class=query_class)
     self.relationship = partial(_relationship, query_class=query_class)
@@ -151,23 +153,24 @@ class Model(_Model):
   """Adding a few methods using the bound session."""
 
   @classmethod
-  def retrieve(cls, from_key=False, if_not_found='flush', **kwargs):
+  def retrieve(cls, from_key=False, flush_if_missing=False, **kwargs):
     """Given constructor arguments will return a match or create one.
 
-    :param if_not_found: whether or not to create and flush the model if 
-      created (this can be used to generate its ``id``). Acceptable values:
-      'flush' (create and flush), 'create' (only create), 'pass' (do nothing).
-    :type if_not_found: str
+    :param flush_if_missing: whether or not to create and flush the model if 
+      created (this can be used to generate its ``id``).
+    :type flush_if_missing: bool
     :param from_key: instead of issuing a filter on kwargs, this will issue
       a get query by id using this parameter. Note that in this case, any other
       keyword arguments will only be used if a new instance is created.
     :type from_key: bool
     :param kwargs: constructor arguments
-    :rtype: tuple
+    :rtype: varies
 
-    This method returns a tuple ``(model, flag)`` where ``model`` is of the
-    corresponding class and ``flag`` is ``True`` if the model was just created
-    and ``False`` otherwise.
+    If ``flush_if_missing`` is ``True``, this method returns a tuple ``(model,
+    flag)`` where ``model`` is of the corresponding class and ``flag`` is
+    ``True`` if the model was just created and ``False`` otherwise. If
+    ``flush_if_missing`` is ``False``, this methods simply returns an instance
+    if found and ``None`` otherwise.
 
     """
     if from_key:
@@ -178,9 +181,9 @@ class Model(_Model):
       instance = cls.q.get(model_primary_key)
     else:
       instance = cls.q.filter_by(**kwargs).first()
-    if if_not_found == 'pass':
+    if not flush_if_missing:
       return instance
-    elif if_not_found in ['flush', 'create']:
+    else:
       if instance:
         return instance, False
       else:
@@ -188,8 +191,6 @@ class Model(_Model):
         if if_not_found == 'flush':
           instance.flush()
       return instance, True
-    else:
-      raise ValueError('Invalid if_not_found argument.')
 
   def delete(self):
     """Mark the model for deletion.

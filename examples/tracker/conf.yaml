@@ -4,6 +4,7 @@ flasks:
       debug: yes
       testing: yes
 sessions:
-  - url: 'sqlite:///db.sqlite'
+  db:
+    url: 'sqlite:///db.sqlite'
     engine:
       echo: yes

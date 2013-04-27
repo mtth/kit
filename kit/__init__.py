@@ -65,7 +65,7 @@ def Celery(module_name, path=None):
   from .base import Kit
   return Kit(path).get_celery_app(module_name)
 
-def get_sessions(path=None):
+def get_session(session_name, path=None):
   """Returns all the sessions registered for this kit.
 
   :param path: the path to the overall kit configuration file. This can be used
@@ -75,7 +75,7 @@ def get_sessions(path=None):
 
   """
   from .base import Kit
-  return Kit(path).sessions
+  return Kit(path).get_session(session_name)
 
 def get_config(path=None):
   """Returns the kit's configuration.

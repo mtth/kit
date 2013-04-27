@@ -56,12 +56,12 @@ for :class:`kit.ext.api.BaseView` for the list of all available options.
 """
 
 from flask import Blueprint, jsonify, request
-from sqlalchemy.orm import class_mapper
+from sqlalchemy.orm import class_mapper, Query
 from time import time
 from werkzeug.exceptions import HTTPException
 
 from ..util.flask import make_view, View as _View, _ViewMeta
-from ..util.sqlalchemy import Model, Query, query_to_models
+from ..util.sqlalchemy import Model, query_to_models
 
 
 class APIError(HTTPException):
@@ -494,7 +494,10 @@ class Parser(object):
         else:
           raise APIError(400, 'Invalid sort column: %s' % key)
 
-      matches = collection.fast_count()
+      if hasattr(collection, 'fast_count'):
+        matches = collection.fast_count()
+      else:
+        matches = collection.count()
       if offset:
         collection = collection.offset(offset)
       if limit:

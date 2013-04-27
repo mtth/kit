@@ -25,7 +25,7 @@ Options:
 
 from code import interact
 from docopt import docopt
-from kit import __version__, Flask, Celery, get_sessions
+from kit import __version__, Flask, Celery
 from kit.base import Kit
 from os import sep
 from os.path import abspath, basename, dirname, join, split, splitext

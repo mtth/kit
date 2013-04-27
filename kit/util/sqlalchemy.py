@@ -50,6 +50,11 @@ class Model(Cacheable, Loggable):
 
   """
 
+  @declared_attr
+  def __tablename__(cls):
+    """Automatically create the table name."""
+    return '%ss' % uncamelcase(cls.__name__)
+
   @classmethod
   def __declare_last__(cls):
     """Creates the ``__json__`` attribute.
@@ -79,6 +84,11 @@ class Model(Cacheable, Loggable):
         ).property.lazy in [False, 'joined', 'immediate']
       )
     )
+
+  @declared_attr
+  def _cache(cls):
+    """Automatically create the table name."""
+    return Column(JSONEncodedDict)
 
   @classmethod
   def _get_columns(cls, show_private=False):
@@ -120,16 +130,6 @@ class Model(Cacheable, Loggable):
       for k, v in self.get_primary_key().items()
     )
     return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
-
-  @declared_attr
-  def __tablename__(cls):
-    """Automatically create the table name."""
-    return '%ss' % uncamelcase(cls.__name__)
-
-  @declared_attr
-  def _cache(cls):
-    """Automatically create the table name."""
-    return Column(JSONEncodedDict)
 
   def get_primary_key(self, as_tuple=False):
     """Returns a dictionary of primary keys for the given model.

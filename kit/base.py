@@ -38,7 +38,7 @@ class Kit(object):
   celeries = []
 
   _registry = {'flasks': {}, 'celeries': {}}
-  _sessions = []
+  _sessions = {}
 
   __state = {}
 
@@ -82,16 +82,7 @@ class Kit(object):
   @property
   def sessions(self):
     """SQLAlchemy scoped sessionmaker getter."""
-    if not self._sessions:
-      for conf in self.config['sessions']:
-        engine = create_engine(
-          conf.get('url', 'sqlite://'), **conf.get('engine', {})
-        )
-        session = scoped_session(
-          sessionmaker(bind=engine, **conf.get('kwargs', {}))
-        )
-        self._sessions.append((session, conf.get('commit', True)))
-    return list(zip(*self._sessions)[0])
+    return {k: v[0] for k, v in self._sessions.items()}
 
   def get_flask_app(self, module_name):
     """Application getter."""
@@ -119,6 +110,18 @@ class Kit(object):
       for module in conf['modules']:
         self._registry['celeries'][module] = celery_app
     return self._registry['celeries'][module_name]
+
+  def get_session(self, session_name):
+    if session_name not in self._sessions:
+      conf = self.config['sessions'][session_name]
+      engine = create_engine(
+        conf.get('url', 'sqlite://'), **conf.get('engine', {})
+      )
+      session = scoped_session(
+        sessionmaker(bind=engine, **conf.get('kwargs', {}))
+      )
+      self._sessions[session_name] = (session, conf.get('commit', True))
+    return self._sessions[session_name][0]
 
   def _get_options(self, kind, module_name):
     configs = filter(
