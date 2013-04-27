@@ -11,7 +11,6 @@ Usage:
 
 Arguments:
   CONF                  Path to YAML configuration file.
-  APP                   Flask or celery application name.
   RAW                   Options to pass to the underlying command.
 
 Options:
@@ -56,7 +55,7 @@ def run_server(kit, local, port, debug):
   else:
     for index, flask_app in enumerate(kit.flasks):
       print '%02s %s' % (index, flask_app.name)
-      app = kit.flasks[int(raw_input('Which app would you like to run? '))]
+    app = kit.flasks[int(raw_input('Which app would you like to run? '))]
   app.run(host=host, port=port, debug=debug)
 
 def run_worker(kit, raw):
@@ -79,7 +78,7 @@ def run_worker(kit, raw):
   else:
     for index, flask_app in enumerate(kit.celeries):
       print '%02s %s' % (index, flask_app.name)
-      app = kit.celeries[int(raw_input('Which app would you like to run? '))]
+    app = kit.celeries[int(raw_input('Which app would you like to run? '))]
   name = app.main
   base_hostname = '%s.%s.%s' % (
     splitext(split(kit.path)[1])[0],
