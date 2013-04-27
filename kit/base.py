@@ -151,7 +151,7 @@ def _remove_session(sender, *args, **kwargs):
   else:
     # sender is a flask application
     app = sender
-  for session, commit in Kit()._sessions:
+  for session, commit in Kit()._sessions.values():
     try:
       if commit:
         session.commit()
