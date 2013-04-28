@@ -1,0 +1,841 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>flasker.util &mdash; Flasker 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/theme_extras.js"></script>
+    <link rel="top" title="Flasker 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="../../index.html">
+          <span>Flasker 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>flasker.util</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <h1>Source code for flasker.util</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;General helpers.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span><span class="p">,</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">csv</span> <span class="kn">import</span> <span class="n">DictReader</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">json</span> <span class="kn">import</span> <span class="n">dumps</span><span class="p">,</span> <span class="n">loads</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">wraps</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">ceil</span>
+<span class="kn">from</span> <span class="nn">re</span> <span class="kn">import</span> <span class="n">sub</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.mutable</span> <span class="kn">import</span> <span class="n">Mutable</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">Query</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.types</span> <span class="kn">import</span> <span class="n">TypeDecorator</span><span class="p">,</span> <span class="n">UnicodeText</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+
+
+<span class="c"># Utility functions</span>
+
+<div class="viewcode-block" id="prod"><a class="viewcode-back" href="../../util.html#flasker.util.prod">[docs]</a><span class="k">def</span> <span class="nf">prod</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Cumulative product function (the equivalent of ``sum``).</span>
+
+<span class="sd">  :param key: function called on each element of the iterable, if none then</span>
+<span class="sd">    identity is assumed</span>
+<span class="sd">  :type key: callable</span>
+<span class="sd">  :rtype: int, float</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">rv</span> <span class="o">=</span> <span class="mi">1</span>
+  <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">rv</span> <span class="o">*=</span> <span class="n">elem</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">rv</span> <span class="o">*=</span> <span class="n">key</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">rv</span>
+</div>
+<div class="viewcode-block" id="uncamelcase"><a class="viewcode-back" href="../../util.html#flasker.util.uncamelcase">[docs]</a><span class="k">def</span> <span class="nf">uncamelcase</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Transforms CamelCase to underscore_case.</span>
+
+<span class="sd">  :param name: string input</span>
+<span class="sd">  :type name: str</span>
+<span class="sd">  :rtype: str</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">s1</span> <span class="o">=</span> <span class="n">sub</span><span class="p">(</span><span class="s">&#39;(.)([A-Z][a-z]+)&#39;</span><span class="p">,</span> <span class="s">r&#39;\1_\2&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">sub</span><span class="p">(</span><span class="s">&#39;([a-z0-9])([A-Z])&#39;</span><span class="p">,</span> <span class="s">r&#39;\1_\2&#39;</span><span class="p">,</span> <span class="n">s1</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="convert"><a class="viewcode-back" href="../../util.html#flasker.util.convert">[docs]</a><span class="k">def</span> <span class="nf">convert</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">rtype</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Converts a string to another value.</span>
+
+<span class="sd">  :param value: the value to be converted</span>
+<span class="sd">  :type value: str</span>
+<span class="sd">  :param rtype: string representation of the type the value should be</span>
+<span class="sd">    converted to</span>
+<span class="sd">  :type rtype: str</span>
+<span class="sd">  :rtype: int, float, bool, str, unicode</span>
+
+<span class="sd">  If ``rtype`` isn&#39;t specified, the following conversions are attempted in</span>
+<span class="sd">  order: ``int``, ``float``, ``bool``. If all fail, the method returns the</span>
+<span class="sd">  string ``value`` unchanged.</span>
+
+<span class="sd">  Boolean conversions convert ``&#39;true&#39;, &#39;1&#39;`` to ``True``, and ``&#39;false&#39;, &#39;0&#39;``</span>
+<span class="sd">  to ``False`` (case insensitive) and otherwise raises an error.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">rtype</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">rtype</span> <span class="o">==</span> <span class="s">&#39;int&#39;</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">rtype</span> <span class="o">==</span> <span class="s">&#39;float&#39;</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">rtype</span> <span class="o">==</span> <span class="s">&#39;bool&#39;</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;true&#39;</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">==</span> <span class="s">&#39;1&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+      <span class="k">elif</span> <span class="ow">not</span> <span class="n">value</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;false&#39;</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">==</span> <span class="s">&#39;0&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Can</span><span class="se">\&#39;</span><span class="s">t convert </span><span class="si">%s</span><span class="s"> to boolean.&#39;</span> <span class="o">%</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">rtype</span> <span class="o">==</span> <span class="s">&#39;unicode&#39;</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s">&#39;utf-8&#39;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s">&#39;replace&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">rtype</span> <span class="o">==</span> <span class="s">&#39;str&#39;</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">value</span>
+    <span class="c"># if we get here, something has gone wrong</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Invalid conversion type: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">rtype</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+      <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;true&#39;</span><span class="p">:</span>
+          <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">elif</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;false&#39;</span><span class="p">:</span>
+          <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">return</span> <span class="n">value</span>
+</div>
+<div class="viewcode-block" id="partition"><a class="viewcode-back" href="../../util.html#flasker.util.partition">[docs]</a><span class="k">def</span> <span class="nf">partition</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">batches</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Split an iterable into several pieces.</span>
+
+<span class="sd">  :param collection: the iterable that will be partitioned. Note that</span>
+<span class="sd">    ``partition`` needs to be able to compute the total length of the iterable</span>
+<span class="sd">    so generators won&#39;t work.</span>
+<span class="sd">  :type collection: list or query</span>
+<span class="sd">  :param batches: number of batches to split the collection into</span>
+<span class="sd">  :type batches: int</span>
+<span class="sd">  :param batch_size: number of items per batch</span>
+<span class="sd">  :type batch_size: int</span>
+<span class="sd">  :rtype: generator</span>
+
+<span class="sd">  Only one of ``batches`` and ``batch_size`` can be specified at a time.</span>
+
+<span class="sd">  ``partition`` returns a generator that yields a tuple ``(batch, partition)``</span>
+<span class="sd">  on each iteration. ``batch`` is of the same type as ``collection``, filtered</span>
+<span class="sd">  to the corresponding partition and ``partition`` is a named tuple with two </span>
+<span class="sd">  properties:</span>
+
+<span class="sd">  * ``offset``, the first index of the partition</span>
+<span class="sd">  * ``limit``, the max-length of the partition (the last one might be shorter)</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">batches</span> <span class="ow">and</span> <span class="n">batch_size</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">batches</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">batch_size</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Exactly one of batches and batch_size &#39;</span>
+                     <span class="s">&#39;must be specified.&#39;</span><span class="p">)</span>
+  <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">limit</span> <span class="o">=</span> <span class="n">batch_size</span>
+  <span class="n">Partition</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s">&#39;partition&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;offset&#39;</span><span class="p">,</span> <span class="s">&#39;limit&#39;</span><span class="p">])</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">Query</span><span class="p">):</span>
+    <span class="c"># collection is a SQLAlchemy query</span>
+    <span class="c"># count won&#39;t be very efficient, but only run once so it&#39;s ok</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">batches</span><span class="p">:</span>
+      <span class="n">limit</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">total</span><span class="p">)</span> <span class="o">/</span> <span class="n">batches</span><span class="p">))</span>
+    <span class="k">while</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="n">total</span><span class="p">:</span>
+      <span class="k">yield</span> <span class="n">collection</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">),</span> <span class="n">Partition</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
+      <span class="n">offset</span> <span class="o">+=</span> <span class="n">limit</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="c"># collection is a list</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">batches</span><span class="p">:</span>
+      <span class="n">limit</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">total</span><span class="p">)</span> <span class="o">/</span> <span class="n">batches</span><span class="p">))</span>
+    <span class="k">while</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="n">total</span><span class="p">:</span>
+      <span class="k">yield</span> <span class="n">collection</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span> <span class="o">+</span> <span class="n">limit</span><span class="p">],</span> <span class="n">Partition</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
+      <span class="n">offset</span> <span class="o">+=</span> <span class="n">limit</span>
+
+<span class="c"># Utility Classes</span>
+</div>
+<div class="viewcode-block" id="Dict"><a class="viewcode-back" href="../../util.html#flasker.util.Dict">[docs]</a><span class="k">class</span> <span class="nc">Dict</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Dictionary class with a few helper methods.</span>
+
+<span class="sd">  The goal of this class is to make multilevel dictionary actions</span>
+<span class="sd">  simple.</span>
+
+<span class="sd">  Usage::</span>
+
+<span class="sd">    d = Dict(d)</span>
+<span class="sd">    d.flattened()</span>
+
+<span class="sd">  :param cname: key used when unflattening a dictionary and a key with a</span>
+<span class="sd">    value also becomes a branch</span>
+<span class="sd">  :type cname: string</span>
+<span class="sd">  :param sep: the separator used to separate hierarchy levels</span>
+<span class="sd">  :type sep: string</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">cname</span> <span class="o">=</span> <span class="s">&#39;all&#39;</span>
+  <span class="n">sep</span> <span class="o">=</span> <span class="s">&#39;_&#39;</span>
+
+<div class="viewcode-block" id="Dict.depth"><a class="viewcode-back" href="../../util.html#flasker.util.Dict.depth">[docs]</a>  <span class="k">def</span> <span class="nf">depth</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Depth of a dictionary.&quot;&quot;&quot;</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">Dict</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">itervalues</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">depth</span><span class="p">()</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">values</span> <span class="k">else</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="Dict.width"><a class="viewcode-back" href="../../util.html#flasker.util.Dict.width">[docs]</a>  <span class="k">def</span> <span class="nf">width</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Width of a dictionary.&quot;&quot;&quot;</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">Dict</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">itervalues</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">width</span><span class="p">()</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Dict.table"><a class="viewcode-back" href="../../util.html#flasker.util.Dict.table">[docs]</a>  <span class="k">def</span> <span class="nf">table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;horizontal&#39;</span><span class="p">,</span> <span class="n">left_columns</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;For HTML headers mostly.&quot;&quot;&quot;</span>
+    <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">unflattened</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unflattened</span><span class="p">())</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">unflattened</span><span class="o">.</span><span class="n">depth</span><span class="p">()</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="n">unflattened</span><span class="o">.</span><span class="n">width</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;horizontal&#39;</span><span class="p">:</span>
+      <span class="n">levels</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">flattened</span><span class="p">()</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">()):</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+          <span class="n">levels</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">part</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])])</span>
+        <span class="n">levels</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">depth</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">key</span><span class="p">])</span>
+      <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">level</span> <span class="ow">in</span> <span class="n">levels</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">left_columns</span><span class="p">:</span>
+          <span class="n">row</span> <span class="o">=</span> <span class="p">[[</span><span class="n">column</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">left_columns</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">row</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">current_label</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">full_label</span> <span class="ow">in</span> <span class="n">level</span><span class="p">:</span>
+          <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="n">current_label</span><span class="p">:</span>
+            <span class="n">row</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+          <span class="k">else</span><span class="p">:</span>
+            <span class="n">current_label</span> <span class="o">=</span> <span class="n">label</span>
+            <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">label</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">full_label</span><span class="p">])</span>
+        <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;vertical&#39;</span><span class="p">:</span>
+      <span class="n">indices</span> <span class="o">=</span> <span class="p">{}</span>
+      <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">flattened</span><span class="p">()</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">())):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">left_columns</span><span class="p">:</span>
+          <span class="n">row</span> <span class="o">=</span> <span class="p">[[</span><span class="n">column</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">left_columns</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">row</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+          <span class="n">full_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+          <span class="k">if</span> <span class="ow">not</span> <span class="n">full_label</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+            <span class="n">indices</span><span class="p">[</span><span class="n">full_label</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">part</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">full_label</span><span class="p">])</span>
+            <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+          <span class="k">else</span><span class="p">:</span>
+            <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">full_label</span><span class="p">]</span>
+            <span class="n">items</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="n">b</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">indices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+        <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="n">depth</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">key</span><span class="p">])</span>
+        <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">items</span>
+</div>
+<div class="viewcode-block" id="Dict.flattened"><a class="viewcode-back" href="../../util.html#flasker.util.Dict.flattened">[docs]</a>  <span class="k">def</span> <span class="nf">flattened</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Flattened representation of the dictionary.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Dict.unflattened"><a class="viewcode-back" href="../../util.html#flasker.util.Dict.unflattened">[docs]</a>  <span class="k">def</span> <span class="nf">unflattened</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Unflattened representation of the dictionary.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">unflatten</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</div>
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Dict.flatten"><a class="viewcode-back" href="../../util.html#flasker.util.Dict.flatten">[docs]</a>  <span class="k">def</span> <span class="nf">flatten</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">dic</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Flatten. Classmethod for convenience.&quot;&quot;&quot;</span>
+    <span class="n">sep</span> <span class="o">=</span> <span class="n">sep</span> <span class="k">if</span> <span class="n">sep</span> <span class="k">else</span> <span class="n">cls</span><span class="o">.</span><span class="n">sep</span>
+    <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">dic</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+      <span class="n">k</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">sep</span> <span class="o">+</span> <span class="n">key</span> <span class="k">if</span> <span class="n">prefix</span> <span class="k">else</span> <span class="n">key</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="p">:</span>
+        <span class="n">items</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">items</span><span class="p">)</span>
+</div>
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Dict.unflatten"><a class="viewcode-back" href="../../util.html#flasker.util.Dict.unflatten">[docs]</a>  <span class="k">def</span> <span class="nf">unflatten</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">dic</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">cname</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Unflatten. Classmethod for convenience&quot;&quot;&quot;</span>
+    <span class="n">sep</span> <span class="o">=</span> <span class="n">sep</span> <span class="k">if</span> <span class="n">sep</span> <span class="k">else</span> <span class="n">cls</span><span class="o">.</span><span class="n">sep</span>
+    <span class="n">cname</span> <span class="o">=</span> <span class="n">cname</span> <span class="k">if</span> <span class="n">cname</span> <span class="k">else</span> <span class="n">cls</span><span class="o">.</span><span class="n">cname</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dic</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+      <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">sep</span><span class="p">))</span>
+    <span class="n">keys</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+      <span class="n">d</span> <span class="o">=</span> <span class="n">result</span>
+      <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">key</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">part</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
+          <span class="n">d</span><span class="p">[</span><span class="n">part</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="n">part</span><span class="p">]</span>
+      <span class="k">if</span> <span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
+        <span class="n">d</span><span class="p">[</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]][</span><span class="n">cname</span><span class="p">]</span> <span class="o">=</span> <span class="n">dic</span><span class="p">[</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">d</span><span class="p">[</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">dic</span><span class="p">[</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">result</span>
+</div></div>
+<div class="viewcode-block" id="SmartDictReader"><a class="viewcode-back" href="../../util.html#flasker.util.SmartDictReader">[docs]</a><span class="k">class</span> <span class="nc">SmartDictReader</span><span class="p">(</span><span class="n">DictReader</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Helper for importing .csv files.</span>
+
+<span class="sd">  :param csvfile: open file instance</span>
+<span class="sd">  :type csvfile: ``file``</span>
+<span class="sd">  :param fields: list of fieldnames or list of tuples (fieldname, fieldtype)</span>
+<span class="sd">  :rtype: iterable</span>
+
+<span class="sd">  Interesting values for kwargs can be:</span>
+<span class="sd">  * delimiter = &#39;\t&#39;</span>
+<span class="sd">  * quotechar = &#39;\x07&#39;</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">csvfile</span><span class="p">,</span> <span class="n">fields</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">csvfile</span> <span class="o">=</span> <span class="n">csvfile</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">rows_imported</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">silent</span> <span class="o">=</span> <span class="n">silent</span>
+    <span class="k">if</span> <span class="n">fields</span><span class="p">:</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fields</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;fieldnames&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">field</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">field_types</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;fieldnames&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fields</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">field_types</span> <span class="o">=</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">fields</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+      <span class="n">DictReader</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">csvfile</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">DictReader</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">csvfile</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">field_types</span> <span class="o">=</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fieldnames</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">DictReader</span><span class="o">.</span><span class="n">next</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">processed_row</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+          <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">convert</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">field_types</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+          <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+      <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">e</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">silent</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">e</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">rows_imported</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="k">return</span> <span class="n">processed_row</span>
+
+
+<span class="c"># Caching</span>
+</div>
+<div class="viewcode-block" id="cached_property"><a class="viewcode-back" href="../../util.html#flasker.util.cached_property">[docs]</a><span class="k">def</span> <span class="nf">cached_property</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Decorator that turns a class method into a cached property.</span>
+
+<span class="sd">  :param func: bound method to be turned in to a property</span>
+<span class="sd">  :type func: func</span>
+
+<span class="sd">  A cached property acts similarly to a property but is only computed once and</span>
+<span class="sd">  then stored in the instance&#39;s ``_cache`` attribute along with the time it was</span>
+<span class="sd">  last computed. Subsequent calls will read directly from the cached value.  To</span>
+<span class="sd">  refresh several or all cached properties, use the ``refresh_cache`` method.</span>
+
+<span class="sd">  Should only be used with methods of classes that inherit from ``Cacheable``.</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">return</span> <span class="n">_CachedProperty</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Cacheable"><a class="viewcode-back" href="../../util.html#flasker.util.Cacheable">[docs]</a><span class="k">class</span> <span class="nc">Cacheable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Class with cacheable properties.</span>
+<span class="sd">  </span>
+<span class="sd">  Implements a few cache maintenance utilities.</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">_cache</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="k">def</span> <span class="nf">_get_cached_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="n">varname</span>
+        <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">varname</span><span class="p">),</span> <span class="n">_CachedProperty</span><span class="p">)</span>
+    <span class="p">]</span>
+
+<div class="viewcode-block" id="Cacheable.refresh_cache"><a class="viewcode-back" href="../../util.html#flasker.util.Cacheable.refresh_cache">[docs]</a>  <span class="k">def</span> <span class="nf">refresh_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">expiration</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">remove_deleted</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Refresh cached properties.</span>
+
+<span class="sd">    :param names: list of cached property names to refresh. If specified, only</span>
+<span class="sd">      these will be refreshed.</span>
+<span class="sd">    :type names: iterable</span>
+<span class="sd">    :param expiration: if specified, only properties of age greater than this</span>
+<span class="sd">      value will be refreshed.</span>
+<span class="sd">    :type expiration: int</span>
+<span class="sd">    :param remove_deleted: if ``True``, cached properties that aren&#39;t defined</span>
+<span class="sd">      but are still present in the cache will be removed (useful especially for</span>
+<span class="sd">      persistent caches)</span>
+<span class="sd">    :type remove_deleted: bool</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">names</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">_CacheRefresh</span><span class="p">(</span><span class="n">expiration</span><span class="p">))</span>
+      <span class="k">if</span> <span class="n">remove_deleted</span><span class="p">:</span>
+        <span class="n">cached_properties</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_cached_properties</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+          <span class="k">if</span> <span class="ow">not</span> <span class="n">varname</span> <span class="ow">in</span> <span class="n">cached_properties</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">remove_deleted</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span> <span class="o">=</span> <span class="p">{}</span>
+      <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_cached_properties</span><span class="p">():</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">varname</span><span class="p">,</span> <span class="n">_CacheRefresh</span><span class="p">(</span><span class="n">expiration</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    <span class="k">except</span><span class="p">:</span>
+      <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="Cacheable.view_cache"><a class="viewcode-back" href="../../util.html#flasker.util.Cacheable.view_cache">[docs]</a>  <span class="k">def</span> <span class="nf">view_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get the age of cached values.</span>
+
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    </span>
+<span class="sd">    Properties not yet cached will appear as ``None``.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_cached_properties</span><span class="p">(),</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+      <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+      <span class="n">rv</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">now</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+      <span class="p">))</span>
+    <span class="k">return</span> <span class="n">rv</span>
+</div></div>
+<span class="k">class</span> <span class="nc">_CacheRefresh</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Special class used to trigger cache refreshes.&quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expiration</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">expiration</span> <span class="o">=</span> <span class="n">expiration</span>
+
+<span class="k">class</span> <span class="nc">_CachedProperty</span><span class="p">(</span><span class="nb">property</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Instance of a cached property for a model.</span>
+
+<span class="sd">  Based on the emulation of PyProperty_Type() in Objects/descrobject.c from </span>
+<span class="sd">  http://infinitesque.net/articles/2005/enhancing%20Python&#39;s%20property.xhtml</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">func</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">__doc__</span>
+
+  <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">objtype</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">obj</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+      <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__set__</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+  <span class="k">def</span> <span class="nf">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+      <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">_CacheRefresh</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+          <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+          <span class="k">if</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="n">value</span><span class="o">.</span><span class="n">expiration</span><span class="p">:</span>
+            <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">obj</span><span class="p">),</span> <span class="n">time</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">obj</span><span class="p">),</span> <span class="n">time</span><span class="p">())</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">time</span><span class="p">())</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+      <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+  <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;&lt;CachedProperty </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span>
+
+
+<span class="c"># Jsonifification</span>
+
+<span class="k">class</span> <span class="nc">JSONDepthExceededError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+
+  <span class="k">pass</span>
+
+<span class="k">def</span> <span class="nf">_jsonify</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">expand</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">depth</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="n">JSONDepthExceededError</span><span class="p">()</span>
+  <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s">&#39;jsonify&#39;</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="n">depth</span><span class="p">,</span> <span class="n">expand</span><span class="p">)</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">_jsonify</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">expand</span><span class="p">))</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">_jsonify</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">expand</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">long</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+    <span class="k">return</span> <span class="n">value</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">datetime</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">None</span>
+  <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;not jsonifiable&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Jsonifiable"><a class="viewcode-back" href="../../util.html#flasker.util.Jsonifiable">[docs]</a><span class="k">class</span> <span class="nc">Jsonifiable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;For easy API calls.</span>
+
+<span class="sd">  This is depth first (different from the one in the ExpandedBase class).</span>
+
+<span class="sd">  We keep track of what has already been jsonified. There might still be</span>
+<span class="sd">  some repetition given that we do not control the order of exploration.</span>
+<span class="sd">  If a key is revisited at a lower depth, it will be reparsed to allow for</span>
+<span class="sd">  more exploration.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">__json__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Default implementation of the attributes to jsonify.</span>
+
+<span class="sd">    This is relatively slow (because it is evaluated for each jsonify call).</span>
+<span class="sd">    Consider overwriting it for better performance.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span>
+      <span class="n">varname</span> <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">varname</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">varname</span><span class="p">),</span> <span class="s">&#39;__call__&#39;</span><span class="p">)</span>
+    <span class="p">]</span>
+
+<div class="viewcode-block" id="Jsonifiable.jsonify"><a class="viewcode-back" href="../../util.html#flasker.util.Jsonifiable.jsonify">[docs]</a>  <span class="k">def</span> <span class="nf">jsonify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns all keys and properties of an instance in a dictionary.</span>
+
+<span class="sd">    Overrides the basic jsonify method to specialize it for models.</span>
+
+<span class="sd">    This function minimizes the number of lookups it does (no dynamic</span>
+<span class="sd">    type checking on the properties for example) to maximize speed.</span>
+
+<span class="sd">    :param depth:</span>
+<span class="sd">    :type depth: int</span>
+<span class="sd">    :rtype: dict</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__json__</span><span class="p">:</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">rv</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="o">=</span> <span class="n">_jsonify</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">varname</span><span class="p">),</span> <span class="n">depth</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+      <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">rv</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span>
+      <span class="k">except</span> <span class="n">JSONDepthExceededError</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">rv</span>
+
+
+<span class="c"># Logging</span>
+</div></div>
+<div class="viewcode-block" id="Loggable"><a class="viewcode-back" href="../../util.html#flasker.util.Loggable">[docs]</a><span class="k">class</span> <span class="nc">Loggable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;To easily log stuff.</span>
+
+<span class="sd">  This implements the main logging methods (&#39;debug&#39;, &#39;info&#39;, &#39;warn&#39;, &#39;error&#39;)</span>
+<span class="sd">  directly on the class instance. For example, this allows something like::</span>
+
+<span class="sd">    instance.log(&#39;Some message.&#39;)</span>
+
+<span class="sd">  Not using __getattr__ to preserve exception context. Otherwise the line where</span>
+<span class="sd">  the inexistent attribute was accessed will be lost.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">loglevel</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;__logger__&#39;</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">__logger__</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__module__</span><span class="p">)</span>
+    <span class="n">action</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__logger__</span><span class="p">,</span> <span class="n">loglevel</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">action</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> :: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Loggable.debug"><a class="viewcode-back" href="../../util.html#flasker.util.Loggable.debug">[docs]</a>  <span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;debug&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Loggable.info"><a class="viewcode-back" href="../../util.html#flasker.util.Loggable.info">[docs]</a>  <span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;info&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Loggable.warn"><a class="viewcode-back" href="../../util.html#flasker.util.Loggable.warn">[docs]</a>  <span class="k">def</span> <span class="nf">warn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;warn&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Loggable.error"><a class="viewcode-back" href="../../util.html#flasker.util.Loggable.error">[docs]</a>  <span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;error&#39;</span><span class="p">)</span>
+
+
+<span class="c"># SQLAlchemy Mutables</span>
+</div></div>
+<div class="viewcode-block" id="JSONEncodedDict"><a class="viewcode-back" href="../../util.html#flasker.util.JSONEncodedDict">[docs]</a><span class="k">class</span> <span class="nc">JSONEncodedDict</span><span class="p">(</span><span class="n">TypeDecorator</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Represents an immutable structure as a JSON encoded dict.</span>
+
+<span class="sd">  This can be used as a Column type during table creation::</span>
+
+<span class="sd">    some_column_name = Column(JSONEncodedDict)</span>
+
+<span class="sd">  .. note::</span>
+
+<span class="sd">    There is a character limit in the UnicodeText field of the database</span>
+<span class="sd">    so care is needed when storing very large dictionaries.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">impl</span> <span class="o">=</span> <span class="n">UnicodeText</span>
+
+  <span class="k">def</span> <span class="nf">process_bind_param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">dialect</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="bp">None</span>
+
+  <span class="k">def</span> <span class="nf">process_result_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">dialect</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">loads</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="p">{}</span>
+</div>
+<span class="k">class</span> <span class="nc">_MutableDict</span><span class="p">(</span><span class="n">Mutable</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Used with JSONEncoded dict to be able to track updates.</span>
+
+<span class="sd">  This enables the database to know when it should update the stored string</span>
+<span class="sd">  representation of the dictionary. This is much more efficient than naive</span>
+<span class="sd">  automatic updating after each query.</span>
+
+<span class="sd">  .. note::</span>
+
+<span class="sd">    Only set, del and update actions are tracked. If another method to</span>
+<span class="sd">    update the dictionary is used, it will not automatically flag the</span>
+<span class="sd">    dictionary for update (for example if a deeply nested key is updated).</span>
+<span class="sd">    In such a case, the ``changed`` method needs the be called manually</span>
+<span class="sd">    after the operation.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span> <span class="nf">coerce</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert plain dictionaries to Features.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">cls</span><span class="p">):</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">Mutable</span><span class="o">.</span><span class="n">coerce</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="c"># this will raise an error</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">value</span>
+
+  <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect dictionary update events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    
+  <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect dictionary set events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">dict</span><span class="o">.</span><span class="n">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    
+  <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect dictionary del events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">dict</span><span class="o">.</span><span class="n">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    
+<span class="n">_MutableDict</span><span class="o">.</span><span class="n">associate_with</span><span class="p">(</span><span class="n">JSONEncodedDict</span><span class="p">)</span>
+
+
+<span class="c"># Computations</span>
+
+<div class="viewcode-block" id="RunningStatistic"><a class="viewcode-back" href="../../util.html#flasker.util.RunningStatistic">[docs]</a><span class="k">class</span> <span class="nc">RunningStatistic</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot; To compute running statistics efficiently.&quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">unweighted_variance</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">push</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">return</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">unweighted_variance</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span>
+      <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unweighted_variance</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="n">mean</span> <span class="o">+</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">unweighted_variance</span> <span class="o">=</span> <span class="n">s</span> <span class="o">+</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">variance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">unweighted_variance</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+      <span class="k">return</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="exponential_smoothing"><a class="viewcode-back" href="../../util.html#flasker.util.exponential_smoothing">[docs]</a><span class="k">def</span> <span class="nf">exponential_smoothing</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Smoothing data.</span>
+
+<span class="sd">  :param data: list of tuples. The smoothing will be done on</span>
+<span class="sd">    the first item of each tuple.</span>
+<span class="sd">  :type data: ``list``</span>
+<span class="sd">  :param alpha: the discount factor</span>
+<span class="sd">  :type alpha: ``float``</span>
+<span class="sd">  :rtype: ``list``</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">sorted_data</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="k">return</span> <span class="p">[(</span><span class="n">x</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="n">_y</span> <span class="o">*</span> <span class="n">alpha</span> <span class="o">**</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">_x</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">_x</span><span class="p">,</span> <span class="n">_y</span><span class="p">)</span> <span class="ow">in</span> <span class="n">sorted_data</span><span class="p">[:</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+        <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">alpha</span> <span class="o">**</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">_x</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">_x</span><span class="p">,</span> <span class="n">_y</span><span class="p">)</span> <span class="ow">in</span> <span class="n">sorted_data</span><span class="p">[:</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]))</span>
+      <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sorted_data</span><span class="p">)]</span>
+</div>
+<div class="viewcode-block" id="histogram"><a class="viewcode-back" href="../../util.html#flasker.util.histogram">[docs]</a><span class="k">def</span> <span class="nf">histogram</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">restrict</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">categories</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+              <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Returns a histogram of counts for the data.</span>
+
+<span class="sd">    :param data: the data to be binned</span>
+<span class="sd">    :type data: iterable of tuples</span>
+<span class="sd">    :param restrict: if provided, only data elements which return `True`</span>
+<span class="sd">      will be included in the histogram. Default is `None` (all elements</span>
+<span class="sd">      are included).</span>
+<span class="sd">    :type restrict: function or None</span>
+<span class="sd">    :param categories: if provided, elements will be counted in separate</span>
+<span class="sd">      categories. This changes the format of the output to a dictionary</span>
+<span class="sd">      with the different categories as keys in each bin.</span>
+<span class="sd">    :type categories: function or None</span>
+<span class="sd">    :param bins: either an int (total number of bins, which will be </span>
+<span class="sd">      uniformly spread) or a list of increasing bin values. smaller</span>
+<span class="sd">      values will be in the first bin, larger in the last one.</span>
+<span class="sd">    :type bins: int or list(int)</span>
+<span class="sd">    :param order: 0 if data isn&#39;t sorted, 1 if sorted in ascending, -1 if</span>
+<span class="sd">      sorted in descending order.</span>
+<span class="sd">    :type order: string</span>
+
+<span class="sd">  Possible extension: allow categories to return a list of keys, which would</span>
+<span class="sd">  allow elements to be included in several counts.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">key</span> <span class="o">=</span> <span class="n">key</span> <span class="ow">or</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">)</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bins</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="n">n_bins</span> <span class="o">=</span> <span class="n">bins</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">n_bins</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Number of bins must be &gt; 0.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="s">&#39;1&#39;</span><span class="p">:</span>
+      <span class="n">max_value</span> <span class="o">=</span> <span class="n">key</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+      <span class="n">min_value</span> <span class="o">=</span> <span class="n">key</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="n">order</span> <span class="o">==</span> <span class="s">&#39;-1&#39;</span><span class="p">:</span>
+      <span class="n">max_value</span> <span class="o">=</span> <span class="n">key</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+      <span class="n">min_value</span> <span class="o">=</span> <span class="n">key</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">max_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">key</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">data</span><span class="p">)</span>
+      <span class="n">min_value</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">key</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">data</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_bins</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">max_value</span> <span class="o">==</span> <span class="n">min_value</span><span class="p">:</span>
+      <span class="c"># If everything is equal, or just one bin, return one bin. Duh.</span>
+      <span class="k">return</span> <span class="p">{</span><span class="n">min_value</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)}</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">bin_width</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">max_value</span> <span class="o">-</span> <span class="n">min_value</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_bins</span>
+      <span class="n">bins</span> <span class="o">=</span> <span class="p">[</span><span class="n">min_value</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">*</span> <span class="n">bin_width</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n_bins</span><span class="p">)]</span>
+      <span class="k">def</span> <span class="nf">find_bin</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+        <span class="c"># this is faster than default iterating over bins</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">int</span><span class="p">((</span><span class="n">key</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">-</span> <span class="n">min_value</span><span class="p">)</span> <span class="o">/</span> <span class="n">bin_width</span><span class="p">),</span> <span class="n">n_bins</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">bins</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bins</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="c"># not very interesting but for compatibility</span>
+      <span class="k">return</span> <span class="p">{</span><span class="n">bins</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)}</span>
+    <span class="k">def</span> <span class="nf">find_bin</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+      <span class="c"># default bin iterator</span>
+      <span class="k">if</span> <span class="n">a</span> <span class="o">&lt;</span> <span class="n">bins</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">bins</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+      <span class="k">for</span> <span class="nb">bin</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">bins</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">a</span> <span class="o">&gt;=</span> <span class="nb">bin</span><span class="p">:</span>
+          <span class="k">return</span> <span class="nb">bin</span>
+  <span class="k">if</span> <span class="n">categories</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="n">data_histogram</span> <span class="o">=</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">bins</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">restrict</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">restrict</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+        <span class="n">data_histogram</span><span class="p">[</span><span class="n">find_bin</span><span class="p">(</span><span class="n">key</span><span class="p">(</span><span class="n">e</span><span class="p">))]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">data_histogram</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">data_histogram</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">restrict</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">restrict</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+        <span class="n">data_histogram</span><span class="p">[</span><span class="n">find_bin</span><span class="p">(</span><span class="n">key</span><span class="p">(</span><span class="n">e</span><span class="p">))][</span><span class="n">categories</span><span class="p">(</span><span class="n">e</span><span class="p">)]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">data_histogram</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+      <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">v</span><span class="p">))</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">data_histogram</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">expand</span><span class="p">:</span>
+      <span class="n">keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">key</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data_histogram</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+      <span class="n">data_histogram</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+          <span class="p">(</span>
+            <span class="n">key</span><span class="p">,</span>
+            <span class="nb">dict</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">data_histogram</span><span class="o">.</span><span class="n">iteritems</span><span class="p">())</span>
+          <span class="p">)</span>
+          <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span>
+      <span class="p">)</span>
+    <span class="k">return</span> <span class="n">data_histogram</span>
+</pre></div></div>
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

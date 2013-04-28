@@ -1,0 +1,252 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Flasker &mdash; Flasker 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/theme_extras.js"></script>
+    <link rel="top" title="Flasker 0.1 documentation" href="#" />
+    <link rel="next" title="Overview" href="project.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="#">
+          <span>Flasker 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>Flasker</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="#">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="project.html">Overview</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <div class="section" id="flasker">
+<h1>Flasker<a class="headerlink" href="#flasker" title="Permalink to this headline">¶</a></h1>
+<p>A configurable, lightweight framework that integrates <a class="reference external" href="http://flask.pocoo.org/docs/api/">Flask</a>, <a class="reference external" href="http://docs.sqlalchemy.org/en/rel_0_7/orm/tutorial.html">SQLAlchemy</a> and
+<a class="reference external" href="http://docs.celeryproject.org/en/latest/index.html">Celery</a>.</p>
+<ul>
+<li><p class="first">What Flasker is!</p>
+<blockquote>
+<div><ul class="simple">
+<li>A one stop <tt class="docutils literal"><span class="pre">.cfg</span></tt> configuration file for Flask, Celery and SQLAlchemy.</li>
+<li>A simple pattern to organize your project via the
+<tt class="docutils literal"><span class="pre">flasker.current_project</span></tt> proxy (cf. <a class="reference internal" href="#quickstart">Quickstart</a>).</li>
+<li>A command line tool from where you can launch the Flask buit in <a class="reference external" href="http://werkzeug.pocoo.org/">Werkzeug</a>
+server, start Celery workers and the <a class="reference external" href="https://github.com/mher/flower">Flower</a> tool, and run a shell in the
+current project context.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">What Flasker isn&#8217;t?</p>
+<blockquote>
+<div><ul class="simple">
+<li>A simplified version of Flask, Celery, and SQLAlchemy. Some knowledge of these
+frameworks is therefore required.</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<p>Flasker is under development. You can find the latest version on <a class="reference external" href="http://github.com/mtth/flasker">GitHub</a> and
+read the documentation on <a class="reference external" href="http://mtth.github.com/flasker">GitHub pages</a>.</p>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>Using <tt class="docutils literal"><span class="pre">pip</span></tt>:</p>
+<div class="code bash highlight-python"><pre>$ pip install flasker</pre>
+</div>
+<p>Using <tt class="docutils literal"><span class="pre">easy_install</span></tt>:</p>
+<div class="code bash highlight-python"><pre>$ easy_install flasker</pre>
+</div>
+</div>
+<div class="section" id="quickstart">
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
+<p>This short guide will show you how to get an application combining Flask,
+Celery and SQLAlchemy running in moments (the code is available on GitHub in
+<tt class="docutils literal"><span class="pre">examples/basic/</span></tt>).</p>
+<p>The basic folder hierarchy for a Flasker project looks something like this:</p>
+<div class="code bash highlight-python"><pre>project/
+  conf.cfg    # configuration
+  app.py      # code</pre>
+</div>
+<p>Where <tt class="docutils literal"><span class="pre">conf.cfg</span></tt> is:</p>
+<div class="code cfg highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">PROJECT</span><span class="p">]</span>
+<span class="n">MODULES</span> <span class="o">=</span> <span class="n">app</span>
+</pre></div>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">MODULES</span></tt> option contains the list of python modules which belong
+to the project. Inside each of these modules we can use the
+<tt class="docutils literal"><span class="pre">flasker.current_project</span></tt> proxy to get access to the current project
+instance (which gives access to the configured Flask application, the Celery
+application and the SQLAlchemy database session registry). This is the
+only option required in a Flasker project configuration file.</p>
+<p>Here is a sample <tt class="docutils literal"><span class="pre">app.py</span></tt>:</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">current_project</span>
+
+<span class="n">flask_app</span> <span class="o">=</span> <span class="n">current_project</span><span class="o">.</span><span class="n">flask</span>    <span class="c"># Flask app</span>
+<span class="n">celery_app</span> <span class="o">=</span> <span class="n">current_project</span><span class="o">.</span><span class="n">celery</span>  <span class="c"># Celery app</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">current_project</span><span class="o">.</span><span class="n">session</span>    <span class="c"># SQLAlchemy scoped session maker</span>
+
+<span class="c"># for this simple example we will only use flask_app</span>
+
+<span class="nd">@flask_app.route</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+ <span class="k">return</span> <span class="s">&#39;Hello World!&#39;</span>
+</pre></div>
+</div>
+<p>Once these two files are in place, we can already start the server! We
+simply run (from the command line in the <tt class="docutils literal"><span class="pre">project/</span></tt> directory):</p>
+<div class="code bash highlight-python"><pre>$ flasker server
+* Running on http://0.0.0.0:5000/</pre>
+</div>
+<p>We can check that our server is running for example using <a class="reference external" href="http://docs.python-requests.org/en/latest/">Requests</a> (if we
+navigate to the same URL in the browser, we would get similarly exciting
+results):</p>
+<div class="code python highlight-python"><pre>In [1]: import requests
+In [2]: print requests.get('http://localhost:5000/').text
+Hello World!</pre>
+</div>
+</div>
+<div class="section" id="configuring-your-project">
+<h2>Configuring your project<a class="headerlink" href="#configuring-your-project" title="Permalink to this headline">¶</a></h2>
+<p>In the previous example, the project was using the default configuration,
+this can easily be changed by adding options to the <tt class="docutils literal"><span class="pre">conf.cfg</span></tt> file.
+Here is an example of a customized configuration file:</p>
+<div class="code cfg highlight-python"><pre>[PROJECT]
+MODULES = app
+[ENGINE]
+URL = sqlite:///db.sqlite   # the engine to bind the session on
+[FLASK]
+DEBUG = true                # generic Flask options
+TESTING = true</pre>
+</div>
+<p>For an exhaustive list of all the options available, please refer to the
+documentation on GitHub Pages.</p>
+<p>Finally, of course, all your code doesn&#8217;t have to be in a single file. You can
+specify a list of modules to import in the <tt class="docutils literal"><span class="pre">MODULES</span></tt> option, which will all
+be imported on project startup. For an example of a more complex application,
+you can check out the code in <tt class="docutils literal"><span class="pre">examples/flisker</span></tt>.</p>
+</div>
+<div class="section" id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
+<p>Under the hood, on project startup, Flasker configures Flask, Celery and the
+database engine and imports all the modules declared in <tt class="docutils literal"><span class="pre">MODULES</span></tt> (the
+configuration file&#8217;s directory is appended to the python path, so any module
+in our <tt class="docutils literal"><span class="pre">project/</span></tt> directory will be accessible).</p>
+<p>There are two ways to start the project.</p>
+<ul>
+<li><p class="first">The simplest is to use the flasker console tool:</p>
+<div class="code bash highlight-python"><pre>$ flasker -h</pre>
+</div>
+<p>This will list all commands now available for that project:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">server</span></tt> to run the Werkzeug app server</li>
+<li><tt class="docutils literal"><span class="pre">worker</span></tt> to start a worker for the Celery backend</li>
+<li><tt class="docutils literal"><span class="pre">flower</span></tt> to run the Flower worker management app</li>
+<li><tt class="docutils literal"><span class="pre">shell</span></tt> to start a shell in the current project context (using <a class="reference external" href="http://ipython.org/">IPython</a>
+if it is available)</li>
+</ul>
+<p>Extra help is available for each command by typing:</p>
+<div class="code bash highlight-python"><pre>$ flasker &lt;command&gt; -h</pre>
+</div>
+</li>
+<li><p class="first">Or you can load the project manually:</p>
+<p>This is useful for example if you are using a separate WSGI server or working
+from an IPython Notebook.</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">Project</span>
+
+<span class="n">project</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s">&#39;path/to/default.cfg&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>To read more on how to user Flasker and configure your Flasker project, refer
+to the documentation on <a class="reference external" href="http://mtth.github.com/flasker">GitHub pages</a>.</p>
+</div>
+<div class="section" id="extensions">
+<h2>Extensions<a class="headerlink" href="#extensions" title="Permalink to this headline">¶</a></h2>
+<p>Flasker also comes with extensions for commonly needed functionalities:</p>
+<ul class="simple">
+<li>Expanded SQLAlchemy base and queries</li>
+<li>ReSTful API</li>
+<li>Authentication via OpenID <em>(still alpha)</em></li>
+</ul>
+</div>
+</div>
+<div class="section" id="contents">
+<h1>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="project.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="project.html#module-flasker.__main__">Console tool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="project.html#module-flasker.project">Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="extensions.html">Extensions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="extensions.html#module-flasker.ext.orm">ORM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extensions.html#api">API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extensions.html#authentication">Authentication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extensions.html#skl">SKL</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="util.html">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="util.html#module-flasker.util">General helpers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="util.html#module-flasker.util.flask">Flask helpers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="util.html#module-flasker.util.sqlalchemy">SQLAlchemy helpers</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="#">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="project.html">Overview</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

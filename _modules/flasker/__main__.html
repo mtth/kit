@@ -1,0 +1,334 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>flasker.__main__ &mdash; Flasker 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/theme_extras.js"></script>
+    <link rel="top" title="Flasker 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="../../index.html">
+          <span>Flasker 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>flasker.__main__</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <h1>Source code for flasker.__main__</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;Flasker command line tool.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span><span class="p">,</span> <span class="n">REMAINDER</span>
+<span class="kn">from</span> <span class="nn">code</span> <span class="kn">import</span> <span class="n">interact</span>
+<span class="kn">from</span> <span class="nn">distutils.dir_util</span> <span class="kn">import</span> <span class="n">copy_tree</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">listdir</span><span class="p">,</span> <span class="n">mkdir</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">abspath</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">exists</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">splitext</span>
+<span class="kn">from</span> <span class="nn">re</span> <span class="kn">import</span> <span class="n">findall</span>
+<span class="kn">from</span> <span class="nn">shutil</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="kn">import</span> <span class="n">path</span>
+
+<span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">current_project</span>
+<span class="kn">from</span> <span class="nn">flasker.project</span> <span class="kn">import</span> <span class="n">Project</span><span class="p">,</span> <span class="n">ProjectImportError</span>
+
+<div class="viewcode-block" id="project_context"><a class="viewcode-back" href="../../project.html#flasker.__main__.project_context">[docs]</a><span class="k">def</span> <span class="nf">project_context</span><span class="p">(</span><span class="n">handler</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Create the project context.</span>
+<span class="sd">  </span>
+<span class="sd">  If no configuration file was entered in the main parser through the -c</span>
+<span class="sd">  option, this function will look in the current directory for possible</span>
+<span class="sd">  matches. If a single file is found it will use it.</span>
+
+<span class="sd">  Some (most) subparser handlers require the project to be created before</span>
+<span class="sd">  returning, this decorator handles this.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="nd">@wraps</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
+  <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">parsed_args</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">conf_file</span> <span class="o">=</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">conf</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">conf_file</span><span class="p">:</span>
+        <span class="n">conf_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">fn</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">splitext</span><span class="p">(</span><span class="n">fn</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;.cfg&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">conf_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+          <span class="k">print</span> <span class="p">(</span>
+            <span class="s">&#39;No configuration file found in current directory. &#39;</span>
+            <span class="s">&#39;Please enter a path to one with the -c option.&#39;</span>
+          <span class="p">)</span>
+          <span class="k">return</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">conf_files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+          <span class="k">print</span> <span class="p">(</span>
+            <span class="s">&#39;Several configuration files found in current directory: </span><span class="si">%s</span><span class="s">. &#39;</span>
+            <span class="s">&#39;Please disambiguate with the -c option.&#39;</span>
+          <span class="p">)</span> <span class="o">%</span> <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">conf_files</span><span class="p">)</span>
+          <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">conf_file</span> <span class="o">=</span> <span class="n">conf_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+      <span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">abspath</span><span class="p">(</span><span class="n">dirname</span><span class="p">(</span><span class="n">conf_file</span><span class="p">)))</span> <span class="c"># for reloader to work</span>
+      <span class="n">pj</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="n">conf_file</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ProjectImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+      <span class="k">print</span> <span class="n">e</span>
+      <span class="k">return</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">pj</span><span class="o">.</span><span class="n">_make</span><span class="p">()</span>
+      <span class="n">handler</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">wrapper</span>
+
+<span class="c"># Parsers</span>
+
+<span class="c"># Main parser</span>
+</div>
+<span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">(</span><span class="s">&#39;flasker&#39;</span><span class="p">)</span>
+
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-c&#39;</span><span class="p">,</span> <span class="s">&#39;--conf&#39;</span><span class="p">,</span>
+  <span class="n">dest</span><span class="o">=</span><span class="s">&#39;conf&#39;</span><span class="p">,</span>
+  <span class="n">default</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;path to configuration file&#39;</span>
+<span class="p">)</span>
+<span class="n">subparsers</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_subparsers</span><span class="p">(</span>
+  <span class="n">title</span><span class="o">=</span><span class="s">&#39;available commands&#39;</span><span class="p">,</span>
+  <span class="n">dest</span><span class="o">=</span><span class="s">&#39;command&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c"># New</span>
+
+<span class="n">new_parser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s">&#39;new&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&#39;start new project&#39;</span><span class="p">)</span>
+
+<span class="n">new_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-a&#39;</span><span class="p">,</span> <span class="s">&#39;--app&#39;</span><span class="p">,</span>
+  <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_false&#39;</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;don</span><span class="se">\&#39;</span><span class="s">t include basic bootstrap app template&#39;</span>
+<span class="p">)</span>
+<span class="n">new_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-n&#39;</span><span class="p">,</span> <span class="s">&#39;--name&#39;</span><span class="p">,</span>
+  <span class="n">default</span><span class="o">=</span><span class="s">&#39;default&#39;</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;name of the new config file [</span><span class="si">%(default)s</span><span class="s">]&#39;</span>
+<span class="p">)</span>
+<span class="n">new_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;config&#39;</span><span class="p">,</span>
+  <span class="n">choices</span><span class="o">=</span><span class="p">[</span>
+    <span class="n">splitext</span><span class="p">(</span><span class="n">name</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">),</span> <span class="s">&#39;data&#39;</span><span class="p">,</span> <span class="s">&#39;configs&#39;</span><span class="p">))</span>
+  <span class="p">],</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;the type of config to create&#39;</span>
+<span class="p">)</span>
+
+<div class="viewcode-block" id="new_handler"><a class="viewcode-back" href="../../project.html#flasker.__main__.new_handler">[docs]</a><span class="k">def</span> <span class="nf">new_handler</span><span class="p">(</span><span class="n">parsed_args</span><span class="p">):</span>
+  <span class="n">src</span> <span class="o">=</span> <span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)</span>
+  <span class="n">conf_name</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.cfg&#39;</span> <span class="o">%</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">name</span>
+  <span class="k">if</span> <span class="n">exists</span><span class="p">(</span><span class="n">conf_name</span><span class="p">):</span>
+    <span class="k">print</span> <span class="p">(</span>
+      <span class="s">&#39;There already exists a configuration file with this name. &#39;</span>
+      <span class="s">&#39;Please enter a different name with the -n option.&#39;</span>
+    <span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">copy</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="s">&#39;data&#39;</span><span class="p">,</span> <span class="s">&#39;configs&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.cfg&#39;</span> <span class="o">%</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">config</span><span class="p">),</span> <span class="n">conf_name</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&#39;Project configuration file created!&#39;</span>
+  <span class="k">if</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">app</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">exists</span><span class="p">(</span><span class="s">&#39;app&#39;</span><span class="p">):</span>
+      <span class="k">print</span> <span class="p">(</span>
+        <span class="s">&#39;There already seems to be an app folder here. &#39;</span>
+        <span class="s">&#39;App creation skipped.&#39;</span>
+      <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">mkdir</span><span class="p">(</span><span class="s">&#39;app&#39;</span><span class="p">)</span>
+      <span class="n">copy_tree</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="s">&#39;data&#39;</span><span class="p">,</span> <span class="s">&#39;app&#39;</span><span class="p">),</span> <span class="s">&#39;app&#39;</span><span class="p">)</span>
+      <span class="k">print</span> <span class="s">&#39;Bootstrap app folder created!&#39;</span>
+</div>
+<span class="n">new_parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">handler</span><span class="o">=</span><span class="n">new_handler</span><span class="p">)</span>
+
+<span class="c"># Server</span>
+
+<span class="n">server_parser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s">&#39;server&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&#39;start server&#39;</span><span class="p">)</span>
+
+<span class="n">server_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-r&#39;</span><span class="p">,</span> <span class="s">&#39;--restrict&#39;</span><span class="p">,</span>
+  <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_true&#39;</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;disallow remote server connections&#39;</span>
+<span class="p">)</span>
+<span class="n">server_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-p&#39;</span><span class="p">,</span> <span class="s">&#39;--port&#39;</span><span class="p">,</span>
+  <span class="n">default</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+  <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;listen on port [</span><span class="si">%(default)s</span><span class="s">]&#39;</span>
+<span class="p">)</span>
+<span class="n">server_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-d&#39;</span><span class="p">,</span> <span class="s">&#39;--debug&#39;</span><span class="p">,</span>
+  <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_true&#39;</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;run in debug mode (autoreload and debugging)&#39;</span>
+<span class="p">)</span>
+
+<span class="nd">@project_context</span>
+<div class="viewcode-block" id="server_handler"><a class="viewcode-back" href="../../project.html#flasker.__main__.server_handler">[docs]</a><span class="k">def</span> <span class="nf">server_handler</span><span class="p">(</span><span class="n">parsed_args</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Start a Werkzeug server for the Flask application.&quot;&quot;&quot;</span>
+  <span class="n">pj</span> <span class="o">=</span> <span class="n">current_project</span>
+  <span class="n">host</span> <span class="o">=</span> <span class="s">&#39;127.0.0.1&#39;</span> <span class="k">if</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">restrict</span> <span class="k">else</span> <span class="s">&#39;0.0.0.0&#39;</span>
+  <span class="n">pj</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">parsed_args</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="n">parsed_args</span><span class="o">.</span><span class="n">debug</span><span class="p">)</span>
+</div>
+<span class="n">server_parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">handler</span><span class="o">=</span><span class="n">server_handler</span><span class="p">)</span>
+
+<span class="c"># Shell</span>
+
+<span class="n">shell_parser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s">&#39;shell&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&#39;start shell&#39;</span><span class="p">)</span>
+
+<span class="nd">@project_context</span>
+<div class="viewcode-block" id="shell_handler"><a class="viewcode-back" href="../../project.html#flasker.__main__.shell_handler">[docs]</a><span class="k">def</span> <span class="nf">shell_handler</span><span class="p">(</span><span class="n">parsed_args</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Start a shell in the context of the project.&quot;&quot;&quot;</span>
+  <span class="n">pj</span> <span class="o">=</span> <span class="n">current_project</span>
+  <span class="n">context</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;pj&#39;</span><span class="p">:</span> <span class="n">pj</span><span class="p">,</span>
+    <span class="s">&#39;app&#39;</span><span class="p">:</span> <span class="n">pj</span><span class="o">.</span><span class="n">app</span><span class="p">,</span>
+    <span class="s">&#39;cel&#39;</span><span class="p">:</span> <span class="n">pj</span><span class="o">.</span><span class="n">celery</span>
+  <span class="p">}</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">IPython</span>
+  <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">interact</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">sh</span> <span class="o">=</span> <span class="n">IPython</span><span class="o">.</span><span class="n">Shell</span><span class="o">.</span><span class="n">IPShellEmbed</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+      <span class="n">sh</span> <span class="o">=</span> <span class="n">IPython</span><span class="o">.</span><span class="n">frontend</span><span class="o">.</span><span class="n">terminal</span><span class="o">.</span><span class="n">embed</span><span class="o">.</span><span class="n">InteractiveShellEmbed</span><span class="p">()</span>
+    <span class="n">sh</span><span class="p">(</span><span class="n">global_ns</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span> <span class="n">local_ns</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
+</div>
+<span class="n">shell_parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">handler</span><span class="o">=</span><span class="n">shell_handler</span><span class="p">)</span>
+
+<span class="c"># Worker</span>
+
+<span class="n">worker_parser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s">&#39;worker&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&#39;start worker&#39;</span><span class="p">)</span>
+
+<span class="n">worker_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-o&#39;</span><span class="p">,</span> <span class="s">&#39;--only-direct&#39;</span><span class="p">,</span>
+  <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_true&#39;</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;only listen to direct queue&#39;</span>
+<span class="p">)</span>
+<span class="n">worker_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-v&#39;</span><span class="p">,</span> <span class="s">&#39;--verbose-help&#39;</span><span class="p">,</span>
+  <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_true&#39;</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;show full help from celery worker&#39;</span>
+<span class="p">)</span>
+<span class="n">worker_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-r&#39;</span><span class="p">,</span> <span class="s">&#39;--raw&#39;</span><span class="p">,</span>
+  <span class="n">nargs</span><span class="o">=</span><span class="n">REMAINDER</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;raw options to pass through&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nd">@project_context</span>
+<div class="viewcode-block" id="worker_handler"><a class="viewcode-back" href="../../project.html#flasker.__main__.worker_handler">[docs]</a><span class="k">def</span> <span class="nf">worker_handler</span><span class="p">(</span><span class="n">parsed_args</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Starts a celery worker.</span>
+
+<span class="sd">  If no hostname is provided, one will be generated automatically using the</span>
+<span class="sd">  project domain and subdomain and current worker count. For example, the first</span>
+<span class="sd">  two workers started for project ``my_project`` and configuration ``default``</span>
+<span class="sd">  will have respective hostnames:</span>
+
+<span class="sd">  * w1.default.my_project</span>
+<span class="sd">  * w2.default.my_project</span>
+
+<span class="sd">  The ``-o`` flag can be used to have the worker only listen to its direct</span>
+<span class="sd">  queue (this option requires the CELERY_WORKER_DIRECT to be set to ``True``).</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">pj</span> <span class="o">=</span> <span class="n">current_project</span>
+  <span class="n">pj_worker_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">pj</span><span class="o">.</span><span class="n">celery</span><span class="o">.</span><span class="n">control</span><span class="o">.</span><span class="n">ping</span><span class="p">()]</span>
+  <span class="n">worker_pattern</span> <span class="o">=</span> <span class="s">r&#39;w(\d+)\.</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pj</span><span class="o">.</span><span class="n">subdomain</span><span class="p">,</span> <span class="n">pj</span><span class="o">.</span><span class="n">domain</span><span class="p">)</span>
+  <span class="n">worker_numbers</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">findall</span><span class="p">(</span><span class="n">worker_pattern</span><span class="p">,</span> <span class="n">worker_name</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[</span><span class="s">&#39;0&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">worker_name</span> <span class="ow">in</span> <span class="n">pj_worker_names</span>
+  <span class="p">]</span>
+  <span class="n">wkn</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
+    <span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">worker_numbers</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))</span> <span class="o">-</span>
+    <span class="nb">set</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">worker_numbers</span><span class="p">]</span> <span class="ow">or</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">worker_numbers</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">])</span> 
+  <span class="p">)</span>
+  <span class="k">if</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">verbose_help</span><span class="p">:</span>
+    <span class="n">pj</span><span class="o">.</span><span class="n">celery</span><span class="o">.</span><span class="n">worker_main</span><span class="p">([</span><span class="s">&#39;worker&#39;</span><span class="p">,</span> <span class="s">&#39;-h&#39;</span><span class="p">])</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">hostname</span> <span class="o">=</span> <span class="s">&#39;w</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wkn</span><span class="p">,</span> <span class="n">pj</span><span class="o">.</span><span class="n">subdomain</span><span class="p">,</span> <span class="n">pj</span><span class="o">.</span><span class="n">domain</span><span class="p">)</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;worker&#39;</span><span class="p">,</span> <span class="s">&#39;--hostname=</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">hostname</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">only_direct</span><span class="p">:</span>
+      <span class="n">options</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;--queues=</span><span class="si">%s</span><span class="s">.dq&#39;</span> <span class="o">%</span> <span class="n">hostname</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">raw</span><span class="p">:</span>
+      <span class="n">options</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">parsed_args</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
+    <span class="n">pj</span><span class="o">.</span><span class="n">celery</span><span class="o">.</span><span class="n">worker_main</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+</div>
+<span class="n">worker_parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">handler</span><span class="o">=</span><span class="n">worker_handler</span><span class="p">)</span>
+
+<span class="c"># Flower</span>
+
+<span class="n">flower_parser</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s">&#39;flower&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&#39;start flower&#39;</span><span class="p">)</span>
+
+<span class="n">flower_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-p&#39;</span><span class="p">,</span> <span class="s">&#39;--port&#39;</span><span class="p">,</span>
+  <span class="n">default</span><span class="o">=</span><span class="mi">5555</span><span class="p">,</span>
+  <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;listen on port [</span><span class="si">%(default)s</span><span class="s">]&#39;</span>
+<span class="p">)</span>
+<span class="n">flower_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-v&#39;</span><span class="p">,</span> <span class="s">&#39;--verbose-help&#39;</span><span class="p">,</span>
+  <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_true&#39;</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;show full help from celery flower&#39;</span>
+<span class="p">)</span>
+<span class="n">flower_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-r&#39;</span><span class="p">,</span> <span class="s">&#39;--raw&#39;</span><span class="p">,</span>
+  <span class="n">help</span><span class="o">=</span><span class="s">&#39;raw options to pass through&#39;</span><span class="p">,</span>
+  <span class="n">nargs</span><span class="o">=</span><span class="n">REMAINDER</span>
+<span class="p">)</span>
+
+<span class="nd">@project_context</span>
+<div class="viewcode-block" id="flower_handler"><a class="viewcode-back" href="../../project.html#flasker.__main__.flower_handler">[docs]</a><span class="k">def</span> <span class="nf">flower_handler</span><span class="p">(</span><span class="n">parsed_args</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Start flower worker manager.&quot;&quot;&quot;</span>
+  <span class="n">pj</span> <span class="o">=</span> <span class="n">current_project</span>
+  <span class="k">if</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">verbose_help</span><span class="p">:</span>
+    <span class="n">pj</span><span class="o">.</span><span class="n">celery</span><span class="o">.</span><span class="n">start</span><span class="p">([</span><span class="s">&#39;celery&#39;</span><span class="p">,</span> <span class="s">&#39;flower&#39;</span><span class="p">,</span> <span class="s">&#39;--help&#39;</span><span class="p">])</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;celery&#39;</span><span class="p">,</span> <span class="s">&#39;flower&#39;</span><span class="p">,</span> <span class="s">&#39;--port=</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">port</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">parsed_args</span><span class="o">.</span><span class="n">raw</span><span class="p">:</span>
+      <span class="n">options</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">parsed_args</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
+    <span class="n">pj</span><span class="o">.</span><span class="n">celery</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+</div>
+<span class="n">flower_parser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">handler</span><span class="o">=</span><span class="n">flower_handler</span><span class="p">)</span>
+
+<span class="c"># END of parsers</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+  <span class="n">parsed_args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+  <span class="n">parsed_args</span><span class="o">.</span><span class="n">handler</span><span class="p">(</span><span class="n">parsed_args</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
