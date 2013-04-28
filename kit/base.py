@@ -53,9 +53,6 @@ class Kit(object):
 
         with open(path) as f:
           self.config = load(f)
-          self.config.setdefault('flasks', [])
-          self.config.setdefault('celeries', [])
-          self.config.setdefault('sessions', [])
 
         if self.root not in sys_path:
           sys_path.insert(0, self.root)
@@ -113,7 +110,7 @@ class Kit(object):
 
   def get_session(self, session_name):
     if session_name not in self._sessions:
-      conf = self.config['sessions'][session_name]
+      conf = self.config.get('sessions', {})[session_name]
       engine = create_engine(
         conf.get('url', 'sqlite://'), **conf.get('engine', {})
       )
@@ -126,7 +123,7 @@ class Kit(object):
   def _get_options(self, kind, module_name):
     configs = filter(
       lambda e: module_name in e.get('modules', []),
-      self.config[kind]
+      self.config.get(kind, [])
     )
     if len(configs) == 1:
       config = configs[0]

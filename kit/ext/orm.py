@@ -62,95 +62,315 @@ also return custom queries:
 
 """
 
+from flask import abort
 from functools import partial
-from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
+from random import randint
+from sqlalchemy import Column, func
+from sqlalchemy.ext.associationproxy import AssociationProxy
+from sqlalchemy.ext.declarative import (declared_attr, declarative_base,
+  DeclarativeMeta)
 from sqlalchemy.orm import (backref as _backref, class_mapper,
-  relationship as _relationship)
+  Query as _Query, relationship as _relationship)
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 from sqlalchemy.orm.exc import UnmappedClassError
 
-from ..util.sqlalchemy import Model as _Model, Query
+from ..util import (Cacheable, JSONEncodedDict, Loggable, uncamelcase,
+  query_to_dataframe, query_to_models, query_to_records, to_json)
+
+try:
+  from pandas import DataFrame
+except ImportError:
+  pass
 
 
-class ORM(object):
+class Query(_Query):
 
-  """The main ORM object.
+  """Base query class.
 
-  The session will be reconfigured to use ``query_class``.
+  All queries and relationships/backrefs defined using this extension will
+  return an instance of this class.
 
   """
 
-  def __init__(self, session, query_class=Query, persistent_cache=False):
+  def get_or_404(self, model_id):
+    """Like get but aborts with 404 if not found.
 
-    session.configure(query_cls=query_class)
+    :param model_id: the model's primary key
+    :type model_id: varies
+    :rtype: model or HTTPError
 
-    self.session = session
-    self._registry = {}
+    This method is from Flask-SQLAlchemy.
+    
+    """
+    rv = self.get(model_id)
+    if rv is None:
+      abort(404)
+    return rv
 
-    self.Model = declarative_base(cls=Model, class_registry=self._registry)
-    self.Model.q = _QueryProperty(session)
-    self.Model.t = _TableProperty(session)
-    if not persistent_cache:
-      self.Model._cache = {}
+  def first_or_404(self):
+    """Like first but aborts with 404 if not found.
+    
+    :rtype: model or HTTPError
 
-    self.backref = partial(_backref, query_class=query_class)
-    self.relationship = partial(_relationship, query_class=query_class)
+    This method is from Flask-SQLAlchemy.
+    
+    """
+    rv = self.first()
+    if rv is None:
+      abort(404)
+    return rv
 
-  def get_all_models(self):
-    """All mapped models."""
-    return {
-      k: v
-      for k, v in self._registry.items()
-      if isinstance(v, DeclarativeMeta)
-    }
+  def fast_count(self):
+    """Fast counting, bypassing subqueries.
 
-  def create_all(self, checkfirst=True):
-    """Create tables for all mapped models."""
-    self.Model.metadata.create_all(
-      self.session.get_bind(),
-      checkfirst=checkfirst
+    By default SQLAlchemy count queries use subqueries (which are very slow
+    on MySQL). This method is useful when counting over large numbers of rows
+    (10k and more), as the following benchmark shows (~250k rows):
+
+    .. code:: python
+
+      In [1]: %time Cat.q.count()
+      CPU times: user 0.01 s, sys: 0.00 s, total: 0.01 s
+      Wall time: 1.36 s
+      Out[1]: 281992L
+
+      In [2]: %time Cat.c.scalar()
+      CPU times: user 0.00 s, sys: 0.00 s, total: 0.00 s
+      Wall time: 0.06 s
+      Out[2]: 281992L
+
+    """
+    models = query_to_models(self)
+    if len(models) != 1:
+      # initial query is over more than one model
+      # not clear how to implement the count in that case
+      raise ValueError('Fast count unavailable for this query.')
+    count_query = self.__class__(func.count(), session=self.session)
+    count_query = count_query.select_from(models[0])
+    count_query._criterion = self._criterion
+    return count_query.scalar()
+
+  def random(self, n=1, dialect=None):
+    """Returns n random model instances.
+
+    :param n: the number of instances to return
+    :type n: int
+    :param dialect: the engine dialect (the implementation of random differs
+      between MySQL and SQLite among others). By default will look up on the
+      query for the dialect used. If no random function is available for the 
+      chosen dialect, the fallback implementation uses total row count to 
+      generate random offsets.
+    :type dialect: str
+    :rtype: model instances
+    
+    """
+    if dialect is None:
+      dialect = self.get_bind().dialect.name
+    if dialect == 'mysql':
+      rv = self.order_by(func.rand()).limit(n).all()
+    elif dialect in ['sqlite', 'postgresql']:
+      rv = self.order_by(func.random()).limit(n).all()
+    else: # fallback implementation
+      count = self.count()
+      rv = [self.offset(randint(0, count - 1)).first() for _ in range(n)]
+    if len(rv) == 1:
+      return rv[0]
+    return rv
+
+  def to_dataframe(self, load_objects=False, **kwargs):
+    """Loads a dataframe with the records from the query and returns it.
+
+    :param lazy: whether or not to load the underlying objects. If set to
+      ``False``, the dataframe will be populated with the contents of
+      ``to_json`` of the models, otherwise it will only contain the columns
+      existing in the database (default behavior). If lazy is ``True``, this
+      method also accepts the same keyword arguments as
+      :func:`kit.util.query_to_dataframe`. For convenience, if no
+      ``exclude`` kwarg is specified, it will default to ``['_cache']``.
+    :type lazy: bool
+    :rtype: pandas.DataFrame
+
+    Requires the ``pandas`` library to be installed.
+
+    """
+    if not load_objects:
+      kwargs.setdefault('exclude', ['_cache'])
+      return query_to_dataframe(
+        self,
+        connection=self.session.connection(),
+        **kwargs
+      )
+    else:
+      return DataFrame([model.to_json() for model in self])
+
+  def to_records(self, **kwargs):
+    """Raw execute of the query into a generator.
+
+    :rtype: generator
+
+    This method accepts the same keyword arguments as 
+    :func:`kit.util.query_to_records`.
+    
+    """
+    return query_to_records(
+      self,
+      connection=self.session.connection(),
+      **kwargs
     )
 
 
-class _QueryProperty(object):
+class Model(Cacheable, Loggable):
 
-  """To make queries accessible directly on model classes."""
+  """The custom SQLAlchemy base.
 
-  def __init__(self, session):
-    self.session = session
+  Along with the methods described below, the following conveniences are
+  provided:
 
-  def __get__(self, obj, cls):
-    try:
-      mapper = class_mapper(cls)
-      if mapper:
-        return Query(mapper, session=self.session())
-    except UnmappedClassError:
-      return None
+  * Automatic table naming (to the model's class name uncamelcased with an
+    extra s appended for good measure). To disable this behavior, simply
+    override the ``__tablename__`` argument (setting it to ``None`` for
+    single table inheritance).
 
+  * Default implementation of ``__repr__`` with model class and primary keys
 
-class _TableProperty(object):
+  * Caching (inherited from :class:`kit.util.Cacheable`). The cache is
+    persistent by default (``_cache`` is actually a
+    :class:`kit.util.JSONEncodedDict` column).
 
-  """Bound table for faster batch executes."""
+  * Logging (inherited from :class:`kit.util.Loggable`)
 
-  def __init__(self, session):
-    self.session = session
+  """
 
-  def __get__(self, obj, cls):
-    try:
-      mapper = class_mapper(cls)
-      if mapper:
-        table = mapper.mapped_table
-        # We bind the metadata to a connection to allow use of `execute`
-        # directly on the statement objects. This connection will be closed
-        # when the session is removed.
-        table.metadata.bind = self.session.connection()
-        return table
-    except UnmappedClassError:
-      return None
+  @declared_attr
+  def __tablename__(cls):
+    """Automatically create the table name."""
+    return '%ss' % uncamelcase(cls.__name__)
 
+  @classmethod
+  def __declare_last__(cls):
+    """Creates the ``__json__`` attribute.
+    
+    Varnames that get JSONified. Doesn't emit any additional queries!
 
-class Model(_Model):
+    TODO: use _get_columns and other methods to generate thist list.
 
-  """Adding a few methods using the bound session."""
+    """
+    cls.__json__ = list(
+      varname
+      for varname in dir(cls)
+      if not varname.startswith('_')  # don't show private properties
+      if (
+        isinstance(getattr(cls, varname), property) 
+      ) or (
+        isinstance(getattr(cls, varname), InstrumentedAttribute) and
+        isinstance(getattr(cls, varname).property, ColumnProperty)
+      ) or (
+        isinstance(getattr(cls, varname), InstrumentedAttribute) and
+        isinstance(getattr(cls, varname).property, RelationshipProperty) and
+        getattr(cls, varname).property.lazy in [False, 'joined', 'immediate']
+      ) or (
+        isinstance(getattr(cls, varname), AssociationProxy) and
+        getattr(
+          cls, getattr(cls, varname).target_collection
+        ).property.lazy in [False, 'joined', 'immediate']
+      )
+    )
+
+  @classmethod
+  def _get_columns(cls, show_private=False):
+    return {
+      c.key: c
+      for c in class_mapper(cls).columns
+      if show_private or not c.key.startswith('_')
+    }
+
+  @classmethod
+  def _get_related_models(cls, show_private=False):
+    return {
+      k: v.mapper.class_
+      for k, v in cls._get_relationships(show_private).items()
+    }
+
+  @classmethod
+  def _get_relationships(cls, show_private=False, lazy=None, uselist=None):
+    return {
+      rel.key: rel
+      for rel in class_mapper(cls).relationships.values()
+      if show_private or not rel.key.startswith('_')
+      if lazy is None or rel.lazy in lazy
+      if uselist is None or rel.uselist == uselist
+    }
+
+  @classmethod
+  def _get_association_proxies(cls, show_private=False):
+    return {
+      varname: getattr(cls, varname)
+      for varname in dir(cls)
+      if isinstance(getattr(cls, varname), AssociationProxy)
+      if show_private or not varname.startswith('_')
+    }
+
+  def __repr__(self):
+    primary_keys = ', '.join(
+      '%s=%r' % (k, getattr(self, k))
+      for k, v in self.get_primary_key().items()
+    )
+    return '<%s (%s)>' % (self.__class__.__name__, primary_keys)
+
+  def get_primary_key(self, as_tuple=False):
+    """Returns a dictionary of primary keys for the given model.
+
+    :param as_tuple: if set to ``True``, this method will return a tuple with
+      the model's primary key values. Otherwise a dictionary is returned.
+    :type as_tuple: bool
+    :rtype: dict, tuple
+
+    """
+    if as_tuple:
+      return tuple(
+        getattr(self, k.name)
+        for k in class_mapper(self.__class__).primary_key
+      )
+    else:
+      return dict(
+        (k.name, getattr(self, k.name))
+        for k in class_mapper(self.__class__).primary_key
+      )
+
+  def to_json(self, depth=1):
+    """Serializes the model into a dictionary.
+
+    :param depth:
+    :type depth: int
+    :rtype: dict
+
+    The following attributes are included in the returned JSON:
+
+    * all non private columns
+    * all non private properties
+    * all non private relationships which have their ``lazy`` attribute set to
+      one of ``False, 'joined', 'immediate'``
+
+    A consequence of this is that this method will never issue extra queries
+    to populate the JSON. Furthermore, all the attribute names to be
+    included are computed at class declaration so this method is very fast.
+
+    .. note::
+
+      To change which attributes are included in the dictionary, you can 
+      override the ``__json__`` attribute.
+
+    """
+    if depth <= 0:
+      return self.get_primary_key()
+    rv = {}
+    for varname in self.__json__:
+      try:
+        rv[varname] = to_json(getattr(self, varname), depth - 1)
+      except ValueError as e:
+        rv[varname] = e.message
+    return rv
 
   @classmethod
   def retrieve(cls, from_key=False, flush_if_missing=False, **kwargs):
@@ -213,3 +433,83 @@ class Model(_Model):
     else:
       session.add(self)
     session.flush([self])
+
+
+class _QueryProperty(object):
+
+  """To make queries accessible directly on model classes."""
+
+  def __init__(self, session):
+    self.session = session
+
+  def __get__(self, obj, cls):
+    try:
+      mapper = class_mapper(cls)
+      if mapper:
+        return Query(mapper, session=self.session())
+    except UnmappedClassError:
+      return None
+
+
+class _TableProperty(object):
+
+  """Bound table for faster batch executes."""
+
+  def __init__(self, session):
+    self.session = session
+
+  def __get__(self, obj, cls):
+    try:
+      mapper = class_mapper(cls)
+      if mapper:
+        table = mapper.mapped_table
+        # We bind the metadata to a connection to allow use of `execute`
+        # directly on the statement objects. This connection will be closed
+        # when the session is removed.
+        table.metadata.bind = self.session.connection()
+        return table
+    except UnmappedClassError:
+      return None
+
+
+class ORM(object):
+
+  """The main ORM object.
+
+  The session will be reconfigured to use ``query_class``.
+
+  """
+
+  def __init__(self, session, query_class=Query, persistent_cache=False):
+
+    session.configure(query_cls=query_class)
+
+    self.session = session
+    self._registry = {}
+
+    self.Model = declarative_base(cls=Model, class_registry=self._registry)
+    self.Model.q = _QueryProperty(session)
+    self.Model.t = _TableProperty(session)
+
+    if persistent_cache:
+      def _cache(cls):
+        return Column(JSONEncodedDict)
+      self.Model._cache = declared_attr(_cache)
+
+    self.backref = partial(_backref, query_class=query_class)
+    self.relationship = partial(_relationship, query_class=query_class)
+
+  def get_all_models(self):
+    """All mapped models."""
+    return {
+      k: v
+      for k, v in self._registry.items()
+      if isinstance(v, DeclarativeMeta)
+    }
+
+  def create_all(self, checkfirst=True):
+    """Create tables for all mapped models."""
+    self.Model.metadata.create_all(
+      self.session.get_bind(),
+      checkfirst=checkfirst
+    )

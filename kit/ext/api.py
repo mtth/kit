@@ -60,8 +60,8 @@ from sqlalchemy.orm import class_mapper, Query
 from time import time
 from werkzeug.exceptions import HTTPException
 
-from ..util.flask import make_view, View as _View, _ViewMeta
-from ..util.sqlalchemy import Model, query_to_models
+from .orm import Model
+from ..util import make_view, query_to_models, View as _View, _ViewMeta
 
 
 class APIError(HTTPException):

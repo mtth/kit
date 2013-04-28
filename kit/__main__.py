@@ -24,8 +24,7 @@ Options:
 
 from code import interact
 from docopt import docopt
-from kit import __version__, Flask, Celery
-from kit.base import Kit
+from kit import __version__, get_kit
 from os import getenv, environ, sep
 from os.path import abspath, basename, dirname, join, split, splitext
 from re import findall
@@ -57,9 +56,11 @@ def run_server(kit, local, port, debug):
     app_number = getenv('KIT_FLASK_APP', None)
     if not app_number:
       s = '%s Flask applications found:\n\n   # Name\n' % (apps, )
-      for index, flask_app in enumerate(kit.flasks):
-        s += '%04s %s\n' % (index, flask_app.name)
-      s += '\nWhich # would you like to run? '
+      s += '\n'.join(
+        '%04s %s' % (index, flask_app.name)
+        for index, flask_app in enumerate(kit.flasks)
+      )
+      s += '\n\nWhich # would you like to run? '
       app_number = raw_input(s)
       environ['KIT_FLASK_APP'] = app_number
     app = kit.flasks[int(app_number)]
@@ -120,7 +121,7 @@ def run_flower(kit, raw):
 def main():
   """Command line parser."""
   arguments = docopt(__doc__, version=__version__)
-  kit = Kit(arguments['CONF'])
+  kit = get_kit(arguments['CONF'])
   if arguments['shell']:
     run_shell(kit)
   elif arguments['server']:

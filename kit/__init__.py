@@ -28,7 +28,7 @@ __version__ = '0.1.18'
 
 
 def Flask(module_name, path=None):
-  """Returns Flask application registered for module.
+  """Returns the Flask application registered for the module.
 
   :param module_name: the module name for which to get the application.
     Typically, this should always be set to ``__name__``.
@@ -47,7 +47,7 @@ def Flask(module_name, path=None):
   return Kit(path).get_flask_app(module_name)
 
 def Celery(module_name, path=None):
-  """Returns Celery application registered for module.
+  """Returns the Celery application registered for the module.
 
   :param module_name: the module name for which to get the application.
     Typically, this should always be set to ``__name__``.
@@ -66,12 +66,14 @@ def Celery(module_name, path=None):
   return Kit(path).get_celery_app(module_name)
 
 def get_session(session_name, path=None):
-  """Returns all the sessions registered for this kit.
+  """Returns the corresponding session.
 
+  :param session_name: the key of the session in the configuration file.
+  :type session_name: str
   :param path: the path to the overall kit configuration file. This can be used
     to load the sessions outside of the kit command line tool.
   :type path: str
-  :rtype: list
+  :rtype: `sqlalchemy.orm.scoping.scoped_session`
 
   """
   from .base import Kit
@@ -88,3 +90,7 @@ def get_config(path=None):
   """
   from .base import Kit
   return Kit(path).config
+
+def get_kit(path=None):
+  from .base import Kit
+  return Kit(path)
