@@ -1,5 +1,7 @@
 flasks:
   - modules: ['poller.app', 'poller.app.views']
+    config:
+      debug: yes
   - modules: ['poller.views']
 celeries:
   - modules: ['poller.tasks']
@@ -12,6 +14,6 @@ sessions:
   db:
     url: 'sqlite:///db/db.sqlite'
     engine:
-      echo: yes
+      echo: no
 twitter:
   user_handle: 'justinbieber'

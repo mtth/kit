@@ -26,7 +26,7 @@ from code import interact
 from docopt import docopt
 from kit import __version__, Flask, Celery
 from kit.base import Kit
-from os import sep
+from os import getenv, environ, sep
 from os.path import abspath, basename, dirname, join, split, splitext
 from re import findall
 
@@ -47,16 +47,23 @@ def run_shell(kit):
 def run_server(kit, local, port, debug):
   """Start a Werkzeug server for the Flask application."""
   host = '127.0.0.1' if local else '0.0.0.0'
-  if not len(kit.flasks):
+  apps = len(kit.flasks)
+  if not apps:
     print 'No Flask app found!'
     return
-  elif len(kit.flasks) == 1:
+  elif apps == 1:
     app = kit.flasks[0]
   else:
-    for index, flask_app in enumerate(kit.flasks):
-      print '%02s %s' % (index, flask_app.name)
-    app = kit.flasks[int(raw_input('Which app would you like to run? '))]
-  app.run(host=host, port=port, debug=debug)
+    app_number = getenv('KIT_FLASK_APP', None)
+    if not app_number:
+      s = '%s Flask applications found:\n\n   # Name\n' % (apps, )
+      for index, flask_app in enumerate(kit.flasks):
+        s += '%04s %s\n' % (index, flask_app.name)
+      s += '\nWhich # would you like to run? '
+      app_number = raw_input(s)
+      environ['KIT_FLASK_APP'] = app_number
+    app = kit.flasks[int(app_number)]
+  app.run(host=host, port=port, debug=debug, extra_files=[kit.path])
 
 def run_worker(kit, raw):
   """Starts a celery worker.
