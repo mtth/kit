@@ -281,6 +281,9 @@ class _CachedProperty(property):
       except:
         pass
 
+  def __delete__(self, obj):
+    del obj._cache[self.func.__name__]
+
   def __repr__(self):
     return '<CachedProperty %r>' % self.func
 
