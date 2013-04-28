@@ -166,7 +166,7 @@ class Query(_Query):
     
     """
     if dialect is None:
-      dialect = self.get_bind().dialect.name
+      dialect = self.session.get_bind().dialect.name
     if dialect == 'mysql':
       rv = self.order_by(func.rand()).limit(n).all()
     elif dialect in ['sqlite', 'postgresql']:
@@ -408,8 +408,7 @@ class Model(Cacheable, Loggable):
         return instance, False
       else:
         instance = cls(**kwargs)
-        if if_not_found == 'flush':
-          instance.flush()
+        instance.flush()
       return instance, True
 
   def delete(self):
