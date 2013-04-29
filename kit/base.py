@@ -44,12 +44,18 @@ class Kit(object):
 
   def __init__(self, path=None):
     self.__dict__ = self.__state
-    if path:
+    if not path:
+      if not self.path:
+        raise KitError('No path specified')
+
+    else:
+      path = abspath(path)
+
       if self.path and path != self.path:
         raise KitError('Invalid path specified: %r' % path)
 
       elif not self.path:
-        self.path = abspath(path)
+        self.path = path
 
         with open(path) as f:
           self.config = load(f)
@@ -65,9 +71,10 @@ class Kit(object):
 
   @property
   def _modules(self):
+    conf = self.config
     return [
       module
-      for app_conf in self.config['flasks'] + self.config['celeries']
+      for app_conf in conf.get('flasks', []) + conf.get('celeries', [])
       for module in app_conf.get('modules', [])
     ]
 
@@ -110,7 +117,12 @@ class Kit(object):
 
   def get_session(self, session_name):
     if session_name not in self._sessions:
-      conf = self.config.get('sessions', {})[session_name]
+
+      try:
+        conf = self.config['sessions'][session_name]
+      except KeyError:
+        raise KitError('No session %r found' % (session_name, ))
+
       engine = create_engine(
         conf.get('url', 'sqlite://'), **conf.get('engine', {})
       )
@@ -156,6 +168,7 @@ def _remove_session(sender, *args, **kwargs):
       session.rollback()
     finally:
       session.remove()
+    
 
 # Session removal handlers
 task_postrun.connect(_remove_session)

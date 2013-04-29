@@ -5,7 +5,7 @@ from flask import Flask
 from itertools import repeat
 from nose import run
 from nose.tools import ok_, eq_, nottest, raises, timed
-from os import chdir, close, pardir
+from os import chdir, close, pardir, unlink
 from os.path import abspath, dirname, exists, join
 from requests import ConnectionError, get
 from sqlalchemy.orm.scoping import scoped_session
@@ -14,57 +14,72 @@ from tempfile import mkstemp
 from threading import Thread
 from time import sleep, time
 
-from kit import Kit
+from kit import get_kit
+from kit.base import Kit, KitError
 
 
-class Test_Project(object):
+@raises(KitError)
+def test_empty_kit_path():
+  kit = get_kit()
+
+
+class Test_FirstExample(object):
 
   def setup(self):
-    self.handle, self.cp = mkstemp()
-    with open(self.cp, 'w') as f:
-      f.write('')
+    self.kit = get_kit('../../examples/tracker/conf.yaml')
+    self.client = self.kit.flasks[0].test_client()
 
   def teardown(self):
-    close(self.handle)
-
-  def make_basic_flask_client(self, kit):
-    @kit.flask.route('/')
-    def index():
-      return 'Hello World!'
-    return kit.flask.test_client()
-
-  def test_session_removed(self):
-    pj = Kit(self.cp)
-    client = self.make_basic_flask_client(pj)
-    session = pj.session
-    client.get('/')
+    Kit._Kit__state = {}
 
   def test_config_path(self):
-    pj = Kit(self.cp)
-    eq_(self.cp, pj.path)
+    kit = get_kit()
+    eq_(self.kit.__dict__, kit.__dict__)
 
-  @raises(IOError)
+  @raises(KitError)
   def test_missing_conf_file(self):
-    pj = Kit(self.cp)
-    another = Kit('/another/missing/path.cfg')
+    get_kit('/another/missing/path.cfg')
 
-  @raises(Exception)
-  def test_empty_config_path(self):
-    pj = Kit()
+  def test_get_flask_app(self):
+    eq_(self.kit.get_flask_app('app'), self.kit.flasks[0])
 
-  def test_components(self):
-    pj = Kit(self.cp)
-    eq_(pj._flask, None)
-    eq_(pj._celery, None)
-    eq_(pj._session, None)
-    eq_(type(pj.flask), Flask)
-    eq_(type(pj.celery), Celery)
-    eq_(type(pj.session), scoped_session)
+  def test_flask_app_config(self):
+    eq_(self.kit.flasks[0].config['DEBUG'], True)
 
-  def test_app_server(self):
-    pj = Kit(self.cp)
-    client = self.make_basic_flask_client(pj)
-    eq_(client.get('/').data, 'Hello World!')
+  @raises(KitError)
+  def test_get_flask_app_no_module(self):
+    self.kit.get_flask_app('wrong.module')
+
+  def test_view(self):
+    eq_(self.client.get('/').status_code, 200)
+
+  @raises(KitError)
+  def test_get_session_wrong_name(self):
+    self.kit.get_session('wrong_name')
+
+  def test_session_commit(self):
+
+    def get_views(data):
+      return [int(s) for s in data.split() if s.isdigit()][0]
+
+    first = get_views(self.client.get('/').data)
+    second = get_views(self.client.get('/').data)
+
+    eq_(first + 1, second)
+
+
+class Test_SecondExample(object):
+
+  def setup(self):
+    self.kit = get_kit('../../examples/poller/conf.yaml')
+    self.client = self.kit.flasks[0].test_client()
+
+  def teardown(self):
+    Kit._Kit__state = {}
+
+#   @raises(KitError)
+#   def test_get_celery_app_no_module(self):
+#     self.kit.get_celery_app('wrong.module')
 
 if __name__ == '__main__':
   run()
