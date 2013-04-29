@@ -73,55 +73,55 @@ sessions:
       commit: yes
       raise: no
     engine:
-      echo: yes
-
-
-* ``root``: project root, will be added to your python path. Useful if your
-  configuration files are in a subdirectory of your project.
-
-* ``modules``: list of modules to import (and that don't belong to an
-  application).
-
-* ``flasks``: list of Flask application settings. Each item has the following
-  keys available:
-
-  * ``modules``: list of modules where this application is used. Inside each
-    of these modules, you can use :func:`kit.Flask` to recover this
-    configured application. The application's name will be automatically
-    generated from this list of modules.
-  * ``kwargs``: dctionary of keyword arguments passed to the
-    :class:`flask.Flask` constructor.
-  * ``config``: dicionary of configuration options used to configure the
-    application. Names are case insensitive so no need to uppercase them.
-
-* ``celeries``: list of Celery application settings. Each item has the
-  following keys available:
-
-  * ``modules``: list of modules where this application is used. Inside each
-    of these modules, you can use :func:`kit.Celery` to recover this
-    configured application. The application's name will be automatically
-    generated from this list of modules.
-  * ``kwargs``: dctionary of keyword arguments passed to the
-    :class:`celery.Celery` constructor.
-  * ``config``: dicionary of configuration options used to configure the
-    application. Names are case insensitive so no need to uppercase them.
-
-* ``sessions: dictionary of sessions. The key is the session name (used
-  as argument to :func:`kit.get_sessions`). Each item has the following
-  settings available:
-
-  * ``url``: the database url (defaults to ``sqlite://``)
-  * ``kwargs``: dictionary of keyword arguments to pass to
-    ``sqlalchemy.orm.sessionmaker``.
-  * ``engine``: dictionary of keyword arguments to pass to the bound engine's
-    constructor.
-  * ``options``: there are currently two options available:
-
-    * ``commit``: whether or not to commit the session after each request
-      or task (defaults to ``False``).
-    * ``raise``: whether or not to reraise any errors found during commit
-      (defaults to ``True``).</pre>
+      echo: yes</pre>
 </div>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">root</span></tt>: project root, will be added to your python path. Useful if your
+configuration files are in a subdirectory of your project.</li>
+<li><tt class="docutils literal"><span class="pre">modules</span></tt>: list of modules to import (and that don&#8217;t belong to an
+application).</li>
+<li><tt class="docutils literal"><span class="pre">flasks</span></tt>: list of Flask application settings. Each item has the following
+keys available:<ul>
+<li><tt class="docutils literal"><span class="pre">modules</span></tt>: list of modules where this application is used. Inside each
+of these modules, you can use <a class="reference internal" href="#kit.Flask" title="kit.Flask"><tt class="xref py py-func docutils literal"><span class="pre">kit.Flask()</span></tt></a> to recover this
+configured application. The application&#8217;s name will be automatically
+generated from this list of modules.</li>
+<li><tt class="docutils literal"><span class="pre">kwargs</span></tt>: dictionary of keyword arguments passed to the
+<tt class="xref py py-class docutils literal"><span class="pre">flask.Flask</span></tt> constructor.</li>
+<li><tt class="docutils literal"><span class="pre">config</span></tt>: dicionary of configuration options used to configure the
+application. Names are case insensitive so no need to uppercase them.</li>
+</ul>
+</li>
+<li><tt class="docutils literal"><span class="pre">celeries</span></tt>: list of Celery application settings. Each item has the
+following keys available:<ul>
+<li><tt class="docutils literal"><span class="pre">modules</span></tt>: list of modules where this application is used. Inside each
+of these modules, you can use <a class="reference internal" href="#kit.Celery" title="kit.Celery"><tt class="xref py py-func docutils literal"><span class="pre">kit.Celery()</span></tt></a> to recover this
+configured application. The application&#8217;s name will be automatically
+generated from this list of modules.</li>
+<li><tt class="docutils literal"><span class="pre">kwargs</span></tt>: dictionary of keyword arguments passed to the
+<tt class="xref py py-class docutils literal"><span class="pre">celery.Celery</span></tt> constructor.</li>
+<li><tt class="docutils literal"><span class="pre">config</span></tt>: dicionary of configuration options used to configure the
+application. Names are case insensitive so no need to uppercase them.</li>
+</ul>
+</li>
+<li><a href="#id1"><span class="problematic" id="id2">``</span></a>sessions: dictionary of sessions. The key is the session name (used
+as argument to <tt class="xref py py-func docutils literal"><span class="pre">kit.get_sessions()</span></tt>). Each item has the following
+settings available:<ul>
+<li><tt class="docutils literal"><span class="pre">url</span></tt>: the database url (defaults to <tt class="docutils literal"><span class="pre">sqlite://</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">kwargs</span></tt>: dictionary of keyword arguments to pass to
+<tt class="docutils literal"><span class="pre">sqlalchemy.orm.sessionmaker</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">engine</span></tt>: dictionary of keyword arguments to pass to the bound engine&#8217;s
+constructor.</li>
+<li><tt class="docutils literal"><span class="pre">options</span></tt>: there are currently two options available:<ul>
+<li><tt class="docutils literal"><span class="pre">commit</span></tt>: whether or not to commit the session after each request
+or task (defaults to <tt class="docutils literal"><span class="pre">False</span></tt>).</li>
+<li><tt class="docutils literal"><span class="pre">raise</span></tt>: whether or not to reraise any errors found during commit
+(defaults to <tt class="docutils literal"><span class="pre">True</span></tt>).</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
 <p>Note that there can only be one application of each type (Flask or Celery) in
 a module. This shouldn&#8217;t be too restrictive as it is arguable bad practice to
 mix applications in a same module.</p>
@@ -132,7 +132,11 @@ mix applications in a same module.</p>
 </div>
 <div class="section" id="next-steps">
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
-<p>Todo.</p>
+<p>To instantiate an application outside of the command line tool (for example
+to run it on a different WSGI server), you can specify a <tt class="docutils literal"><span class="pre">path</span></tt> argument
+to the <a class="reference internal" href="#kit.Flask" title="kit.Flask"><tt class="xref py py-func docutils literal"><span class="pre">kit.Flask()</span></tt></a> function. This will load the kit before returning
+the application. The <tt class="docutils literal"><span class="pre">path</span></tt> argument is available on all other functions as
+well (for example to allow model access from an IPython notebook).</p>
 <p>All the functions available in the <tt class="docutils literal"><span class="pre">kit</span></tt> module are detailed below:</p>
 <dl class="function">
 <dt id="kit.Flask">
