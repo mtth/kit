@@ -1,18 +1,21 @@
 Twitter poller
 ==============
 
-Kit example using Celery, and SQAlchemy.
+Kit example using Flask, Celery, and SQAlchemy.
 
 This example implements a background API poller to study how tweets get
-retweeted. Retweet counts are stored in a database and can then be analyzed
-offline.
+retweeted. Retweet counts are polled every 10 minutes from the Twitter API,
+stored in a database and can then be analyzed offline.
 
-The worker can be started with:
+The worker can be started with (the ``-B`` flag activates the celerybeat
+scheduler):
 
 .. code:: bash
 
-  $ kit worker poller -r -B
+  $ kit worker conf.yaml -- -B
 
-This application uses the celerybeat scheduler to automatically run tasks
-on scheduled intervals (activated via the ``-B`` flag).
+As usual, the server can be started with:
 
+.. code:: bash
+
+  $ kit server conf.yaml

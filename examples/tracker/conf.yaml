@@ -8,3 +8,5 @@ sessions:
     url: 'sqlite://'
     options:
       commit: yes
+    engine:
+      echo: yes
