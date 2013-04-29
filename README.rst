@@ -9,7 +9,8 @@ Celery_.
 
   * Run your project from the command line: Start the Werkzeug_ webserver,
     start Celery workers, start a shell in your project's context (using
-    IPython_ if available), and start the Flower_ monitor tool.
+    IPython_ if available), and start the Flower_ monitor using the ``kit``
+    command line tool.
 
   * No more complicated and sometimes circular, import schemes: ``kit.Flask``
     and ``kit.Celery`` always return the correct (and configured) application
