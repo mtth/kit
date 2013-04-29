@@ -29,8 +29,4 @@ class RetweetCount(orm.Model):
     backref=orm.backref('retweet_counts', lazy='dynamic')
   )
 
-  @orm.Model.cached_property
-  def say_hi(self):
-    return 'hi'
-
 orm.create_all()

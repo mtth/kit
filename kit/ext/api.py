@@ -159,10 +159,10 @@ class _ApiViewMeta(_ViewMeta):
       dct.setdefault('endpoint', model.__tablename__)
       base_url = dct.setdefault('base_url', model.__tablename__)
 
-      collection_route = '/%s' % (base_url, )
-      model_route = '/%s%s' % (
+      collection_route = '/%s/' % (base_url, )
+      model_route = '/%s/%s' % (
         base_url,
-        ''.join('/<%s>' % k.name for k in class_mapper(model).primary_key)
+        '/'.join('<%s>' % k.name for k in class_mapper(model).primary_key)
       )
 
       dct['rules'] = {
@@ -231,17 +231,17 @@ class View(_View):
         keys = all_keys & keys
 
       for key in keys:
-        collection_route = '/%s%s/%s' % (
+        collection_route = '/%s/%s/%s/' % (
           cls.base_url,
-          ''.join(
-            '/<%s>' % k.name for k in class_mapper(model).primary_key
+          '/'.join(
+            '<%s>' % k.name for k in class_mapper(model).primary_key
           ),
           key,
         )
-        model_route = '/%s%s/%s/<position>' % (
+        model_route = '/%s/%s/%s/<position>' % (
           cls.base_url,
-          ''.join(
-            '/<%s>' % k.name for k in class_mapper(model).primary_key
+          '/'.join(
+            '<%s>' % k.name for k in class_mapper(model).primary_key
           ),
           key
         )
