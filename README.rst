@@ -41,14 +41,18 @@ Sample configuration file:
 
 .. code:: yaml
 
+  root: '..'
+  modules: ['my_project.startup']
   flasks:
-    - modules: ['app', 'app.views']
+    - modules: ['my_project.app', 'my_project.app.views']
+      kwargs:
+        static_folder: 'st'
       config:
         debug: yes
         testing: yes
-    - modules: ['api']
+    - modules: ['my_project.api']
   celeries:
-    - modules: ['tasks']
+    - modules: ['my_project.tasks']
       config:
         broker_url: 'redis://'
   sessions:
@@ -56,12 +60,16 @@ Sample configuration file:
       url: 'mysql://...'
       engine:
         pool_recycle: 3600
+      options:
+        commit: yes
+        raise: no
 
 
 The following configuration options are available:
 
 * ``root``: project root, will be added to your python path. Useful if your
-  configuration files are in a subdirectory of your project.
+  configuration files are in a subdirectory of your project (defaults to
+  ``'.'``)
 
 * ``modules``: list of modules to import (and that don't belong to an
   application).
@@ -107,7 +115,7 @@ The following configuration options are available:
       (defaults to ``True``).
 
 Note that there can only be one application of each type (Flask or Celery) in
-a module. This shouldn't be too restrictive as it is arguable bad practice to
+a module. This shouldn't be too restrictive as it is arguably bad practice to
 mix applications in a same module.
 
 
