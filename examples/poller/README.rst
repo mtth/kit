@@ -19,3 +19,6 @@ As usual, the server can be started with:
 .. code:: bash
 
   $ kit server conf.yaml
+
+Note: The worker is configured to use redis as broker and backend. Also, this
+example requires the ``python-twitter`` library to be installed.
