@@ -78,28 +78,28 @@ The following configuration options are available:
   keys available:
 
   * ``modules``: list of modules where this application is used. Inside each
-    of these modules, you can use :func:`kit.Flask` to recover this
+    of these modules, you can use ``kit.Flask`` to recover this
     configured application. The application's name will be automatically
     generated from this list of modules.
-  * ``kwargs``: dictionary of keyword arguments passed to the
-    :class:`flask.Flask` constructor.
-  * ``config``: dicionary of configuration options used to configure the
+  * ``kwargs``: dictionary of keyword arguments passed to the ``flask.Flask``
+    constructor.
+  * ``config``: dictionary of configuration options used to configure the
     application. Names are case insensitive so no need to uppercase them.
 
 * ``celeries``: list of Celery application settings. Each item has the
   following keys available:
 
   * ``modules``: list of modules where this application is used. Inside each
-    of these modules, you can use :func:`kit.Celery` to recover this
+    of these modules, you can use ``kit.Celery`` to recover this
     configured application. The application's name will be automatically
     generated from this list of modules.
   * ``kwargs``: dictionary of keyword arguments passed to the
-    :class:`celery.Celery` constructor.
-  * ``config``: dicionary of configuration options used to configure the
+    ``celery.Celery`` constructor.
+  * ``config``: dictionary of configuration options used to configure the
     application. Names are case insensitive so no need to uppercase them.
 
 * ``sessions``: dictionary of sessions. The key is the session name (used
-  as argument to :func:`kit.get_session`). Each item has the following
+  as argument to ``kit.get_session``). Each item has the following
   settings available:
 
   * ``url``: the database url (defaults to ``sqlite://``)
@@ -115,8 +115,8 @@ The following configuration options are available:
       (defaults to ``True``).
 
 Note that there can only be one application of each type (Flask or Celery) in
-a module. This shouldn't be too restrictive as it is arguably bad practice to
-mix applications in a same module.
+a given module. This shouldn't be too restrictive as it is arguably bad
+practice to mix applications in a same module.
 
 
 Next steps
@@ -124,7 +124,7 @@ Next steps
 
 To instantiate an application outside of the command line tool (for example
 to run it on a different WSGI server), you can specify a ``path`` argument
-to the :func:`kit.Flask` function. This will load the kit before returning
+to the ``kit.Flask`` function. This will load the kit before returning
 the application. The ``path`` argument is available on all other functions as
 well (for example to allow model access from an IPython notebook).
 
