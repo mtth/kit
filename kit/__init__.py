@@ -92,10 +92,6 @@ def get_config(path=None):
   from .base import Kit
   return Kit(path).config
 
-def get_kit(path=None):
-  from .base import Kit
-  return Kit(path)
-
 def teardown_handler(func, path=None):
   """Set the teardown handler.
 
@@ -106,3 +102,7 @@ def teardown_handler(func, path=None):
   """
   from .base import Kit
   Kit(path)._teardown_handler = func
+
+def get_kit(path=None):
+  from .base import Kit
+  return Kit(path)
