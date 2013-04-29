@@ -10,8 +10,9 @@ Why use Kit?
 ------------
 
 * 1 YAML file for all your configuration options
-* A command line tool to start a development server, Celery workers and more
+* No more complicated import schemes for your applications
 * Seamless integration between SQLAlchemy and the rest of your application
+* A command line tool to start a development server, Celery workers and more
 
 How to get Kit?
 ---------------
@@ -24,7 +25,7 @@ You can find the latest version on `Github <https://github.com/mtth/kit>`_.
 
 """
 
-__version__ = '0.1.18'
+__version__ = '0.2.1'
 
 
 def Flask(module_name, path=None):
