@@ -56,6 +56,70 @@ Sample configuration file
         pool_recycle: 3600
 
 
+Quickstart
+----------
+
+* ``root``: project root, will be added to your python path. Useful if your
+  configuration files are in a subdirectory of your project.
+
+* ``modules``: list of modules to import (and that don't belong to an
+  application).
+
+* ``flasks``: list of Flask application settings. Each item has the following
+  keys available:
+
+  * ``modules``: list of modules where this application is used. Inside each
+    of these modules, you can use :func:`kit.Flask` to recover this
+    configured application. The application's name will be automatically
+    generated from this list of modules.
+  * ``kwargs``: dictionary of keyword arguments passed to the
+    :class:`flask.Flask` constructor.
+  * ``config``: dicionary of configuration options used to configure the
+    application. Names are case insensitive so no need to uppercase them.
+
+* ``celeries``: list of Celery application settings. Each item has the
+  following keys available:
+
+  * ``modules``: list of modules where this application is used. Inside each
+    of these modules, you can use :func:`kit.Celery` to recover this
+    configured application. The application's name will be automatically
+    generated from this list of modules.
+  * ``kwargs``: dictionary of keyword arguments passed to the
+    :class:`celery.Celery` constructor.
+  * ``config``: dicionary of configuration options used to configure the
+    application. Names are case insensitive so no need to uppercase them.
+
+* ``sessions``: dictionary of sessions. The key is the session name (used
+  as argument to :func:`kit.get_session`). Each item has the following
+  settings available:
+
+  * ``url``: the database url (defaults to ``sqlite://``)
+  * ``kwargs``: dictionary of keyword arguments to pass to
+    ``sqlalchemy.orm.sessionmaker``.
+  * ``engine``: dictionary of keyword arguments to pass to the bound engine's
+    constructor.
+  * ``options``: there are currently two options available:
+
+    * ``commit``: whether or not to commit the session after each request
+      or task (defaults to ``False``).
+    * ``raise``: whether or not to reraise any errors found during commit
+      (defaults to ``True``).
+
+Note that there can only be one application of each type (Flask or Celery) in
+a module. This shouldn't be too restrictive as it is arguable bad practice to
+mix applications in a same module.
+
+
+Next steps
+----------
+
+To instantiate an application outside of the command line tool (for example
+to run it on a different WSGI server), you can specify a ``path`` argument
+to the :func:`kit.Flask` function. This will load the kit before returning
+the application. The ``path`` argument is available on all other functions as
+well (for example to allow model access from an IPython notebook).
+
+
 .. _Flask: http://flask.pocoo.org/docs/api/
 .. _Flask-Script: http://flask-script.readthedocs.org/en/latest/
 .. _Flask-Login: http://packages.python.org/Flask-Login/
