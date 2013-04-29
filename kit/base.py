@@ -6,12 +6,11 @@
 from celery import Celery
 from celery.signals import task_postrun
 from celery.task import periodic_task
-from collections import defaultdict
 from flask import Flask
 from flask.signals import request_tearing_down
-from os.path import abspath, basename, dirname, join
+from os.path import abspath, dirname, join
 from sqlalchemy import create_engine  
-from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sys import path as sys_path
 from yaml import load
@@ -44,15 +43,21 @@ class Kit(object):
 
   def __init__(self, path=None):
     self.__dict__ = self.__state
-    if path:
+    if not path:
+      if not self.path:
+        raise KitError('No path specified')
+
+    else:
+      path = abspath(path)
+
       if self.path and path != self.path:
         raise KitError('Invalid path specified: %r' % path)
 
       elif not self.path:
-        self.path = abspath(path)
+        self.path = path
 
-        with open(path) as f:
-          self.config = load(f)
+        with open(path) as handle:
+          self.config = load(handle)
 
         if self.root not in sys_path:
           sys_path.insert(0, self.root)
@@ -60,14 +65,20 @@ class Kit(object):
         for module in self._modules:
           __import__(module)
 
+        # Session removal handlers
+        task_postrun.connect(_remove_session)
+        request_tearing_down.connect(_remove_session)
+
   def __repr__(self):
     return '<Kit %r>' % (self.path, )
 
   @property
   def _modules(self):
-    return [
+    """Modules to import on kit load."""
+    conf = self.config
+    return conf.get('modules', []) + [
       module
-      for app_conf in self.config['flasks'] + self.config['celeries']
+      for app_conf in conf.get('flasks', []) + conf.get('celeries', [])
       for module in app_conf.get('modules', [])
     ]
 
@@ -109,22 +120,35 @@ class Kit(object):
     return self._registry['celeries'][module_name]
 
   def get_session(self, session_name):
+    """SQLAlchemy session getter."""
     if session_name not in self._sessions:
-      conf = self.config.get('sessions', {})[session_name]
+
+      try:
+        conf = self.config['sessions'][session_name]
+      except KeyError:
+        raise KitError('No session %r found' % (session_name, ))
+
       engine = create_engine(
         conf.get('url', 'sqlite://'), **conf.get('engine', {})
       )
       session = scoped_session(
         sessionmaker(bind=engine, **conf.get('kwargs', {}))
       )
-      self._sessions[session_name] = (session, conf.get('commit', True))
+
+      options = conf.get('options', {})
+      options.setdefault('commit', False)
+      options.setdefault('raise', True)
+
+      self._sessions[session_name] = (session, options)
     return self._sessions[session_name][0]
 
   def _get_options(self, kind, module_name):
-    configs = filter(
-      lambda e: module_name in e.get('modules', []),
-      self.config.get(kind, [])
-    )
+    """Options dictionary for the corresponding app."""
+    configs = [
+      config
+      for config in self.config.get(kind, [])
+      if module_name in config.get('modules', [])
+    ]
     if len(configs) == 1:
       config = configs[0]
       def letters_generator(modules):
@@ -139,24 +163,42 @@ class Kit(object):
       raise KitError('Duplicate %s for module %r found.' % (kind, module_name))
     else:
       raise KitError('Undefined %s for module  %r.' % (kind, module_name))
+    
+  def on_teardown(self, app, task=None):
+    """Callback on request / task teardown.
 
-def _remove_session(sender, *args, **kwargs):
-  """Globally namespaced function for signals to work."""
-  if hasattr(sender, 'app'):
-    # sender is a celery task
-    app = sender.app
-  else:
-    # sender is a flask application
-    app = sender
-  for session, commit in Kit()._sessions.values():
+    Default implementation calls the teardown handler on all the defined
+    sessions.
+    
+    """
+    for session, options in self._sessions.values():
+      self._teardown_handler(session, app, options)
+
+  @staticmethod
+  def _teardown_handler(session, app, session_options):
+    """Static method to allow overriding without passing first argument."""
     try:
-      if commit:
+      if session_options['commit']:
         session.commit()
-    except InvalidRequestError:
+    except (DBAPIError, SQLAlchemyError) as err:
+      if session_options['raise']:
+        raise err
       session.rollback()
     finally:
       session.remove()
 
-# Session removal handlers
-task_postrun.connect(_remove_session)
-request_tearing_down.connect(_remove_session)
+
+def _remove_session(sender, *args, **kwargs):
+  """Globally namespaced function for signals to work."""
+  if hasattr(sender, 'app'):  # sender is a celery task
+    app = sender.app
+    task = sender
+  else:                       # sender is a flask application
+    app = sender
+    task = None
+  try:
+    kit = Kit()
+  except KitError:            # probably in nosetests
+    pass
+  else:
+    kit.on_teardown(app, task)

@@ -5,6 +5,6 @@ flasks:
       testing: yes
 sessions:
   db:
-    url: 'sqlite:///db.sqlite'
-    engine:
-      echo: yes
+    url: 'sqlite://'
+    options:
+      commit: yes

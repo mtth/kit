@@ -5,3 +5,10 @@ Version 0.1 (04/09/2013)
 ------------------------
 
 * Initial release
+
+
+Version 0.2 (04/28/2013)
+------------------------
+
+* Allow several Flask, Celery applications and SQAlchemy sessions.
+* ORM and API extensions.

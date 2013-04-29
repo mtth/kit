@@ -10,8 +10,9 @@ Why use Kit?
 ------------
 
 * 1 YAML file for all your configuration options
-* A command line tool to start a development server, Celery workers and more
+* No more complicated import schemes for your applications
 * Seamless integration between SQLAlchemy and the rest of your application
+* A command line tool to start a development server, Celery workers and more
 
 How to get Kit?
 ---------------
@@ -24,7 +25,7 @@ You can find the latest version on `Github <https://github.com/mtth/kit>`_.
 
 """
 
-__version__ = '0.1.18'
+__version__ = '0.2.1'
 
 
 def Flask(module_name, path=None):
@@ -90,6 +91,17 @@ def get_config(path=None):
   """
   from .base import Kit
   return Kit(path).config
+
+def teardown_handler(func, path=None):
+  """Set the teardown handler.
+
+  :param func: Must accept three arguments: session, app,
+    session_options
+  :type func: callable
+
+  """
+  from .base import Kit
+  Kit(path)._teardown_handler = func
 
 def get_kit(path=None):
   from .base import Kit

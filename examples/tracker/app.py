@@ -10,7 +10,7 @@ to our view.
 """
 
 from datetime import datetime
-from kit import Flask, get_sessions
+from kit import Flask, get_session
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 

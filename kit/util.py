@@ -2,6 +2,7 @@
 
 """Utility module."""
 
+from collections import namedtuple
 from datetime import datetime
 from decimal import Decimal
 from flask import request
@@ -28,8 +29,8 @@ def uncamelcase(name):
   :rtype: str
   
   """
-  s1 = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-  return sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+  first = sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+  return sub('([a-z0-9])([A-Z])', r'\1_\2', first).lower()
 
 def to_json(value, depth=1):
   """Serialize an object.
@@ -47,9 +48,9 @@ def to_json(value, depth=1):
     return value.to_json(depth - 1)
   if isinstance(value, dict):
     return {k: to_json(v, depth) for k, v in value.items()}
-  if isinstance(value, list):
+  if isinstance(value, (list, tuple)):
     return [to_json(v, depth) for v in value]
-  if isinstance(value, (float, int, long, str, unicode, tuple)):
+  if isinstance(value, (float, int, long, str, unicode)):
     return value
   if value is None:
     return None
@@ -89,70 +90,46 @@ class Jsonifiable(object):
     :rtype: dict
 
     """
-    rv = {}
+    rvd = {}
     if depth < 1:
-      return rv
+      return rvd
     for varname in self.__json__:
       try:
-        rv[varname] = to_json(getattr(self, varname), depth)
-      except ValueError as e:
-        rv[varname] = e.message
-    return rv
+        rvd[varname] = to_json(getattr(self, varname), depth)
+      except ValueError as err:
+        rvd[varname] = err.message
+    return rvd
 
 
 class Loggable(object):
 
-  """Convenient logging mixin.
-
-  This implements the main logging methods directly on the class instance. For
-  example, this allows something like::
-
-    instance.info('Some message.')
-
-  The instance's ``__str__`` is prepended to the message for easier debugging.
-
-  Note that this class doesn't override `` __getattr__`` to preserve exception
-  context. Otherwise the line where the inexistent attribute was accessed will
-  be lost.
-
-  """
+  """Convenient logging mixin."""
 
   __logger__ = None
 
-  def _logger(self, message, loglevel):
+  @property
+  def logger(self):
+    """The class logger."""
     if not self.__logger__:
       self.__logger__ = getLogger(self.__module__)
-    action = getattr(self.__logger__, loglevel)
-    return action('%s :: %s' % (self, message))
+    return self.__logger__
 
-  def debug(self, message):
-    """Debug level message."""
-    return self._logger(message, 'debug')
 
-  def info(self, message):
-    """Info level message."""
-    return self._logger(message, 'info')
-
-  def warn(self, message):
-    """Warn level message."""
-    return self._logger(message, 'warn')
-
-  def error(self, message):
-    """Error level message."""
-    return self._logger(message, 'error')
+CACHE_REFRESH = namedtuple('CACHE_REFRESH', ['expiration'])
 
 
 class Cacheable(object):
 
   """Mixin to support cacheable properties.
   
-  Implements a few cache maintenance utilities.
+  Implements a few cache maintenance utilities as well.
   
   """
 
-  _cache = None
+  __cache__ = None
 
   def _get_cached_properties(self):
+    """Private method to return the list of cached properties."""
     return [
         varname
         for varname in dir(self.__class__)
@@ -160,13 +137,13 @@ class Cacheable(object):
     ]
 
   def refresh_cache(self, names=None, expiration=0, remove_deleted=True):
-    """Refresh cached properties.
+    """Refresh this instance's cached properties.
 
     :param names: list of cached property names to refresh. If specified, only
       these will be refreshed.
     :type names: iterable
     :param expiration: if specified, only properties of age greater than this
-      value will be refreshed.
+      value will be refreshed (seconds).
     :type expiration: int
     :param remove_deleted: if ``True``, cached properties that aren't defined
       but are still present in the cache will be removed (useful especially for
@@ -179,24 +156,19 @@ class Cacheable(object):
     if names:
       for name in names:
         if name in cached_properties:
-          setattr(self, name, _CacheRefresh(expiration))
+          setattr(self, name, CACHE_REFRESH(expiration))
         else:
           raise AttributeError('No cached property %r on %r.' % (name, self))
     else:
       for varname in cached_properties:
-        setattr(self, varname, _CacheRefresh(expiration))
+        setattr(self, varname, CACHE_REFRESH(expiration))
 
     if remove_deleted:
-      for varname in self._cache:
+      for varname in self.__cache__:
         if not varname in cached_properties:
-          del self._cache[varname]
+          del self.__cache__[varname]
 
-    try:
-      self._cache.changed()
-    except:
-      pass
-
-  def view_cache(self):
+  def get_cache_ages(self):
     """Get the age of cached values.
 
     :rtype: dict
@@ -204,14 +176,14 @@ class Cacheable(object):
     Properties not yet cached will appear as ``None``.
     
     """
-    rv = dict.fromkeys(self._get_cached_properties(), None)
-    if self._cache:
+    ages = dict.fromkeys(self._get_cached_properties(), None)
+    if self.__cache__:
       now = time()
-      rv.update(dict(
+      ages.update(dict(
         (k, now - v[1])
-        for k, v in self._cache.items()
+        for k, v in self.__cache__.items()
       ))
-    return rv
+    return ages
 
   @classmethod
   def cached_property(cls, func):
@@ -220,23 +192,16 @@ class Cacheable(object):
     :param func: bound method to be turned in to a property
     :type func: func
 
-    A cached property acts similarly to a property but is only computed once and
-    then stored in the instance's ``_cache`` attribute along with the time it was
-    last computed. Subsequent calls will read directly from the cached value.  To
-    refresh several or all cached properties, use the ``refresh_cache`` method.
+    A cached property acts similarly to a property but is only computed once
+    and then stored in the instance's `__cache__` attribute along with the time
+    it was last computed. Subsequent calls will read directly from the cached
+    value.  To refresh several or all cached properties, use the
+    :meth:`refresh_cache` method.
 
     Should only be used with methods of classes that inherit from ``Cacheable``.
     
     """
     return _CachedProperty(func)
-
-
-class _CacheRefresh(object):
-
-  """Special class used to trigger cache refreshes."""
-
-  def __init__(self, expiration):
-    self.expiration = expiration
 
 
 class _CachedProperty(property):
@@ -257,32 +222,33 @@ class _CachedProperty(property):
       return self
     else:
       try:
-        return obj._cache[self.func.__name__][0]
-      except (KeyError, TypeError) as e:
+        return obj.__cache__[self.func.__name__][0]
+      except (KeyError, TypeError):
         value = self.func(obj)
         self.__set__(obj, value)
         return value
 
   def __set__(self, obj, value):
-    if not obj._cache:
-      obj._cache = {}
+    if not obj.__cache__:
+      obj.__cache__ = {}
     if value:
-      if isinstance(value, _CacheRefresh):
-        if self.func.__name__ in obj._cache:
-          t = time() - obj._cache[self.func.__name__][1]
-          if t > value.expiration:
-            obj._cache[self.func.__name__] = (self.func(obj), time())
+      if isinstance(value, CACHE_REFRESH):
+        if self.func.__name__ in obj.__cache__:
+          age = time() - obj.__cache__[self.func.__name__][1]
+          if age > value.expiration:
+            obj.__cache__[self.func.__name__] = (self.func(obj), time())
         else:
-          obj._cache[self.func.__name__] = (self.func(obj), time())
+          obj.__cache__[self.func.__name__] = (self.func(obj), time())
       else:
-        obj._cache[self.func.__name__] = (value, time())
+        obj.__cache__[self.func.__name__] = (value, time())
       try:
-        obj._cache.changed()
-      except:
+        # for persistent mutable caches, trigger refresh.
+        obj.__cache__.changed()
+      except AttributeError:
         pass
 
   def __delete__(self, obj):
-    del obj._cache[self.func.__name__]
+    del obj.__cache__[self.func.__name__]
 
   def __repr__(self):
     return '<CachedProperty %r>' % self.func
@@ -310,8 +276,7 @@ def query_to_models(query):
       if isinstance(d['expr'], Mapper)
     ]
 
-def query_to_dataframe(query, connection=None, exclude=None, index=None,
-                       columns=None, coerce_float=False):
+def query_to_dataframe(query, connection=None, columns=None, **kwargs):
   """Load a Pandas dataframe from an SQLAlchemy query.
 
   :param query: the query to be executed
@@ -320,32 +285,30 @@ def query_to_dataframe(query, connection=None, exclude=None, index=None,
     the method will create a new connection using the session's bound engine
     and properly close it afterwards.
   :type connection: sqlalchemy.engine.base.Connection
-  :param exclude: a list of column names to exclude from the dataframe
-  :type exclude: list
-  :param index: the column to use as index
-  :type index: str
-  :param names: a list of column names. If unspecified, the method will use
+  :param columns: a list of column names. If unspecified, the method will use
     the table's keys from the query's metadata. If the passed data do not have
     named associated with them, this argument provides names for the columns.
     Otherwise this argument indicates the order of the columns in the result
     (any names not found in the data will become all-NA columns)
-  :type names: list
-  :param coerce_float: Attempt to convert values to non-string, non-numeric
-    objects (like decimal.Decimal) to floating point.
-  :type coerce_float: bool
+  :type columns: list
   :rtype: pandas.DataFrame
+
+  Any keyword arguments will be forwarded to `pandas.DataFrame.from_records`.
+  The following are available:
+
+    * exclude: a list of column names to exclude from the dataframe
+    * index: the column to use as index
+    * coerce_float: Attempt to convert values to non-string, non-numeric
+      objects (like decimal.Decimal) to floating point.
   
   """
   connection = connection or query.session.get_bind()
-  exclude = exclude or []
   result = connection.execute(query.statement)
   columns = columns or result.keys()
   dataframe = DataFrame.from_records(
     result.fetchall(),
     columns=columns,
-    exclude=exclude,
-    index=index,
-    coerce_float=coerce_float,
+    **kwargs
   )
   result.close()
   return dataframe
@@ -532,7 +495,7 @@ class _ViewMeta(type):
 
   """To register classes with an app or blueprint on definition."""
 
-  http_methods = ['get', 'post', 'put', 'delete', 'patch']
+  http_methods = frozenset(['HEAD', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
 
   def __new__(mcs, name, bases, dct):
     view_class = super(_ViewMeta, mcs).__new__(mcs, name, bases, dct)
@@ -542,14 +505,21 @@ class _ViewMeta(type):
       if not view_class.__app__:
         raise ValueError('%r is not bound to an app' % (view_class, ))
 
+      rule_methods = set(
+        meth for meths in view_class.rules.values() for meth in meths
+      )
+      invalid_methods = rule_methods - mcs.http_methods
+      if invalid_methods:
+        raise ValueError('Invalid rule methods: %s' % (invalid_methods, ))
+
       if view_class.endpoint is None:
         view_class.endpoint = uncamelcase(view_class.__name__)
 
       if view_class.methods is None:
-        methods = set(key.upper() for key in dct if key in mcs.http_methods)
+        methods = set(key.upper() for key in dct) & mcs.http_methods
         view_class.methods = sorted(methods or [])
       
-      view_class.register_view(view_class.__app__)
+      view_class.register_view()
 
     return view_class
 
@@ -603,31 +573,31 @@ class View(_View):
   #: default to the class' name uncamelcased.
   endpoint = None
 
-  #: If specified, only these methods will have their routes registered. This
-  #: can be useful if subclassing views.
+  #: If specified, only these methods will be allowed. This can be useful if
+  #: subclassing views to override the rule methods.
   methods = None
 
   #: A dictionary with the rules to create. Each key is the url rule and the
   #: corresponding value a list of methods to accept. E.g.
-  #: ``{'/index': ['GET'], '/index/<page>': ['GET', 'PUT']}``.
+  #: ``{'/index/': ['GET'], '/index/<page>': ['GET', 'PUT']}``.
   rules = None
 
   @classmethod
-  def register_view(cls, app):
+  def register_view(cls):
     """Attach view to app or blueprint.
     
     Called by the metaclass when the class is created.
     
     """
-    view = cls.as_view(cls.endpoint)
-
-    all_methods = set(cls.methods)
     if cls.rules is None:
       raise ValueError('No rules found for %r' % (cls, ))
+
+    view = cls.as_view(cls.endpoint)
+    allowed_methods = set(cls.methods)
     for rule, methods in cls.rules.items():
-      rule_methods = set(methods) & all_methods
-      if rule_methods:
-        app.add_url_rule(rule=rule, view_func=view, methods=rule_methods)
+      methods = set(methods) & allowed_methods
+      if methods:
+        cls.__app__.add_url_rule(rule=rule, view_func=view, methods=methods)
       
   def dispatch_request(self, **kwargs):
     """Dispatches requests to the corresponding method name.
