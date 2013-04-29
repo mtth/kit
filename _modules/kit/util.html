@@ -1,0 +1,726 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>kit.util &mdash; Kit 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/theme_extras.js"></script>
+    <link rel="top" title="Kit 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="kit" href="../kit.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="../../index.html">
+          <span>Kit 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>kit.util</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <h1>Source code for kit.util</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;Utility module.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">decimal</span> <span class="kn">import</span> <span class="n">Decimal</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">flask.views</span> <span class="kn">import</span> <span class="n">View</span> <span class="k">as</span> <span class="n">_View</span>
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
+<span class="kn">from</span> <span class="nn">re</span> <span class="kn">import</span> <span class="n">sub</span>
+<span class="kn">from</span> <span class="nn">json</span> <span class="kn">import</span> <span class="n">dumps</span><span class="p">,</span> <span class="n">loads</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.mutable</span> <span class="kn">import</span> <span class="n">Mutable</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm.mapper</span> <span class="kn">import</span> <span class="n">Mapper</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.types</span> <span class="kn">import</span> <span class="n">TypeDecorator</span><span class="p">,</span> <span class="n">UnicodeText</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+
+<span class="k">try</span><span class="p">:</span>
+  <span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+  <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="uncamelcase"><a class="viewcode-back" href="../../util.html#kit.util.uncamelcase">[docs]</a><span class="k">def</span> <span class="nf">uncamelcase</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Transforms CamelCase to underscore_case.</span>
+
+<span class="sd">  :param name: string input</span>
+<span class="sd">  :type name: str</span>
+<span class="sd">  :rtype: str</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">s1</span> <span class="o">=</span> <span class="n">sub</span><span class="p">(</span><span class="s">&#39;(.)([A-Z][a-z]+)&#39;</span><span class="p">,</span> <span class="s">r&#39;\1_\2&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">sub</span><span class="p">(</span><span class="s">&#39;([a-z0-9])([A-Z])&#39;</span><span class="p">,</span> <span class="s">r&#39;\1_\2&#39;</span><span class="p">,</span> <span class="n">s1</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="to_json"><a class="viewcode-back" href="../../util.html#kit.util.to_json">[docs]</a><span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Serialize an object.</span>
+
+<span class="sd">  :param value: the object to be serialized.</span>
+<span class="sd">  :type value: varies</span>
+<span class="sd">  :param depth: used when serializing nested objects with a ``to_json``</span>
+<span class="sd">    method. In that case, the ``depth`` parameter is decremented by one each</span>
+<span class="sd">    call. This paramater sets the initial value.</span>
+<span class="sd">  :type depth: int</span>
+<span class="sd">  :rtype: varies</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s">&#39;to_json&#39;</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">to_json</span><span class="p">(</span><span class="n">depth</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">to_json</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">depth</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">to_json</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">depth</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">long</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">unicode</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+    <span class="k">return</span> <span class="n">value</span>
+  <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">None</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">datetime</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Decimal</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+  <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Not jsonifiable&#39;</span><span class="p">)</span>
+
+
+<span class="c"># Mixins</span>
+<span class="c"># ======</span>
+</div>
+<div class="viewcode-block" id="Jsonifiable"><a class="viewcode-back" href="../../util.html#kit.util.Jsonifiable">[docs]</a><span class="k">class</span> <span class="nc">Jsonifiable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;JSONification mixin.&quot;&quot;&quot;</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">__json__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Default implementation of the attributes to jsonify.</span>
+
+<span class="sd">    This is relatively slow (because it is evaluated for each jsonify call).</span>
+<span class="sd">    Consider overwriting it for better performance.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span>
+      <span class="n">varname</span> <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">varname</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">varname</span><span class="p">))</span>
+    <span class="p">]</span>
+
+<div class="viewcode-block" id="Jsonifiable.to_json"><a class="viewcode-back" href="../../util.html#kit.util.Jsonifiable.to_json">[docs]</a>  <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns all keys and properties of an instance in a dictionary.</span>
+
+<span class="sd">    :param depth:</span>
+<span class="sd">    :type depth: int</span>
+<span class="sd">    :rtype: dict</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">depth</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">rv</span>
+    <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__json__</span><span class="p">:</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">rv</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="o">=</span> <span class="n">to_json</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">varname</span><span class="p">),</span> <span class="n">depth</span><span class="p">)</span>
+      <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">rv</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span>
+    <span class="k">return</span> <span class="n">rv</span>
+
+</div></div>
+<div class="viewcode-block" id="Loggable"><a class="viewcode-back" href="../../util.html#kit.util.Loggable">[docs]</a><span class="k">class</span> <span class="nc">Loggable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Convenient logging mixin.</span>
+
+<span class="sd">  This implements the main logging methods directly on the class instance. For</span>
+<span class="sd">  example, this allows something like::</span>
+
+<span class="sd">    instance.info(&#39;Some message.&#39;)</span>
+
+<span class="sd">  The instance&#39;s ``__str__`` is prepended to the message for easier debugging.</span>
+
+<span class="sd">  Note that this class doesn&#39;t override `` __getattr__`` to preserve exception</span>
+<span class="sd">  context. Otherwise the line where the inexistent attribute was accessed will</span>
+<span class="sd">  be lost.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">__logger__</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="k">def</span> <span class="nf">_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">loglevel</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__logger__</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">__logger__</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__module__</span><span class="p">)</span>
+    <span class="n">action</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__logger__</span><span class="p">,</span> <span class="n">loglevel</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">action</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> :: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Loggable.debug"><a class="viewcode-back" href="../../util.html#kit.util.Loggable.debug">[docs]</a>  <span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Debug level message.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;debug&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Loggable.info"><a class="viewcode-back" href="../../util.html#kit.util.Loggable.info">[docs]</a>  <span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Info level message.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;info&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Loggable.warn"><a class="viewcode-back" href="../../util.html#kit.util.Loggable.warn">[docs]</a>  <span class="k">def</span> <span class="nf">warn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Warn level message.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;warn&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Loggable.error"><a class="viewcode-back" href="../../util.html#kit.util.Loggable.error">[docs]</a>  <span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Error level message.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s">&#39;error&#39;</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="Cacheable"><a class="viewcode-back" href="../../util.html#kit.util.Cacheable">[docs]</a><span class="k">class</span> <span class="nc">Cacheable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Mixin to support cacheable properties.</span>
+<span class="sd">  </span>
+<span class="sd">  Implements a few cache maintenance utilities.</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">_cache</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="k">def</span> <span class="nf">_get_cached_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="n">varname</span>
+        <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">varname</span><span class="p">),</span> <span class="n">_CachedProperty</span><span class="p">)</span>
+    <span class="p">]</span>
+
+<div class="viewcode-block" id="Cacheable.refresh_cache"><a class="viewcode-back" href="../../util.html#kit.util.Cacheable.refresh_cache">[docs]</a>  <span class="k">def</span> <span class="nf">refresh_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">expiration</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">remove_deleted</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Refresh cached properties.</span>
+
+<span class="sd">    :param names: list of cached property names to refresh. If specified, only</span>
+<span class="sd">      these will be refreshed.</span>
+<span class="sd">    :type names: iterable</span>
+<span class="sd">    :param expiration: if specified, only properties of age greater than this</span>
+<span class="sd">      value will be refreshed.</span>
+<span class="sd">    :type expiration: int</span>
+<span class="sd">    :param remove_deleted: if ``True``, cached properties that aren&#39;t defined</span>
+<span class="sd">      but are still present in the cache will be removed (useful especially for</span>
+<span class="sd">      persistent caches)</span>
+<span class="sd">    :type remove_deleted: bool</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cached_properties</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_cached_properties</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="n">names</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cached_properties</span><span class="p">:</span>
+          <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">_CacheRefresh</span><span class="p">(</span><span class="n">expiration</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s">&#39;No cached property </span><span class="si">%r</span><span class="s"> on </span><span class="si">%r</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="n">cached_properties</span><span class="p">:</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">varname</span><span class="p">,</span> <span class="n">_CacheRefresh</span><span class="p">(</span><span class="n">expiration</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">remove_deleted</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">varname</span> <span class="ow">in</span> <span class="n">cached_properties</span><span class="p">:</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span>
+
+    <span class="k">try</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    <span class="k">except</span><span class="p">:</span>
+      <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="Cacheable.view_cache"><a class="viewcode-back" href="../../util.html#kit.util.Cacheable.view_cache">[docs]</a>  <span class="k">def</span> <span class="nf">view_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get the age of cached values.</span>
+
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    </span>
+<span class="sd">    Properties not yet cached will appear as ``None``.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_cached_properties</span><span class="p">(),</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+      <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+      <span class="n">rv</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">now</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+      <span class="p">))</span>
+    <span class="k">return</span> <span class="n">rv</span>
+</div>
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Cacheable.cached_property"><a class="viewcode-back" href="../../util.html#kit.util.Cacheable.cached_property">[docs]</a>  <span class="k">def</span> <span class="nf">cached_property</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decorator that turns a class method into a cached property.</span>
+
+<span class="sd">    :param func: bound method to be turned in to a property</span>
+<span class="sd">    :type func: func</span>
+
+<span class="sd">    A cached property acts similarly to a property but is only computed once and</span>
+<span class="sd">    then stored in the instance&#39;s ``_cache`` attribute along with the time it was</span>
+<span class="sd">    last computed. Subsequent calls will read directly from the cached value.  To</span>
+<span class="sd">    refresh several or all cached properties, use the ``refresh_cache`` method.</span>
+
+<span class="sd">    Should only be used with methods of classes that inherit from ``Cacheable``.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_CachedProperty</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+
+</div></div>
+<span class="k">class</span> <span class="nc">_CacheRefresh</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Special class used to trigger cache refreshes.&quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expiration</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">expiration</span> <span class="o">=</span> <span class="n">expiration</span>
+
+
+<span class="k">class</span> <span class="nc">_CachedProperty</span><span class="p">(</span><span class="nb">property</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Instance of a cached property for a model.</span>
+
+<span class="sd">  Based on the emulation of PyProperty_Type() in Objects/descrobject.c from </span>
+<span class="sd">  http://infinitesque.net/articles/2005/enhancing%20Python&#39;s%20property.xhtml</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">func</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">__doc__</span>
+
+  <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">objtype</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">obj</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+      <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__set__</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+  <span class="k">def</span> <span class="nf">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+      <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">_CacheRefresh</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+          <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+          <span class="k">if</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="n">value</span><span class="o">.</span><span class="n">expiration</span><span class="p">:</span>
+            <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">obj</span><span class="p">),</span> <span class="n">time</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">obj</span><span class="p">),</span> <span class="n">time</span><span class="p">())</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">time</span><span class="p">())</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+      <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+  <span class="k">def</span> <span class="nf">__delete__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+    <span class="k">del</span> <span class="n">obj</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span>
+
+  <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;&lt;CachedProperty </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span>
+
+
+<span class="c"># Query helpers</span>
+<span class="c"># =============</span>
+
+<div class="viewcode-block" id="query_to_models"><a class="viewcode-back" href="../../util.html#kit.util.query_to_models">[docs]</a><span class="k">def</span> <span class="nf">query_to_models</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Returns the model classes associated with a query.</span>
+<span class="sd">  </span>
+<span class="sd">  :param query: the query to be executed</span>
+<span class="sd">  :type query: sqlalchemy.orm.query.Query</span>
+<span class="sd">  :rtype: list</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="s">&#39;attr&#39;</span><span class="p">):</span>
+    <span class="c"># this is a subquery</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">query</span><span class="o">.</span><span class="n">attr</span><span class="o">.</span><span class="n">target_mapper</span><span class="p">]</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="c"># this is a main query</span>
+    <span class="k">return</span> <span class="p">[</span>
+      <span class="n">d</span><span class="p">[</span><span class="s">&#39;expr&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">class_</span>
+      <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">column_descriptions</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s">&#39;expr&#39;</span><span class="p">],</span> <span class="n">Mapper</span><span class="p">)</span>
+    <span class="p">]</span>
+</div>
+<div class="viewcode-block" id="query_to_dataframe"><a class="viewcode-back" href="../../util.html#kit.util.query_to_dataframe">[docs]</a><span class="k">def</span> <span class="nf">query_to_dataframe</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">connection</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">columns</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">coerce_float</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Load a Pandas dataframe from an SQLAlchemy query.</span>
+
+<span class="sd">  :param query: the query to be executed</span>
+<span class="sd">  :type query: sqlalchemy.orm.query.Query</span>
+<span class="sd">  :param connection: the connection to use to execute the query. By default</span>
+<span class="sd">    the method will create a new connection using the session&#39;s bound engine</span>
+<span class="sd">    and properly close it afterwards.</span>
+<span class="sd">  :type connection: sqlalchemy.engine.base.Connection</span>
+<span class="sd">  :param exclude: a list of column names to exclude from the dataframe</span>
+<span class="sd">  :type exclude: list</span>
+<span class="sd">  :param index: the column to use as index</span>
+<span class="sd">  :type index: str</span>
+<span class="sd">  :param names: a list of column names. If unspecified, the method will use</span>
+<span class="sd">    the table&#39;s keys from the query&#39;s metadata. If the passed data do not have</span>
+<span class="sd">    named associated with them, this argument provides names for the columns.</span>
+<span class="sd">    Otherwise this argument indicates the order of the columns in the result</span>
+<span class="sd">    (any names not found in the data will become all-NA columns)</span>
+<span class="sd">  :type names: list</span>
+<span class="sd">  :param coerce_float: Attempt to convert values to non-string, non-numeric</span>
+<span class="sd">    objects (like decimal.Decimal) to floating point.</span>
+<span class="sd">  :type coerce_float: bool</span>
+<span class="sd">  :rtype: pandas.DataFrame</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">connection</span> <span class="o">=</span> <span class="n">connection</span> <span class="ow">or</span> <span class="n">query</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get_bind</span><span class="p">()</span>
+  <span class="n">exclude</span> <span class="o">=</span> <span class="n">exclude</span> <span class="ow">or</span> <span class="p">[]</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="o">.</span><span class="n">statement</span><span class="p">)</span>
+  <span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span> <span class="ow">or</span> <span class="n">result</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+  <span class="n">dataframe</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="o">.</span><span class="n">from_records</span><span class="p">(</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">fetchall</span><span class="p">(),</span>
+    <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span>
+    <span class="n">exclude</span><span class="o">=</span><span class="n">exclude</span><span class="p">,</span>
+    <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+    <span class="n">coerce_float</span><span class="o">=</span><span class="n">coerce_float</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="n">result</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">dataframe</span>
+</div>
+<div class="viewcode-block" id="query_to_records"><a class="viewcode-back" href="../../util.html#kit.util.query_to_records">[docs]</a><span class="k">def</span> <span class="nf">query_to_records</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">connection</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Raw execute of the query into a generator.</span>
+
+<span class="sd">  :param query: the query to be executed</span>
+<span class="sd">  :type query: sqlalchemy.orm.query.Query</span>
+<span class="sd">  :param connection: the connection to use to execute the query. By default</span>
+<span class="sd">    the method will create a new connection using the session&#39;s bound engine</span>
+<span class="sd">    and properly close it afterwards.</span>
+<span class="sd">  :type connection: sqlalchemy.engine.base.Connection</span>
+<span class="sd">  :rtype: generator</span>
+
+<span class="sd">  About 5 times faster than loading the objects. Useful if only interested in</span>
+<span class="sd">  raw columns of the model::</span>
+
+<span class="sd">    # for ~300k models</span>
+<span class="sd">    In [1]: %time [m.id for s in Model.q]</span>
+<span class="sd">    CPU times: user 48.22 s, sys: 2.62 s, total: 50.84 s</span>
+<span class="sd">    Wall time: 52.19 s</span>
+<span class="sd">    In [2]: %time [m[&#39;id&#39;] for s in query_to_records(Model.q)]</span>
+<span class="sd">    CPU times: user 9.12 s, sys: 0.20 s, total: 9.32 s</span>
+<span class="sd">    Wall time: 10.32 s</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">connection</span> <span class="o">=</span> <span class="n">connection</span> <span class="ow">or</span> <span class="n">query</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get_bind</span><span class="p">()</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="o">.</span><span class="n">statement</span><span class="p">)</span>
+  <span class="n">keys</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+    <span class="k">yield</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">record</span><span class="p">)}</span>
+  <span class="n">result</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+
+<span class="c"># Mutable columns</span>
+<span class="c"># ===============</span>
+</div>
+<span class="k">class</span> <span class="nc">_JSONEncodedType</span><span class="p">(</span><span class="n">TypeDecorator</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Base class for storing python mutables as a JSON.</span>
+
+<span class="sd">  For mutability tracking, associate with a Mutable.</span>
+
+<span class="sd">  The underlying immutable object is of kind ``sqlalchemy.types.unicodetext``.</span>
+<span class="sd">  Note that it has a character limit so care is needed when storing very large</span>
+<span class="sd">  objects.</span>
+
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">impl</span> <span class="o">=</span> <span class="n">UnicodeText</span>
+
+  <span class="k">def</span> <span class="nf">process_bind_param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">dialect</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="bp">None</span>
+
+  <span class="k">def</span> <span class="nf">process_result_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">dialect</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="JSONEncodedDict"><a class="viewcode-back" href="../../util.html#kit.util.JSONEncodedDict">[docs]</a><span class="k">class</span> <span class="nc">JSONEncodedDict</span><span class="p">(</span><span class="n">_JSONEncodedType</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Implements dictionary column field type for SQLAlchemy.</span>
+
+<span class="sd">  This can be used as a Column type during table creation::</span>
+
+<span class="sd">    some_column_name = Column(JSONEncodedDict)</span>
+
+<span class="sd">  It also implements limited  mutability tracking to know when to update the</span>
+<span class="sd">  database: set, del and update actions are tracked. If another method to</span>
+<span class="sd">  update the dictionary is used, it will not automatically flag the</span>
+<span class="sd">  dictionary for update (for example if a deeply nested key is updated).</span>
+<span class="sd">  In such a case, the ``changed`` method needs the be called manually</span>
+<span class="sd">  after the operation.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">process_result_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">dialect</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">loads</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="p">{}</span>
+
+</div>
+<span class="k">class</span> <span class="nc">_MutableDict</span><span class="p">(</span><span class="n">Mutable</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Used with JSONEncoded dict to be able to track updates.</span>
+
+<span class="sd">  This enables the database to know when it should update the stored string</span>
+<span class="sd">  representation of the dictionary. This is much more efficient than naive</span>
+<span class="sd">  automatic updating after each query.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span> <span class="nf">coerce</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert plain dictionaries to Features.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">cls</span><span class="p">):</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">Mutable</span><span class="o">.</span><span class="n">coerce</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="c"># this will raise an error</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">value</span>
+
+  <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect dictionary update events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    
+  <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect dictionary set events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">dict</span><span class="o">.</span><span class="n">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    
+  <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect dictionary del events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">dict</span><span class="o">.</span><span class="n">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    
+<span class="n">_MutableDict</span><span class="o">.</span><span class="n">associate_with</span><span class="p">(</span><span class="n">JSONEncodedDict</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="JSONEncodedList"><a class="viewcode-back" href="../../util.html#kit.util.JSONEncodedList">[docs]</a><span class="k">class</span> <span class="nc">JSONEncodedList</span><span class="p">(</span><span class="n">_JSONEncodedType</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Implements list column field type for SQLAlchemy.</span>
+
+<span class="sd">  This can be used as a Column type during table creation::</span>
+
+<span class="sd">    some_column_name = Column(JSONEncodedList)</span>
+
+<span class="sd">  Currently only set, delete, append and extend events are tracked. Others</span>
+<span class="sd">  will require a call to ``changed`` to be persisted.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">process_result_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">dialect</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">loads</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="p">[]</span>
+
+</div>
+<span class="k">class</span> <span class="nc">_MutableList</span><span class="p">(</span><span class="n">Mutable</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Used with JSONEncoded list to be able to track updates.</span>
+
+<span class="sd">  This enables the database to know when it should update the stored string</span>
+<span class="sd">  representation of the dictionary. This is much more efficient than naive</span>
+<span class="sd">  automatic updating after each query.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span> <span class="nf">coerce</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert plain dictionaries to Features.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">cls</span><span class="p">):</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">Mutable</span><span class="o">.</span><span class="n">coerce</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="c"># this will raise an error</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">value</span>
+
+  <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect update events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+
+  <span class="k">def</span> <span class="nf">extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect update events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    
+  <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect set events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">list</span><span class="o">.</span><span class="n">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+    
+  <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Detect del events and emit change events.&quot;&quot;&quot;</span>
+    <span class="nb">list</span><span class="o">.</span><span class="n">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+
+<span class="n">_MutableList</span><span class="o">.</span><span class="n">associate_with</span><span class="p">(</span><span class="n">JSONEncodedList</span><span class="p">)</span>
+
+
+<span class="c"># Flask view helpers</span>
+<span class="c"># ==================</span>
+
+<span class="k">class</span> <span class="nc">_ViewMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;To register classes with an app or blueprint on definition.&quot;&quot;&quot;</span>
+
+  <span class="n">http_methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;get&#39;</span><span class="p">,</span> <span class="s">&#39;post&#39;</span><span class="p">,</span> <span class="s">&#39;put&#39;</span><span class="p">,</span> <span class="s">&#39;delete&#39;</span><span class="p">,</span> <span class="s">&#39;patch&#39;</span><span class="p">]</span>
+
+  <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">mcs</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">dct</span><span class="p">):</span>
+    <span class="n">view_class</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">_ViewMeta</span><span class="p">,</span> <span class="n">mcs</span><span class="p">)</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">mcs</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">dct</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">view_class</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">view_class</span><span class="o">.</span><span class="n">__app__</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%r</span><span class="s"> is not bound to an app&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">view_class</span><span class="p">,</span> <span class="p">))</span>
+
+      <span class="k">if</span> <span class="n">view_class</span><span class="o">.</span><span class="n">endpoint</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">view_class</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">uncamelcase</span><span class="p">(</span><span class="n">view_class</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+
+      <span class="k">if</span> <span class="n">view_class</span><span class="o">.</span><span class="n">methods</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">methods</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dct</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">mcs</span><span class="o">.</span><span class="n">http_methods</span><span class="p">)</span>
+        <span class="n">view_class</span><span class="o">.</span><span class="n">methods</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">methods</span> <span class="ow">or</span> <span class="p">[])</span>
+      
+      <span class="n">view_class</span><span class="o">.</span><span class="n">register_view</span><span class="p">(</span><span class="n">view_class</span><span class="o">.</span><span class="n">__app__</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">view_class</span>
+
+
+<div class="viewcode-block" id="View"><a class="viewcode-back" href="../../util.html#kit.util.View">[docs]</a><span class="k">class</span> <span class="nc">View</span><span class="p">(</span><span class="n">_View</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Base view implementation that simplifies route registration.</span>
+
+<span class="sd">  This class is very similar to :class:`flask.views.MethodView` but goes a </span>
+<span class="sd">  step further in registering its routes automatically. Rules are specified</span>
+<span class="sd">  through the :prop:`rules` property.</span>
+
+<span class="sd">  Usage::</span>
+
+<span class="sd">    class MyView(View):</span>
+
+<span class="sd">      __app__ = flask_app</span>
+
+<span class="sd">      rules = {</span>
+<span class="sd">        &#39;/some_route&#39;: [&#39;GET&#39;],</span>
+<span class="sd">        &#39;/some_route/&lt;some_index&gt;&#39;: [&#39;GET&#39;, &#39;POST&#39;]</span>
+<span class="sd">      }</span>
+
+<span class="sd">      def get(self, **kwargs):</span>
+<span class="sd">        if kwargs:</span>
+<span class="sd">          some_index = kwargs[&#39;some_index&#39;]</span>
+<span class="sd">          # we are in the second route case</span>
+<span class="sd">          # ...</span>
+<span class="sd">        else:</span>
+<span class="sd">          # we are in the first route case</span>
+<span class="sd">          # ...</span>
+
+<span class="sd">      def post(self, **kwargs):</span>
+<span class="sd">        some_index = kwargs[&#39;some_index&#39;]</span>
+<span class="sd">        # ...</span>
+
+
+<span class="sd">  Typically, this view will be generated by the :func:`make_view` function,</span>
+<span class="sd">  which will set the ``__app__`` attribute.</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">_ViewMeta</span>
+
+  <span class="c">#: The Flask application views should be bound to. If you are using the</span>
+  <span class="c">#: :func:`make_view` function, this attribute will be set automatically.</span>
+  <span class="n">__app__</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="c">#: The view endpoint. This can generally be skipped, it is only used</span>
+  <span class="c">#: internally by Flask in the routes dictionary. If not specifies, it will</span>
+  <span class="c">#: default to the class&#39; name uncamelcased.</span>
+  <span class="n">endpoint</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="c">#: If specified, only these methods will have their routes registered. This</span>
+  <span class="c">#: can be useful if subclassing views.</span>
+  <span class="n">methods</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="c">#: A dictionary with the rules to create. Each key is the url rule and the</span>
+  <span class="c">#: corresponding value a list of methods to accept. E.g.</span>
+  <span class="c">#: ``{&#39;/index&#39;: [&#39;GET&#39;], &#39;/index/&lt;page&gt;&#39;: [&#39;GET&#39;, &#39;PUT&#39;]}``.</span>
+  <span class="n">rules</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="View.register_view"><a class="viewcode-back" href="../../util.html#kit.util.View.register_view">[docs]</a>  <span class="k">def</span> <span class="nf">register_view</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Attach view to app or blueprint.</span>
+<span class="sd">    </span>
+<span class="sd">    Called by the metaclass when the class is created.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">view</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">as_view</span><span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">endpoint</span><span class="p">)</span>
+
+    <span class="n">all_methods</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">methods</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cls</span><span class="o">.</span><span class="n">rules</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;No rules found for </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="p">))</span>
+    <span class="k">for</span> <span class="n">rule</span><span class="p">,</span> <span class="n">methods</span> <span class="ow">in</span> <span class="n">cls</span><span class="o">.</span><span class="n">rules</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="n">rule_methods</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">methods</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">all_methods</span>
+      <span class="k">if</span> <span class="n">rule_methods</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">add_url_rule</span><span class="p">(</span><span class="n">rule</span><span class="o">=</span><span class="n">rule</span><span class="p">,</span> <span class="n">view_func</span><span class="o">=</span><span class="n">view</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="n">rule_methods</span><span class="p">)</span>
+      </div>
+<div class="viewcode-block" id="View.dispatch_request"><a class="viewcode-back" href="../../util.html#kit.util.View.dispatch_request">[docs]</a>  <span class="k">def</span> <span class="nf">dispatch_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dispatches requests to the corresponding method name.</span>
+<span class="sd">    </span>
+<span class="sd">    Similar to the :class:`flask.views.MethodView` implementation: GET requests</span>
+<span class="sd">    are passed to :meth:`get`, POST to :meth:`post`, etc.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">meth</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">meth</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s">&#39;HEAD&#39;</span><span class="p">:</span>
+      <span class="n">meth</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;get&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">meth</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="make_view"><a class="viewcode-back" href="../../util.html#kit.util.make_view">[docs]</a><span class="k">def</span> <span class="nf">make_view</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">view_class</span><span class="o">=</span><span class="n">View</span><span class="p">,</span> <span class="n">view_name</span><span class="o">=</span><span class="s">&#39;View&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Create a base View class bound to the Flask application.</span>
+
+<span class="sd">  :param app: the app (or blueprint) to be bound to</span>
+<span class="sd">  :type app: Flask app or blueprint</span>
+<span class="sd">  :param view_class: base view class</span>
+<span class="sd">  :type view_class: kit.util.View</span>
+<span class="sd">  :param view_name: the name of the class created. If multiple base views are</span>
+<span class="sd">    generated, you can specify a different name for each using this argument.</span>
+<span class="sd">  :type view_name: str</span>
+<span class="sd">  :rtype: kit.util.View</span>
+
+<span class="sd">  Any keyword arguments will be added to the class&#39; dictionary. This is only</span>
+<span class="sd">  provided as a convenience, if many methods are added, it is simpler to</span>
+<span class="sd">  subclass :class:`kit.util.View` directly rather than use this function.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s">&#39;__app__&#39;</span><span class="p">:</span> <span class="n">app</span><span class="p">})</span>
+  <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="n">view_name</span><span class="p">,</span> <span class="p">(</span><span class="n">view_class</span><span class="p">,</span> <span class="p">),</span> <span class="n">kwargs</span><span class="p">)</span></div>
+</pre></div>
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

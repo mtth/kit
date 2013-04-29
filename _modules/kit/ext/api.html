@@ -1,0 +1,598 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>kit.ext.api &mdash; Kit 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/theme_extras.js"></script>
+    <link rel="top" title="Kit 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="kit" href="../../kit.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="../../../index.html">
+          <span>Kit 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>kit.ext.api</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="../../../index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <h1>Source code for kit.ext.api</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;API Extension (requires the ORM extension).</span>
+
+<span class="sd">This extension provides a base class to create API views.</span>
+
+<span class="sd">Setup is as follows:</span>
+
+<span class="sd">.. code:: python</span>
+
+<span class="sd">  from kit import current_project as pj</span>
+<span class="sd">  from kit.ext import API</span>
+
+<span class="sd">  api = API(pj)</span>
+
+<span class="sd">  View = api.View   # the base API view</span>
+
+<span class="sd">Views can then be created for models as follows:</span>
+
+<span class="sd">.. code:: python</span>
+
+<span class="sd">  # Cat is a subclass of kit.ext.orm.Base</span>
+
+<span class="sd">  class CatView(View):</span>
+
+<span class="sd">    __model__ = Cat</span>
+
+<span class="sd">This view will create the following hooks:</span>
+
+<span class="sd">* ``/cats``</span>
+<span class="sd">* ``/cats/&lt;id&gt;``</span>
+
+<span class="sd">Another slighly more complex example:</span>
+
+<span class="sd">.. code:: python</span>
+
+<span class="sd">  # House is a subclass of kit.ext.orm.Base</span>
+
+<span class="sd">  class HouseView(View):</span>
+
+<span class="sd">    __model__ = House</span>
+
+<span class="sd">    methods = [&#39;GET&#39;, &#39;POST&#39;]</span>
+<span class="sd">    subviews = [&#39;cats&#39;]</span>
+
+<span class="sd">This view will create the following hooks:</span>
+
+<span class="sd">* ``/houses``</span>
+<span class="sd">* ``/houses/&lt;id&gt;``</span>
+<span class="sd">* ``/houses/&lt;id&gt;/cats``</span>
+<span class="sd">* ``/houses/&lt;id&gt;/cats/&lt;position&gt;``</span>
+
+<span class="sd">These are only two simple ways to add a view. Please refer to the documentation</span>
+<span class="sd">for :class:`kit.ext.api.BaseView` for the list of all available options.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Blueprint</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">,</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">class_mapper</span><span class="p">,</span> <span class="n">Query</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+<span class="kn">from</span> <span class="nn">werkzeug.exceptions</span> <span class="kn">import</span> <span class="n">HTTPException</span>
+
+<span class="kn">from</span> <span class="nn">.orm</span> <span class="kn">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">..util</span> <span class="kn">import</span> <span class="n">make_view</span><span class="p">,</span> <span class="n">query_to_models</span><span class="p">,</span> <span class="n">View</span> <span class="k">as</span> <span class="n">_View</span><span class="p">,</span> <span class="n">_ViewMeta</span>
+
+
+<div class="viewcode-block" id="APIError"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.APIError">[docs]</a><span class="k">class</span> <span class="nc">APIError</span><span class="p">(</span><span class="n">HTTPException</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Thrown when an API call is invalid.</span>
+
+<span class="sd">  The following error codes can occur:</span>
+
+<span class="sd">  * ``400 Bad Request`` if the request is badly formulated (wrong query</span>
+<span class="sd">    parameters, invalid form data, etc.)</span>
+<span class="sd">  * ``403 Forbidden`` if the request is not authorized by the server</span>
+<span class="sd">  * ``404 Not Found`` if the request refers to a non-existent resource</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">content</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">code</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">content</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">APIError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;&lt;APIError </span><span class="si">%r</span><span class="s">: </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="API"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.API">[docs]</a><span class="k">class</span> <span class="nc">API</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;The main API object.</span>
+
+<span class="sd">  :param project: the project against which the extension will be registered</span>
+<span class="sd">  :type project: kit.project.Project</span>
+<span class="sd">  :param url_prefix: the blueprint URL prefix</span>
+<span class="sd">  :type url_prefix: str</span>
+<span class="sd">  :param index_view: whether or not to create a splash page for the api</span>
+<span class="sd">  :type index_view: bool</span>
+<span class="sd">  :param parser_options: dictionary of options to create the default request</span>
+<span class="sd">    :class:`kit.ext.api.Parser`</span>
+<span class="sd">  :type parser_options: dict</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flask_app</span><span class="p">,</span> <span class="n">url_prefix</span><span class="o">=</span><span class="s">&#39;api&#39;</span><span class="p">,</span> <span class="n">parser_options</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+
+    <span class="n">parser_options</span> <span class="o">=</span> <span class="n">parser_options</span> <span class="ow">or</span> <span class="p">{}</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">url_prefix</span> <span class="o">=</span> <span class="n">url_prefix</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">blueprint</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span>
+      <span class="n">url_prefix</span><span class="p">,</span>
+      <span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">flask_app</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">url_prefix</span><span class="p">),</span>
+      <span class="n">url_prefix</span><span class="o">=</span><span class="s">&#39;/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">url_prefix</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">View</span> <span class="o">=</span> <span class="n">make_view</span><span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">blueprint</span><span class="p">,</span>
+      <span class="n">view_class</span><span class="o">=</span><span class="n">View</span><span class="p">,</span>
+      <span class="n">parser</span><span class="o">=</span><span class="n">Parser</span><span class="p">(</span><span class="o">**</span><span class="n">parser_options</span><span class="p">)</span>
+    <span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flask_app</span><span class="p">,</span> <span class="n">index_view</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">index_view</span><span class="p">:</span>
+      <span class="nd">@self.blueprint.route</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+      <span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+          <span class="s">&#39;available_endpoints&#39;</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="s">&#39;</span><span class="si">%s</span><span class="s"> (</span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">rule</span><span class="p">,</span> <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">meth</span><span class="p">)</span> <span class="k">for</span> <span class="n">meth</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">methods</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">flask_app</span><span class="o">.</span><span class="n">url_map</span><span class="o">.</span><span class="n">iter_rules</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">endpoint</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">url_prefix</span><span class="p">)</span>
+          <span class="p">)</span>
+        <span class="p">})</span>
+
+    <span class="n">flask_app</span><span class="o">.</span><span class="n">register_blueprint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">blueprint</span><span class="p">)</span>
+
+</div>
+<span class="k">class</span> <span class="nc">_ApiViewMeta</span><span class="p">(</span><span class="n">_ViewMeta</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;To register classes with the API on definition.</span>
+
+<span class="sd">  Automatically creates the ``endpoint``, ``base_url`` and ``rules`` for the</span>
+<span class="sd">  view from the ``__model__`` attribute.</span>
+
+<span class="sd">  Each route is then registered on the bound application (the current API</span>
+<span class="sd">  blueprint here).</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">dct</span><span class="p">):</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">dct</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;__model__&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Api views can only be used with Orm models.&#39;</span><span class="p">)</span>
+
+      <span class="n">dct</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s">&#39;endpoint&#39;</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">__tablename__</span><span class="p">)</span>
+      <span class="n">base_url</span> <span class="o">=</span> <span class="n">dct</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s">&#39;base_url&#39;</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">__tablename__</span><span class="p">)</span>
+
+      <span class="n">collection_route</span> <span class="o">=</span> <span class="s">&#39;/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="p">)</span>
+      <span class="n">model_route</span> <span class="o">=</span> <span class="s">&#39;/</span><span class="si">%s%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+        <span class="n">base_url</span><span class="p">,</span>
+        <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&#39;/&lt;</span><span class="si">%s</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="n">k</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">class_mapper</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">primary_key</span><span class="p">)</span>
+      <span class="p">)</span>
+
+      <span class="n">dct</span><span class="p">[</span><span class="s">&#39;rules&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">collection_route</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="s">&#39;POST&#39;</span><span class="p">],</span>
+        <span class="n">model_route</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="s">&#39;PUT&#39;</span><span class="p">,</span> <span class="s">&#39;DELETE&#39;</span><span class="p">],</span>
+      <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">_ApiViewMeta</span><span class="p">,</span> <span class="n">cls</span><span class="p">)</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">dct</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="View"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.View">[docs]</a><span class="k">class</span> <span class="nc">View</span><span class="p">(</span><span class="n">_View</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Base API view.</span>
+
+<span class="sd">  To customize, override the ``get``, ``post``, etc. methods.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">_ApiViewMeta</span>
+
+  <span class="c">#: orm.Model class</span>
+  <span class="n">__model__</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="c">#: Base URL (will default to the model&#39;s tablename).</span>
+  <span class="n">base_url</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="c">#: Allowed methods.</span>
+  <span class="n">methods</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;GET&#39;</span><span class="p">])</span>
+
+  <span class="c">#: Request parser.</span>
+  <span class="n">parser</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="c">#: Which relationship endpoints to create (these allow GET requests).</span>
+  <span class="c">#: Can be ``True`` (all relationships) or a list of relationship names.</span>
+  <span class="c">#: Only relationships with ``lazy`` set to ``&#39;dynamic&#39;``, ``&#39;select&#39;`` or</span>
+  <span class="c">#: ``True`` can have subroutes. All eagerly loaded relationships are simply</span>
+  <span class="c">#: available directly on the model.</span>
+  <span class="n">subviews</span> <span class="o">=</span> <span class="p">[]</span>
+
+  <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="View.register_view"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.View.register_view">[docs]</a>  <span class="k">def</span> <span class="nf">register_view</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">blueprint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create the URL routes for the view.</span>
+<span class="sd">    </span>
+<span class="sd">    Standard :class:`kit.util.View` implementation plus subview support.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">super</span><span class="p">(</span><span class="n">View</span><span class="p">,</span> <span class="n">cls</span><span class="p">)</span><span class="o">.</span><span class="n">register_view</span><span class="p">(</span><span class="n">blueprint</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">cls</span><span class="o">.</span><span class="n">subviews</span><span class="p">:</span>
+      <span class="n">model</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">__model__</span>
+      <span class="n">all_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">_get_relationships</span><span class="p">(</span>
+          <span class="n">lazy</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;dynamic&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&#39;select&#39;</span><span class="p">],</span>
+          <span class="n">uselist</span><span class="o">=</span><span class="bp">True</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">+</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">_get_association_proxies</span><span class="p">()</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+      <span class="p">)</span>
+
+      <span class="k">if</span> <span class="n">cls</span><span class="o">.</span><span class="n">subviews</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="n">all_keys</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">subviews</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">keys</span> <span class="o">-</span> <span class="n">all_keys</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> invalid for subviews&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">keys</span> <span class="o">-</span> <span class="n">all_keys</span><span class="p">,</span> <span class="p">))</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="n">all_keys</span> <span class="o">&amp;</span> <span class="n">keys</span>
+
+      <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="n">collection_route</span> <span class="o">=</span> <span class="s">&#39;/</span><span class="si">%s%s</span><span class="s">/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+          <span class="n">cls</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
+          <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="s">&#39;/&lt;</span><span class="si">%s</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="n">k</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">class_mapper</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">primary_key</span>
+          <span class="p">),</span>
+          <span class="n">key</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">model_route</span> <span class="o">=</span> <span class="s">&#39;/</span><span class="si">%s%s</span><span class="s">/</span><span class="si">%s</span><span class="s">/&lt;position&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span>
+          <span class="n">cls</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
+          <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="s">&#39;/&lt;</span><span class="si">%s</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="n">k</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">class_mapper</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">primary_key</span>
+          <span class="p">),</span>
+          <span class="n">key</span>
+        <span class="p">)</span>
+        <span class="n">make_view</span><span class="p">(</span>
+          <span class="n">blueprint</span><span class="p">,</span>
+          <span class="n">view_class</span><span class="o">=</span><span class="n">_RelationshipView</span><span class="p">,</span>
+          <span class="n">view_name</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">key</span><span class="p">),</span>
+          <span class="n">__model__</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+          <span class="n">__assoc_key__</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+          <span class="n">parser</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">parser</span><span class="p">,</span>
+          <span class="n">endpoint</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">key</span><span class="p">),</span>
+          <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="p">],</span>
+          <span class="n">rules</span><span class="o">=</span><span class="p">{</span>
+            <span class="n">collection_route</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="p">],</span>
+            <span class="n">model_route</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="p">],</span>
+          <span class="p">},</span>
+        <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="View.get"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.View.get">[docs]</a>  <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;GET request handler.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">kwargs</span><span class="p">:</span>
+      <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__model__</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span><span class="n">from_key</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;Not found&#39;</span><span class="p">)</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__model__</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="View.post"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.View.post">[docs]</a>  <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;POST request handler.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">json</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid POST parameters&#39;</span><span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__model__</span><span class="p">(</span><span class="o">**</span><span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="View.put"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.View.put">[docs]</a>  <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;PUT request handler.&quot;&quot;&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__model__</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span><span class="n">from_key</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;Not found&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">json</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid PUT parameters&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="nb">setattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="View.delete"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.View.delete">[docs]</a>  <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;DELETE request handler.&quot;&quot;&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__model__</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span><span class="n">from_key</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;Not found&#39;</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="View.validate"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.View.validate">[docs]</a>  <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Validation method.</span>
+
+<span class="sd">    :param json: a dictionary of attributes</span>
+<span class="sd">    :type json: dict</span>
+<span class="sd">    :param model: ``None`` if it is POST request, and the model instance to be</span>
+<span class="sd">      modified if it is a PUT request.</span>
+<span class="sd">    :type model: None or kit.ext.orm.BaseModel</span>
+<span class="sd">    :rtype: bool</span>
+
+<span class="sd">    This method is called on each POST and PUT request. Override it to</span>
+<span class="sd">    implement your own validation logic: return ``True`` when the input is</span>
+<span class="sd">    valid and ``False`` otherwise. Default implementation accepts everything.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">True</span>
+  
+</div></div>
+<span class="k">class</span> <span class="nc">_RelationshipView</span><span class="p">(</span><span class="n">_View</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Relationship View.&quot;&quot;&quot;</span>
+
+  <span class="n">__model__</span> <span class="o">=</span> <span class="bp">None</span>
+  <span class="n">__assoc_key__</span> <span class="o">=</span> <span class="bp">None</span>
+
+  <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;GET request handler.&quot;&quot;&quot;</span>
+    <span class="n">position</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;position&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__model__</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span><span class="n">from_key</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">parent</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;Parent not found&#39;</span><span class="p">)</span>
+    <span class="n">collection</span> <span class="o">=</span>  <span class="nb">getattr</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__assoc_key__</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">position</span><span class="p">:</span>
+      <span class="n">position</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="c"># model_position is 1 indexed</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">Query</span><span class="p">):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">position</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">collection</span><span class="p">[</span><span class="n">position</span><span class="p">:(</span><span class="n">position</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">collection</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">collection</span> <span class="k">else</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="s">&#39;Not found&#39;</span><span class="p">)</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">jsonify</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Parser"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.Parser">[docs]</a><span class="k">class</span> <span class="nc">Parser</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;The request parameter parser.</span>
+
+<span class="sd">  :param default_depth: the default depth models are jsonified to. ``0`` yields </span>
+<span class="sd">    an empty dictionary</span>
+<span class="sd">  :type default_depth: int</span>
+<span class="sd">  :param max_depth: the maximum depth allowed in a query. ``0`` means no limit.</span>
+<span class="sd">  :type max_depth: int</span>
+<span class="sd">  :param default_limit: the default number of results returned per query </span>
+<span class="sd">  :type default_limit: int</span>
+<span class="sd">  :param max_limit: the maximum number of results returned by a query. ``0`` </span>
+<span class="sd">    means no limit.</span>
+<span class="sd">  :type max_limit: int</span>
+<span class="sd">  :param sep: the separator used for filters and sort parameters</span>
+<span class="sd">  :type sep: str</span>
+
+<span class="sd">  This class has a single method :meth:``jsonify`` which is used to parse a</span>
+<span class="sd">  model or collection and return the serialized response.</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_depth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_depth</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">default_limit</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+               <span class="n">max_limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s">&#39;;&#39;</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="s">&#39;default_depth&#39;</span><span class="p">:</span> <span class="n">default_depth</span><span class="p">,</span>
+      <span class="s">&#39;max_depth&#39;</span><span class="p">:</span> <span class="n">max_depth</span><span class="p">,</span>
+      <span class="s">&#39;default_limit&#39;</span><span class="p">:</span> <span class="n">default_limit</span><span class="p">,</span>
+      <span class="s">&#39;max_limit&#39;</span><span class="p">:</span> <span class="n">max_limit</span><span class="p">,</span>
+      <span class="s">&#39;sep&#39;</span><span class="p">:</span> <span class="n">sep</span><span class="p">,</span>
+    <span class="p">}</span>
+
+<div class="viewcode-block" id="Parser.jsonify"><a class="viewcode-back" href="../../../extensions.html#kit.ext.api.Parser.jsonify">[docs]</a>  <span class="k">def</span> <span class="nf">jsonify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">data_key</span><span class="o">=</span><span class="s">&#39;data&#39;</span><span class="p">,</span> <span class="n">meta_key</span><span class="o">=</span><span class="s">&#39;meta&#39;</span><span class="p">,</span>
+    <span class="n">include_request</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">include_time</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">include_matches</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parses the data and returns the serialized response.</span>
+
+<span class="sd">    :param data: data. At this time, only instances, and lists of instances of</span>
+<span class="sd">      ``kit.util.sqlalchemy.Model``, along with instances of </span>
+<span class="sd">      ``kit.util.sqlalchemy.Query`` are valid.</span>
+<span class="sd">    :type data: model or collection</span>
+<span class="sd">    :param data_key: key where the serialized data will go</span>
+<span class="sd">    :type data_key: str</span>
+<span class="sd">    :param meta_key: key where the metadata will go</span>
+<span class="sd">    :type meta_key: str</span>
+<span class="sd">    :param include_request: whether or not to include the issued request</span>
+<span class="sd">      information</span>
+<span class="sd">    :type include_request: bool</span>
+<span class="sd">    :param include_time: whether or not to include processing time</span>
+<span class="sd">    :type include_time: bool</span>
+<span class="sd">    :param include_matches: whether or not to include the total number of</span>
+<span class="sd">      results from the data (useful if ``data`` is a collection)</span>
+<span class="sd">    :type include_matches: bool</span>
+<span class="sd">    :rtype: Flask response</span>
+<span class="sd">    </span>
+<span class="sd">    Any keyword arguments will be included with the metadata.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;depth&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s">&#39;default_depth&#39;</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="n">max_depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s">&#39;max_depth&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">max_depth</span><span class="p">:</span>
+      <span class="n">depth</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">depth</span><span class="p">,</span> <span class="n">max_depth</span><span class="p">)</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Model</span><span class="p">):</span>
+      <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to_json</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="n">depth</span><span class="p">)</span>
+      <span class="n">match</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">col</span><span class="p">,</span> <span class="n">matches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_collection</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+      <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">to_json</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="n">depth</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">col</span> <span class="k">if</span> <span class="n">e</span><span class="p">]</span>
+      <span class="n">match</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;total&#39;</span><span class="p">:</span> <span class="n">matches</span><span class="p">,</span> <span class="s">&#39;returned&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)}</span>
+
+    <span class="n">rv</span> <span class="o">=</span> <span class="p">{</span><span class="n">data_key</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span> <span class="n">meta_key</span><span class="p">:</span> <span class="n">kwargs</span><span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">include_matches</span><span class="p">:</span>
+      <span class="n">rv</span><span class="p">[</span><span class="n">meta_key</span><span class="p">][</span><span class="s">&#39;matches&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">match</span>
+    <span class="k">if</span> <span class="n">include_request</span><span class="p">:</span>
+      <span class="n">rv</span><span class="p">[</span><span class="n">meta_key</span><span class="p">][</span><span class="s">&#39;request&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;base_url&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
+        <span class="s">&#39;method&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+        <span class="s">&#39;values&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+      <span class="p">}</span>
+    <span class="k">if</span> <span class="n">include_time</span><span class="p">:</span>
+      <span class="n">rv</span><span class="p">[</span><span class="n">meta_key</span><span class="p">][</span><span class="s">&#39;parsing_time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">rv</span><span class="p">)</span>
+</div>
+  <span class="k">def</span> <span class="nf">_get_collection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">collection</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parse query and return JSON.</span>
+
+<span class="sd">    :param collection: the query or list to be transformed to JSON</span>
+<span class="sd">    :type collection: kit.ext.orm.Query, list</span>
+<span class="sd">    :rtype: tuple</span>
+
+<span class="sd">    Returns a tuple ``(collection, match)``:</span>
+
+<span class="sd">    * ``collection`` is the filtered, sorted, offsetted, limited collection.</span>
+<span class="sd">    * ``match`` is the total number of results from the filtered query </span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_model_class</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+    <span class="n">raw_filters</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getlist</span><span class="p">(</span><span class="s">&#39;filter&#39;</span><span class="p">)</span>
+    <span class="n">raw_sorts</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">getlist</span><span class="p">(</span><span class="s">&#39;sort&#39;</span><span class="p">)</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;offset&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="n">limit</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;limit&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s">&#39;default_limit&#39;</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="n">max_limit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s">&#39;max_limit&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">max_limit</span><span class="p">:</span>
+      <span class="n">limit</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span> <span class="n">max_limit</span><span class="p">)</span> <span class="k">if</span> <span class="n">limit</span> <span class="k">else</span> <span class="n">max_limit</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">Query</span><span class="p">):</span>
+
+      <span class="n">sep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s">&#39;sep&#39;</span><span class="p">]</span>
+
+      <span class="k">for</span> <span class="n">raw_filter</span> <span class="ow">in</span> <span class="n">raw_filters</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="n">key</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">raw_filter</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">sep</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid filter: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">raw_filter</span><span class="p">)</span>
+        <span class="n">column</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">column</span><span class="p">:</span> <span class="c"># TODO check if is actual column</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid filter column: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s">&#39;in&#39;</span><span class="p">:</span>
+          <span class="n">filt</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">try</span><span class="p">:</span>
+            <span class="n">attr</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span>
+              <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">e</span> <span class="o">%</span> <span class="n">op</span><span class="p">),</span>
+              <span class="p">[</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">_&#39;</span><span class="p">,</span> <span class="s">&#39;__</span><span class="si">%s</span><span class="s">__&#39;</span><span class="p">]</span>
+            <span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span> <span class="n">op</span>
+          <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid filter operator: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">op</span><span class="p">)</span>
+          <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="s">&#39;null&#39;</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+          <span class="n">filt</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">attr</span><span class="p">)(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">filt</span><span class="p">)</span>
+
+      <span class="k">for</span> <span class="n">raw_sort</span> <span class="ow">in</span> <span class="n">raw_sorts</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="n">key</span><span class="p">,</span> <span class="n">order</span> <span class="o">=</span> <span class="n">raw_sort</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">sep</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid sort: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">raw_sort</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">order</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;asc&#39;</span><span class="p">,</span> <span class="s">&#39;desc&#39;</span><span class="p">]:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid sort order: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">order</span><span class="p">)</span>
+        <span class="n">column</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">column</span><span class="p">:</span>
+          <span class="n">collection</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">order</span><span class="p">)())</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Invalid sort column: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
+
+      <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s">&#39;fast_count&#39;</span><span class="p">):</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">fast_count</span><span class="p">()</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+      <span class="k">if</span> <span class="n">offset</span><span class="p">:</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">limit</span><span class="p">:</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">raw_filters</span> <span class="ow">or</span> <span class="n">raw_sorts</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">APIError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&#39;Filter and sorts not implemented for lists&#39;</span><span class="p">)</span>
+
+      <span class="n">matches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">limit</span><span class="p">:</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">collection</span><span class="p">[</span><span class="n">offset</span><span class="p">:(</span><span class="n">offset</span> <span class="o">+</span> <span class="n">limit</span><span class="p">)]</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">collection</span> <span class="o">=</span> <span class="n">collection</span><span class="p">[</span><span class="n">offset</span><span class="p">:]</span>
+
+    <span class="k">return</span> <span class="n">collection</span><span class="p">,</span> <span class="n">matches</span>
+
+  <span class="k">def</span> <span class="nf">_get_model_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">collection</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return corresponding model class from collection.&quot;&quot;&quot;</span>
+  
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="n">Query</span><span class="p">):</span>
+      <span class="n">models</span> <span class="o">=</span> <span class="n">query_to_models</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+
+      <span class="c"># only tested for _BaseQueries and associated count queries</span>
+      <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&#39;Invalid query&#39;</span>
+
+      <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">):</span>
+        <span class="c"># this is a count query</span>
+        <span class="k">return</span> <span class="n">collection</span><span class="o">.</span><span class="n">_select_from_entity</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="c"># this is a Query</span>
+        <span class="k">return</span> <span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">collection</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">__class__</span>
+</pre></div></div>
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="../../../index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

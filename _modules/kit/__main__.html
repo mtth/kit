@@ -1,0 +1,203 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>kit.__main__ &mdash; Kit 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/theme_extras.js"></script>
+    <link rel="top" title="Kit 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="kit" href="../kit.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="../../index.html">
+          <span>Kit 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>kit.__main__</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <h1>Source code for kit.__main__</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;Kit: your friendly Flask, Celery, SQLAlchemy toolkit.</span>
+
+<span class="sd">Usage:</span>
+<span class="sd">  kit shell CONF</span>
+<span class="sd">  kit server [-dlp PORT] CONF</span>
+<span class="sd">  kit worker CONF [(-- [RAW] ...)]</span>
+<span class="sd">  kit flower CONF [(-- [RAW] ...)]</span>
+<span class="sd">  kit -h | --help | --version</span>
+
+<span class="sd">Arguments:</span>
+<span class="sd">  CONF                  Path to YAML configuration file.</span>
+<span class="sd">  RAW                   Options to pass to the underlying command.</span>
+
+<span class="sd">Options:</span>
+<span class="sd">  -h --help             Show this screen.</span>
+<span class="sd">  --version             Show version.</span>
+<span class="sd">  -d --debug            Enable in browser debugging and autoreloading.</span>
+<span class="sd">  -l --local            Only allow local connections to server.</span>
+<span class="sd">  -p PORT --port=PORT   Port to run server on [default: 5000].</span>
+<span class="sd">  </span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">code</span> <span class="kn">import</span> <span class="n">interact</span>
+<span class="kn">from</span> <span class="nn">docopt</span> <span class="kn">import</span> <span class="n">docopt</span>
+<span class="kn">from</span> <span class="nn">kit</span> <span class="kn">import</span> <span class="n">__version__</span><span class="p">,</span> <span class="n">get_kit</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">getenv</span><span class="p">,</span> <span class="n">environ</span><span class="p">,</span> <span class="n">sep</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">abspath</span><span class="p">,</span> <span class="n">basename</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">split</span><span class="p">,</span> <span class="n">splitext</span>
+<span class="kn">from</span> <span class="nn">re</span> <span class="kn">import</span> <span class="n">findall</span>
+
+
+<div class="viewcode-block" id="run_shell"><a class="viewcode-back" href="../../project.html#kit.__main__.run_shell">[docs]</a><span class="k">def</span> <span class="nf">run_shell</span><span class="p">(</span><span class="n">kit</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Start a shell in the context of the kit (using IPython if available).&quot;&quot;&quot;</span>
+  <span class="n">context</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;kit&#39;</span><span class="p">:</span> <span class="n">kit</span><span class="p">,</span>
+  <span class="p">}</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">IPython</span>
+  <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">interact</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">interactive_shell</span> <span class="o">=</span> <span class="n">IPython</span><span class="o">.</span><span class="n">frontend</span><span class="o">.</span><span class="n">terminal</span><span class="o">.</span><span class="n">embed</span><span class="o">.</span><span class="n">InteractiveShellEmbed</span><span class="p">()</span>
+    <span class="n">interactive_shell</span><span class="p">(</span><span class="n">local_ns</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="run_server"><a class="viewcode-back" href="../../project.html#kit.__main__.run_server">[docs]</a><span class="k">def</span> <span class="nf">run_server</span><span class="p">(</span><span class="n">kit</span><span class="p">,</span> <span class="n">local</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">debug</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Start a Werkzeug server for the Flask application.&quot;&quot;&quot;</span>
+  <span class="n">host</span> <span class="o">=</span> <span class="s">&#39;127.0.0.1&#39;</span> <span class="k">if</span> <span class="n">local</span> <span class="k">else</span> <span class="s">&#39;0.0.0.0&#39;</span>
+  <span class="n">apps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">kit</span><span class="o">.</span><span class="n">flasks</span><span class="p">)</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">apps</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&#39;No Flask app found!&#39;</span>
+    <span class="k">return</span>
+  <span class="k">elif</span> <span class="n">apps</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">kit</span><span class="o">.</span><span class="n">flasks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">app_number</span> <span class="o">=</span> <span class="n">getenv</span><span class="p">(</span><span class="s">&#39;KIT_FLASK_APP&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">app_number</span><span class="p">:</span>
+      <span class="n">s</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s"> Flask applications found:</span><span class="se">\n\n</span><span class="s">   # Name</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">apps</span><span class="p">,</span> <span class="p">)</span>
+      <span class="n">s</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="s">&#39;</span><span class="si">%04s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">flask_app</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">flask_app</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">kit</span><span class="o">.</span><span class="n">flasks</span><span class="p">)</span>
+      <span class="p">)</span>
+      <span class="n">s</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="se">\n\n</span><span class="s">Which # would you like to run? &#39;</span>
+      <span class="n">app_number</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+      <span class="n">environ</span><span class="p">[</span><span class="s">&#39;KIT_FLASK_APP&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">app_number</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">kit</span><span class="o">.</span><span class="n">flasks</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">app_number</span><span class="p">)]</span>
+  <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="n">debug</span><span class="p">,</span> <span class="n">extra_files</span><span class="o">=</span><span class="p">[</span><span class="n">kit</span><span class="o">.</span><span class="n">path</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="run_worker"><a class="viewcode-back" href="../../project.html#kit.__main__.run_worker">[docs]</a><span class="k">def</span> <span class="nf">run_worker</span><span class="p">(</span><span class="n">kit</span><span class="p">,</span> <span class="n">raw</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Starts a celery worker.</span>
+
+<span class="sd">  If no hostname is provided, one will be generated automatically using the</span>
+<span class="sd">  configuration file path and kit project root. For example, the first two</span>
+<span class="sd">  workers started for project root ``my_project`` and configuration ``default``</span>
+<span class="sd">  will have respective hostnames:</span>
+
+<span class="sd">  * w1.default.my_project</span>
+<span class="sd">  * w2.default.my_project</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">kit</span><span class="o">.</span><span class="n">celeries</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s">&#39;No Celery app found!&#39;</span>
+    <span class="k">return</span>
+  <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">kit</span><span class="o">.</span><span class="n">celeries</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">kit</span><span class="o">.</span><span class="n">celeries</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">flask_app</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">kit</span><span class="o">.</span><span class="n">celeries</span><span class="p">):</span>
+      <span class="k">print</span> <span class="s">&#39;</span><span class="si">%02s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">flask_app</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">kit</span><span class="o">.</span><span class="n">celeries</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">raw_input</span><span class="p">(</span><span class="s">&#39;Which app would you like to run? &#39;</span><span class="p">))]</span>
+  <span class="n">name</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">main</span>
+  <span class="n">base_hostname</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+    <span class="n">splitext</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">kit</span><span class="o">.</span><span class="n">path</span><span class="p">)[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">name</span><span class="p">,</span>
+    <span class="n">basename</span><span class="p">(</span><span class="n">abspath</span><span class="p">(</span><span class="n">join</span><span class="p">(</span>
+      <span class="n">dirname</span><span class="p">(</span><span class="n">kit</span><span class="o">.</span><span class="n">path</span><span class="p">),</span>
+      <span class="n">kit</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;root&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="n">sep</span><span class="p">)</span>
+    <span class="p">))),</span>
+  <span class="p">)</span>
+  <span class="n">worker_pattern</span> <span class="o">=</span> <span class="s">r&#39;w(\d+)\.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">base_hostname</span><span class="p">,</span> <span class="p">)</span>
+  <span class="n">kit_worker_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">control</span><span class="o">.</span><span class="n">ping</span><span class="p">()]</span>
+  <span class="n">worker_numbers</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">findall</span><span class="p">(</span><span class="n">worker_pattern</span><span class="p">,</span> <span class="n">worker_name</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[</span><span class="s">&#39;0&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">worker_name</span> <span class="ow">in</span> <span class="n">kit_worker_names</span>
+  <span class="p">]</span>
+  <span class="n">wkn</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
+    <span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">worker_numbers</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))</span> <span class="o">-</span>
+    <span class="nb">set</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">worker_numbers</span><span class="p">]</span> <span class="ow">or</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">worker_numbers</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">])</span> 
+  <span class="p">)</span>
+  <span class="n">hostname</span> <span class="o">=</span> <span class="s">&#39;w</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">wkn</span><span class="p">,</span> <span class="n">base_hostname</span><span class="p">)</span>
+  <span class="n">options</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;worker&#39;</span><span class="p">,</span> <span class="s">&#39;--hostname=</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">hostname</span><span class="p">]</span> <span class="o">+</span> <span class="n">raw</span>
+  <span class="n">app</span><span class="o">.</span><span class="n">worker_main</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="run_flower"><a class="viewcode-back" href="../../project.html#kit.__main__.run_flower">[docs]</a><span class="k">def</span> <span class="nf">run_flower</span><span class="p">(</span><span class="n">kit</span><span class="p">,</span> <span class="n">raw</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Start flower worker manager.&quot;&quot;&quot;</span>
+  <span class="n">options</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;celery&#39;</span><span class="p">,</span> <span class="s">&#39;flower&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">raw</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">kit</span><span class="o">.</span><span class="n">celeries</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s">&#39;No Celery app found!&#39;</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">kit</span><span class="o">.</span><span class="n">celeries</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../project.html#kit.__main__.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+  <span class="sd">&quot;&quot;&quot;Command line parser.&quot;&quot;&quot;</span>
+  <span class="n">arguments</span> <span class="o">=</span> <span class="n">docopt</span><span class="p">(</span><span class="n">__doc__</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">__version__</span><span class="p">)</span>
+  <span class="n">kit</span> <span class="o">=</span> <span class="n">get_kit</span><span class="p">(</span><span class="n">arguments</span><span class="p">[</span><span class="s">&#39;CONF&#39;</span><span class="p">])</span>
+  <span class="k">if</span> <span class="n">arguments</span><span class="p">[</span><span class="s">&#39;shell&#39;</span><span class="p">]:</span>
+    <span class="n">run_shell</span><span class="p">(</span><span class="n">kit</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">arguments</span><span class="p">[</span><span class="s">&#39;server&#39;</span><span class="p">]:</span>
+    <span class="n">run_server</span><span class="p">(</span>
+      <span class="n">kit</span><span class="p">,</span>
+      <span class="n">local</span><span class="o">=</span><span class="n">arguments</span><span class="p">[</span><span class="s">&#39;--local&#39;</span><span class="p">],</span>
+      <span class="n">port</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">arguments</span><span class="p">[</span><span class="s">&#39;--port&#39;</span><span class="p">]),</span>
+      <span class="n">debug</span><span class="o">=</span><span class="n">arguments</span><span class="p">[</span><span class="s">&#39;--debug&#39;</span><span class="p">],</span>
+    <span class="p">)</span>
+  <span class="k">elif</span> <span class="n">arguments</span><span class="p">[</span><span class="s">&#39;worker&#39;</span><span class="p">]:</span>
+    <span class="n">run_worker</span><span class="p">(</span><span class="n">kit</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="n">arguments</span><span class="p">[</span><span class="s">&#39;RAW&#39;</span><span class="p">])</span>
+  <span class="k">elif</span> <span class="n">arguments</span><span class="p">[</span><span class="s">&#39;flower&#39;</span><span class="p">]:</span>
+    <span class="n">run_flower</span><span class="p">(</span><span class="n">kit</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="n">arguments</span><span class="p">[</span><span class="s">&#39;RAW&#39;</span><span class="p">])</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

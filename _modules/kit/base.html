@@ -1,0 +1,225 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>kit.base &mdash; Kit 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/theme_extras.js"></script>
+    <link rel="top" title="Kit 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="kit" href="../kit.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="../../index.html">
+          <span>Kit 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>kit.base</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <h1>Source code for kit.base</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;Kit class module.&quot;&quot;&quot;</span>
+
+
+<span class="kn">from</span> <span class="nn">celery</span> <span class="kn">import</span> <span class="n">Celery</span>
+<span class="kn">from</span> <span class="nn">celery.signals</span> <span class="kn">import</span> <span class="n">task_postrun</span>
+<span class="kn">from</span> <span class="nn">celery.task</span> <span class="kn">import</span> <span class="n">periodic_task</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span>
+<span class="kn">from</span> <span class="nn">flask.signals</span> <span class="kn">import</span> <span class="n">request_tearing_down</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">abspath</span><span class="p">,</span> <span class="n">basename</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">join</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span>  
+<span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">InvalidRequestError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">scoped_session</span><span class="p">,</span> <span class="n">sessionmaker</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="kn">import</span> <span class="n">path</span> <span class="k">as</span> <span class="n">sys_path</span>
+<span class="kn">from</span> <span class="nn">yaml</span> <span class="kn">import</span> <span class="n">load</span>
+
+
+<div class="viewcode-block" id="KitError"><a class="viewcode-back" href="../../project.html#kit.base.KitError">[docs]</a><span class="k">class</span> <span class="nc">KitError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Generic error class.&quot;&quot;&quot;</span>
+
+  <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="Kit"><a class="viewcode-back" href="../../project.html#kit.base.Kit">[docs]</a><span class="k">class</span> <span class="nc">Kit</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="sd">&quot;&quot;&quot;Kit class.</span>
+
+<span class="sd">  :param path: path to the configuration file.</span>
+<span class="sd">  :type path: str</span>
+<span class="sd">  </span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">path</span> <span class="o">=</span> <span class="bp">None</span>
+  <span class="n">flasks</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">celeries</span> <span class="o">=</span> <span class="p">[]</span>
+
+  <span class="n">_registry</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;flasks&#39;</span><span class="p">:</span> <span class="p">{},</span> <span class="s">&#39;celeries&#39;</span><span class="p">:</span> <span class="p">{}}</span>
+  <span class="n">_sessions</span> <span class="o">=</span> <span class="p">{}</span>
+
+  <span class="n">__state</span> <span class="o">=</span> <span class="p">{}</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__state</span>
+    <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="ow">and</span> <span class="n">path</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">KitError</span><span class="p">(</span><span class="s">&#39;Invalid path specified: </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">path</span><span class="p">)</span>
+
+      <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys_path</span><span class="p">:</span>
+          <span class="n">sys_path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modules</span><span class="p">:</span>
+          <span class="nb">__import__</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;&lt;Kit </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="p">)</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">_modules</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span>
+      <span class="n">module</span>
+      <span class="k">for</span> <span class="n">app_conf</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;flasks&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;celeries&#39;</span><span class="p">]</span>
+      <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">app_conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;modules&#39;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="p">]</span>
+
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Kit.root"><a class="viewcode-back" href="../../project.html#kit.base.Kit.root">[docs]</a>  <span class="k">def</span> <span class="nf">root</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Kit root path.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">abspath</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;root&#39;</span><span class="p">,</span> <span class="s">&#39;.&#39;</span><span class="p">)))</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Kit.sessions"><a class="viewcode-back" href="../../project.html#kit.base.Kit.sessions">[docs]</a>  <span class="k">def</span> <span class="nf">sessions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;SQLAlchemy scoped sessionmaker getter.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sessions</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+</div>
+<div class="viewcode-block" id="Kit.get_flask_app"><a class="viewcode-back" href="../../project.html#kit.base.Kit.get_flask_app">[docs]</a>  <span class="k">def</span> <span class="nf">get_flask_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module_name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Application getter.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">module_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="s">&#39;flasks&#39;</span><span class="p">]:</span>
+      <span class="n">name</span><span class="p">,</span> <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_options</span><span class="p">(</span><span class="s">&#39;flasks&#39;</span><span class="p">,</span> <span class="n">module_name</span><span class="p">)</span>
+      <span class="n">flask_app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;kwargs&#39;</span><span class="p">,</span> <span class="p">{}))</span>
+      <span class="n">flask_app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;config&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+      <span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">flasks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">flask_app</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">conf</span><span class="p">[</span><span class="s">&#39;modules&#39;</span><span class="p">]:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="s">&#39;flasks&#39;</span><span class="p">][</span><span class="n">module</span><span class="p">]</span> <span class="o">=</span> <span class="n">flask_app</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="s">&#39;flasks&#39;</span><span class="p">][</span><span class="n">module_name</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Kit.get_celery_app"><a class="viewcode-back" href="../../project.html#kit.base.Kit.get_celery_app">[docs]</a>  <span class="k">def</span> <span class="nf">get_celery_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module_name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Celery application getter.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">module_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="s">&#39;celeries&#39;</span><span class="p">]:</span>
+      <span class="n">name</span><span class="p">,</span> <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_options</span><span class="p">(</span><span class="s">&#39;celeries&#39;</span><span class="p">,</span> <span class="n">module_name</span><span class="p">)</span>
+      <span class="n">celery_app</span> <span class="o">=</span> <span class="n">Celery</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;kwargs&#39;</span><span class="p">,</span> <span class="p">{}))</span>
+      <span class="n">celery_app</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;config&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+      <span class="p">)</span>
+      <span class="n">celery_app</span><span class="o">.</span><span class="n">periodic_task</span> <span class="o">=</span> <span class="n">periodic_task</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">celeries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">celery_app</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">conf</span><span class="p">[</span><span class="s">&#39;modules&#39;</span><span class="p">]:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="s">&#39;celeries&#39;</span><span class="p">][</span><span class="n">module</span><span class="p">]</span> <span class="o">=</span> <span class="n">celery_app</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="s">&#39;celeries&#39;</span><span class="p">][</span><span class="n">module_name</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Kit.get_session"><a class="viewcode-back" href="../../project.html#kit.base.Kit.get_session">[docs]</a>  <span class="k">def</span> <span class="nf">get_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_name</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">session_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sessions</span><span class="p">:</span>
+      <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;sessions&#39;</span><span class="p">,</span> <span class="p">{})[</span><span class="n">session_name</span><span class="p">]</span>
+      <span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span>
+        <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;url&#39;</span><span class="p">,</span> <span class="s">&#39;sqlite://&#39;</span><span class="p">),</span> <span class="o">**</span><span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;engine&#39;</span><span class="p">,</span> <span class="p">{})</span>
+      <span class="p">)</span>
+      <span class="n">session</span> <span class="o">=</span> <span class="n">scoped_session</span><span class="p">(</span>
+        <span class="n">sessionmaker</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">,</span> <span class="o">**</span><span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;kwargs&#39;</span><span class="p">,</span> <span class="p">{}))</span>
+      <span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_sessions</span><span class="p">[</span><span class="n">session_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;commit&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">))</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sessions</span><span class="p">[</span><span class="n">session_name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+</div>
+  <span class="k">def</span> <span class="nf">_get_options</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">module_name</span><span class="p">):</span>
+    <span class="n">configs</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span>
+      <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">module_name</span> <span class="ow">in</span> <span class="n">e</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;modules&#39;</span><span class="p">,</span> <span class="p">[]),</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">configs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="n">config</span> <span class="o">=</span> <span class="n">configs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+      <span class="k">def</span> <span class="nf">letters_generator</span><span class="p">(</span><span class="n">modules</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">letters</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="nb">set</span><span class="p">,</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">modules</span><span class="p">)):</span>
+          <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">letters</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">letters</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+          <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>
+      <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">letters_generator</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&#39;modules&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">name</span><span class="p">,</span> <span class="n">config</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">configs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">KitError</span><span class="p">(</span><span class="s">&#39;Duplicate </span><span class="si">%s</span><span class="s"> for module </span><span class="si">%r</span><span class="s"> found.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">module_name</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="n">KitError</span><span class="p">(</span><span class="s">&#39;Undefined </span><span class="si">%s</span><span class="s"> for module  </span><span class="si">%r</span><span class="s">.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">module_name</span><span class="p">))</span>
+</div>
+<span class="k">def</span> <span class="nf">_remove_session</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Globally namespaced function for signals to work.&quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="s">&#39;app&#39;</span><span class="p">):</span>
+    <span class="c"># sender is a celery task</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">sender</span><span class="o">.</span><span class="n">app</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="c"># sender is a flask application</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">sender</span>
+  <span class="k">for</span> <span class="n">session</span><span class="p">,</span> <span class="n">commit</span> <span class="ow">in</span> <span class="n">Kit</span><span class="p">()</span><span class="o">.</span><span class="n">_sessions</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">commit</span><span class="p">:</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">InvalidRequestError</span><span class="p">:</span>
+      <span class="n">session</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="n">session</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+
+<span class="c"># Session removal handlers</span>
+<span class="n">task_postrun</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">_remove_session</span><span class="p">)</span>
+<span class="n">request_tearing_down</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">_remove_session</span><span class="p">)</span>
+</pre></div>
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        <a class="uplink" href="../../index.html">Contents</a>
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

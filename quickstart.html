@@ -1,0 +1,194 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Quickstart &mdash; Kit 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/print.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/theme_extras.js"></script>
+    <link rel="top" title="Kit 0.1 documentation" href="index.html" />
+    <link rel="next" title="Extensions" href="extensions.html" />
+    <link rel="prev" title="Kit" href="index.html" /> 
+  </head>
+  <body>
+      <div class="header"><h1 class="heading"><a href="index.html">
+          <span>Kit 0.1 documentation</span></a></h1>
+        <h2 class="heading"><span>Quickstart</span></h2>
+      </div>
+      <div class="topnav">
+      
+        <p>
+        «&#160;&#160;<a href="index.html">Kit</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="extensions.html">Extensions</a>&#160;&#160;»
+        </p>
+
+      </div>
+      <div class="content">
+        
+        
+  <span class="target" id="module-kit"></span><div class="section" id="quickstart">
+<h1>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="configuration-options">
+<h2>Configuration options<a class="headerlink" href="#configuration-options" title="Permalink to this headline">¶</a></h2>
+<p>Todo.</p>
+</div>
+<div class="section" id="command-line-tool">
+<h2>Command line tool<a class="headerlink" href="#command-line-tool" title="Permalink to this headline">¶</a></h2>
+<p>Todo.</p>
+</div>
+<div class="section" id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
+<p>Todo.</p>
+<dl class="function">
+<dt id="kit.Flask">
+<tt class="descclassname">kit.</tt><tt class="descname">Flask</tt><big>(</big><em>module_name</em>, <em>path=None</em><big>)</big><a class="reference internal" href="_modules/kit.html#Flask"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.Flask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the Flask application registered for the module.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>module_name</strong> (<em>str</em>) &#8211; the module name for which to get the application.
+Typically, this should always be set to <tt class="docutils literal"><span class="pre">__name__</span></tt>.</li>
+<li><strong>path</strong> (<em>str</em>) &#8211; the path to the overall kit configuration file. This can be used
+to load the Flask application outside of the kit command line tool.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><cite>flask.Flask</cite></p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This isn&#8217;t a class constructor.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="kit.Celery">
+<tt class="descclassname">kit.</tt><tt class="descname">Celery</tt><big>(</big><em>module_name</em>, <em>path=None</em><big>)</big><a class="reference internal" href="_modules/kit.html#Celery"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.Celery" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the Celery application registered for the module.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>module_name</strong> (<em>str</em>) &#8211; the module name for which to get the application.
+Typically, this should always be set to <tt class="docutils literal"><span class="pre">__name__</span></tt>.</li>
+<li><strong>path</strong> (<em>str</em>) &#8211; the path to the overall kit configuration file. This can be used
+to load the Celery application outside of the kit command line tool.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><cite>celery.Celery</cite></p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This isn&#8217;t a class constructor.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="kit.get_session">
+<tt class="descclassname">kit.</tt><tt class="descname">get_session</tt><big>(</big><em>session_name</em>, <em>path=None</em><big>)</big><a class="reference internal" href="_modules/kit.html#get_session"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.get_session" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the corresponding session.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>session_name</strong> (<em>str</em>) &#8211; the key of the session in the configuration file.</li>
+<li><strong>path</strong> (<em>str</em>) &#8211; the path to the overall kit configuration file. This can be used
+to load the sessions outside of the kit command line tool.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><cite>sqlalchemy.orm.scoping.scoped_session</cite></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="kit.get_config">
+<tt class="descclassname">kit.</tt><tt class="descname">get_config</tt><big>(</big><em>path=None</em><big>)</big><a class="reference internal" href="_modules/kit.html#get_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.get_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the kit&#8217;s configuration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<em>str</em>) &#8211; the path to the overall kit configuration file. This can be used
+to load the configuration outside of the kit command line tool.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="kit.teardown_handler">
+<tt class="descclassname">kit.</tt><tt class="descname">teardown_handler</tt><big>(</big><em>func</em>, <em>path=None</em><big>)</big><a class="reference internal" href="_modules/kit.html#teardown_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.teardown_handler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the teardown handler.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> (<em>callable</em>) &#8211; Must accept three arguments: session, app,
+session_options</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+      </div>
+      <div class="bottomnav">
+      
+        <p>
+        «&#160;&#160;<a href="index.html">Kit</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="extensions.html">Extensions</a>&#160;&#160;»
+        </p>
+
+      </div>
+
+    <div class="footer">
+        &copy; Copyright 2013, Matthieu Monsch.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>
