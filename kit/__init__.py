@@ -95,3 +95,14 @@ def get_config(path=None):
 def get_kit(path=None):
   from .base import Kit
   return Kit(path)
+
+def teardown_handler(func, path=None):
+  """Set the teardown handler.
+
+  :param func: Must accept three arguments: session, app,
+    session_options
+  :type func: callable
+
+  """
+  from .base import Kit
+  Kit(path)._teardown_handler = func

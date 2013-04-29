@@ -11,7 +11,7 @@ from flask import Flask
 from flask.signals import request_tearing_down
 from os.path import abspath, basename, dirname, join
 from sqlalchemy import create_engine  
-from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sys import path as sys_path
 from yaml import load
@@ -65,6 +65,10 @@ class Kit(object):
 
         for module in self._modules:
           __import__(module)
+
+        # Session removal handlers
+        task_postrun.connect(_remove_session)
+        request_tearing_down.connect(_remove_session)
 
   def __repr__(self):
     return '<Kit %r>' % (self.path, )
@@ -129,7 +133,12 @@ class Kit(object):
       session = scoped_session(
         sessionmaker(bind=engine, **conf.get('kwargs', {}))
       )
-      self._sessions[session_name] = (session, conf.get('commit', True))
+
+      options = conf.get('options', {})
+      options.setdefault('commit', True),
+      options.setdefault('raise', True),
+
+      self._sessions[session_name] = (session, options)
     return self._sessions[session_name][0]
 
   def _get_options(self, kind, module_name):
@@ -151,6 +160,23 @@ class Kit(object):
       raise KitError('Duplicate %s for module %r found.' % (kind, module_name))
     else:
       raise KitError('Undefined %s for module  %r.' % (kind, module_name))
+    
+  def on_teardown(self, app):
+    """Callback on request / task teardown."""
+    for session, options in self._sessions.values():
+      self._teardown_handler(session, app, options)
+
+  @staticmethod
+  def _teardown_handler(session, app, session_options):
+    try:
+      if session_options['commit']:
+        session.commit()
+    except (DBAPIError, SQLAlchemyError) as err:
+      if session_options['raise']:
+        raise err
+      session.rollback()
+    finally:
+      session.remove()
 
 def _remove_session(sender, *args, **kwargs):
   """Globally namespaced function for signals to work."""
@@ -160,16 +186,10 @@ def _remove_session(sender, *args, **kwargs):
   else:
     # sender is a flask application
     app = sender
-  for session, commit in Kit()._sessions.values():
-    try:
-      if commit:
-        session.commit()
-    except InvalidRequestError:
-      session.rollback()
-    finally:
-      session.remove()
-    
-
-# Session removal handlers
-task_postrun.connect(_remove_session)
-request_tearing_down.connect(_remove_session)
+  try:
+    kit = Kit()
+  except KitError:
+    # no kit actually initialized, probably in nosetests
+    pass
+  else:
+    kit.on_teardown(app)
