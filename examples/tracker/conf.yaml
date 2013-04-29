@@ -6,3 +6,5 @@ flasks:
 sessions:
   db:
     url: 'sqlite://'
+    options:
+      commit: yes

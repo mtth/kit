@@ -76,7 +76,7 @@ class Kit(object):
   def _modules(self):
     """Modules to import on kit load."""
     conf = self.config
-    return [
+    return conf.get('modules', []) + [
       module
       for app_conf in conf.get('flasks', []) + conf.get('celeries', [])
       for module in app_conf.get('modules', [])
@@ -136,7 +136,7 @@ class Kit(object):
       )
 
       options = conf.get('options', {})
-      options.setdefault('commit', True)
+      options.setdefault('commit', False)
       options.setdefault('raise', True)
 
       self._sessions[session_name] = (session, options)

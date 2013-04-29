@@ -103,10 +103,10 @@ class Query(_Query):
     This method is from Flask-SQLAlchemy.
     
     """
-    rv = self.get(model_id)
-    if rv is None:
+    instance = self.get(model_id)
+    if instance is None:
       abort(404)
-    return rv
+    return instance
 
   def first_or_404(self):
     """Like first but aborts with 404 if not found.
@@ -116,10 +116,10 @@ class Query(_Query):
     This method is from Flask-SQLAlchemy.
     
     """
-    rv = self.first()
-    if rv is None:
+    instance = self.first()
+    if instance is None:
       abort(404)
-    return rv
+    return instance
 
   def fast_count(self):
     """Fast counting, bypassing subqueries.
@@ -151,11 +151,11 @@ class Query(_Query):
     count_query._criterion = self._criterion
     return count_query.scalar()
 
-  def random(self, n=1, dialect=None):
-    """Returns n random model instances.
+  def random(self, n_instances=1, dialect=None):
+    """Returns random model instances.
 
-    :param n: the number of instances to return
-    :type n: int
+    :param n_instances: the number of instances to return
+    :type n_instances: int
     :param dialect: the engine dialect (the implementation of random differs
       between MySQL and SQLite among others). By default will look up on the
       query for the dialect used. If no random function is available for the 
@@ -168,34 +168,37 @@ class Query(_Query):
     if dialect is None:
       dialect = self.session.get_bind().dialect.name
     if dialect == 'mysql':
-      rv = self.order_by(func.rand()).limit(n).all()
+      instances = self.order_by(func.rand()).limit(n_instances).all()
     elif dialect in ['sqlite', 'postgresql']:
-      rv = self.order_by(func.random()).limit(n).all()
+      instances = self.order_by(func.random()).limit(n_instances).all()
     else: # fallback implementation
       count = self.count()
-      rv = [self.offset(randint(0, count - 1)).first() for _ in range(n)]
-    if len(rv) == 1:
-      return rv[0]
-    return rv
+      instances = [
+        self.offset(randint(0, count - 1)).first()
+        for _ in range(n_instances)
+      ]
+    if len(instances) == 1:
+      return instances[0]
+    return instances
 
   def to_dataframe(self, load_objects=False, **kwargs):
     """Loads a dataframe with the records from the query and returns it.
 
-    :param lazy: whether or not to load the underlying objects. If set to
-      ``False``, the dataframe will be populated with the contents of
+    :param load_objects: whether or not to load the underlying objects. If set
+      to ``False``, the dataframe will be populated with the contents of
       ``to_json`` of the models, otherwise it will only contain the columns
       existing in the database (default behavior). If lazy is ``True``, this
       method also accepts the same keyword arguments as
       :func:`kit.util.query_to_dataframe`. For convenience, if no
       ``exclude`` kwarg is specified, it will default to ``['_cache']``.
-    :type lazy: bool
+    :type load_objects: bool
     :rtype: pandas.DataFrame
 
     Requires the ``pandas`` library to be installed.
 
     """
     if not load_objects:
-      kwargs.setdefault('exclude', ['_cache'])
+      kwargs.setdefault('exclude', ['__cache__'])
       return query_to_dataframe(
         self,
         connection=self.session.connection(),
@@ -222,7 +225,7 @@ class Query(_Query):
 
 class Model(Cacheable, Loggable):
 
-  """The custom SQLAlchemy base.
+  """The custom model class.
 
   Along with the methods described below, the following conveniences are
   provided:
@@ -234,9 +237,8 @@ class Model(Cacheable, Loggable):
 
   * Default implementation of ``__repr__`` with model class and primary keys
 
-  * Caching (inherited from :class:`kit.util.Cacheable`). The cache is
-    persistent by default (``_cache`` is actually a
-    :class:`kit.util.JSONEncodedDict` column).
+  * Caching (inherited from :class:`kit.util.Cacheable`). The cache is not
+    persistent by default.
 
   * Logging (inherited from :class:`kit.util.Loggable`)
 
@@ -279,6 +281,7 @@ class Model(Cacheable, Loggable):
 
   @classmethod
   def _get_columns(cls, show_private=False):
+    """Dictionary of columns."""
     return {
       c.key: c
       for c in class_mapper(cls).columns
@@ -287,6 +290,7 @@ class Model(Cacheable, Loggable):
 
   @classmethod
   def _get_related_models(cls, show_private=False):
+    """Dictionary of relationship key to related model class."""
     return {
       k: v.mapper.class_
       for k, v in cls._get_relationships(show_private).items()
@@ -294,6 +298,7 @@ class Model(Cacheable, Loggable):
 
   @classmethod
   def _get_relationships(cls, show_private=False, lazy=None, uselist=None):
+    """Dictionary of relationships."""
     return {
       rel.key: rel
       for rel in class_mapper(cls).relationships.values()
@@ -304,6 +309,7 @@ class Model(Cacheable, Loggable):
 
   @classmethod
   def _get_association_proxies(cls, show_private=False):
+    """Dictionary of association proxies."""
     return {
       varname: getattr(cls, varname)
       for varname in dir(cls)
@@ -364,13 +370,13 @@ class Model(Cacheable, Loggable):
     """
     if depth <= 0:
       return self.get_primary_key()
-    rv = {}
+    instance_json = {}
     for varname in self.__json__:
       try:
-        rv[varname] = to_json(getattr(self, varname), depth - 1)
-      except ValueError as e:
-        rv[varname] = e.message
-    return rv
+        instance_json[varname] = to_json(getattr(self, varname), depth - 1)
+      except ValueError as err:
+        instance_json[varname] = err.message
+    return instance_json
 
   @classmethod
   def retrieve(cls, from_key=False, flush_if_missing=False, **kwargs):
@@ -475,11 +481,37 @@ class ORM(object):
 
   """The main ORM object.
 
-  The session will be reconfigured to use ``query_class``.
+  :param session: the session to attach the ORM instance to.
+  :type session: `sqlalchemy.orm.scoped.scoped_session`
+  :param model_class: the base model class used by all models in this
+    extension.
+  :param model_class: `kit.ext.orm.Model`
+  :param query_class: the base query class used by all queries made on the
+    session. The session will be reconfigured in place.
+  :param query_class: `sqlalchemy.orm.Query`
+  :param persistent_cache: whether or not to store each model's cache in the
+    database. If so, a text column storing the JSON encoded dictionary will
+    be created.
+  :type persistent_cache: bool
 
   """
 
-  def __init__(self, session, query_class=Query, persistent_cache=False):
+  #: The declarative base generated from the `model_class`. All models in this
+  #: ORM extension should inherit from this class.
+  Model = None
+
+  #: The relationship factory function using `query_class`. If you use
+  #: `sqlalchemy.relationship` instead, your dynamic queries will not subclass
+  #: `query_class`.
+  relationship = None
+
+  #: The backref factory function using `query_class`. If you use
+  #: `sqlalchemy.backref` instead, your dynamic queries will not subclass
+  #: `query_class`.
+  backref = None
+
+  def __init__(self, session, model_class=Model, query_class=Query,
+               persistent_cache=False):
 
     session.configure(query_cls=query_class)
 
@@ -491,9 +523,9 @@ class ORM(object):
     self.Model.t = _TableProperty(session)
 
     if persistent_cache:
-      def _cache(cls):
+      def __cache__(cls):
         return Column(JSONEncodedDict)
-      self.Model._cache = declared_attr(_cache)
+      self.Model.__cache__ = declared_attr(__cache__)
 
     self.backref = partial(_backref, query_class=query_class)
     self.relationship = partial(_relationship, query_class=query_class)
@@ -507,7 +539,13 @@ class ORM(object):
     }
 
   def create_all(self, checkfirst=True):
-    """Create tables for all mapped models."""
+    """Create tables for all mapped models.
+
+    :param checkfirst: whether or not to check if tables already exist before
+      creating them.
+    :type checkfirst: bool
+    
+    """
     self.Model.metadata.create_all(
       self.session.get_bind(),
       checkfirst=checkfirst
