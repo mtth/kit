@@ -22,6 +22,9 @@ Next steps
 
 Todo.
 
+
+All the functions available in the ``kit`` module are detailed below:
+
 """
 
 __version__ = '0.2.4'
