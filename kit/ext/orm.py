@@ -147,7 +147,9 @@ class Query(_Query):
       # initial query is over more than one model
       # not clear how to implement the count in that case
       raise ValueError('Fast count unavailable for this query.')
-    count_query = self.__class__(func.count(), session=self.session)
+    # can't use self.__class__ because of appender queries, which come
+    # with their own session
+    count_query = Query(func.count(), session=self.session)
     count_query = count_query.select_from(models[0])
     count_query._criterion = self._criterion
     return count_query.scalar()
@@ -259,25 +261,17 @@ class Model(Cacheable, Loggable):
     TODO: use _get_columns and other methods to generate thist list.
 
     """
+    names = (
+      cls._get_columns().keys() +
+      cls._get_relationships(lazy=[False, 'joined', 'immediate']).keys() +
+      cls._get_association_proxies(lazy=[False, 'joined', 'immediate']).keys()
+    )
     cls.__json__ = list(
       varname
       for varname in dir(cls)
       if not varname.startswith('_')  # don't show private properties
-      if (
-        isinstance(getattr(cls, varname), property) 
-      ) or (
-        isinstance(getattr(cls, varname), InstrumentedAttribute) and
-        isinstance(getattr(cls, varname).property, ColumnProperty)
-      ) or (
-        isinstance(getattr(cls, varname), InstrumentedAttribute) and
-        isinstance(getattr(cls, varname).property, RelationshipProperty) and
-        getattr(cls, varname).property.lazy in [False, 'joined', 'immediate']
-      ) or (
-        isinstance(getattr(cls, varname), AssociationProxy) and
-        getattr(
-          cls, getattr(cls, varname).target_collection
-        ).property.lazy in [False, 'joined', 'immediate']
-      )
+      if not varname in ['logger']
+      if isinstance(getattr(cls, varname), property) or varname in names
     )
 
   @classmethod
@@ -309,13 +303,20 @@ class Model(Cacheable, Loggable):
     }
 
   @classmethod
-  def _get_association_proxies(cls, show_private=False):
+  def _get_association_proxies(cls, show_private=False, lazy=None,
+                               uselist=None):
     """Dictionary of association proxies."""
     return {
       varname: getattr(cls, varname)
       for varname in dir(cls)
       if isinstance(getattr(cls, varname), AssociationProxy)
       if show_private or not varname.startswith('_')
+      if lazy is None or getattr(
+        cls, getattr(cls, varname).target_collection
+      ).property.lazy in lazy
+      if uselist is None or getattr(
+        cls, getattr(cls, varname).target_collection
+      ).property.uselist == uselist
     }
 
   def __repr__(self):

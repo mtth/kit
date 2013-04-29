@@ -52,7 +52,7 @@ Base.metadata.create_all(session.get_bind())
 def index():
   """This view returns the number of times it has been visited.
 
-  Note that since the option `commit_on_teardown` is set to ``True`` in our
+  Note that since the option ``commit`` is set to ``True`` in our
   configuration file, we don't need to commit our changes manually, it is
   done automatically after the request ends.
   

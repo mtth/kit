@@ -1,8 +1,7 @@
 flasks:
-  - modules: ['poller.app', 'poller.app.views']
+  - modules: ['poller.app.api', 'poller.app.views']
     config:
       debug: yes
-  - modules: ['poller.views']
 celeries:
   - modules: ['poller.tasks']
     config:
