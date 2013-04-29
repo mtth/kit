@@ -24,12 +24,9 @@ Celery_.
         engine:
           pool_recycle: 3600
 
-* Run your project from the command line:
-
-  * Start the Werkzeug_ webserver
-  * Start Celery workers
-  * Start a shell in your project's context (using IPython_ if available)
-  * Start the Flower_ monitor tool
+* Run your project from the command line: Start the Werkzeug_ webserver, start
+  Celery workers, start a shell in your project's context (using IPython_ if
+  available), and start the Flower_ monitor tool
 
 * No more complicated and sometimes circular, import schemes: ``kit.Flask`` and
   ``kit.Celery`` always return the correct (and configured) application
