@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -16,7 +14,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '0.1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -29,7 +27,7 @@
     <script type="text/javascript" src="_static/theme_extras.js"></script>
     <link rel="top" title="Flasker 0.1 documentation" href="index.html" />
     <link rel="next" title="Extensions" href="extensions.html" />
-    <link rel="prev" title="Flasker" href="index.html" /> 
+    <link rel="prev" title="Kit" href="index.html" /> 
   </head>
   <body>
       <div class="header"><h1 class="heading"><a href="index.html">
@@ -39,7 +37,7 @@
       <div class="topnav">
       
         <p>
-        «&#160;&#160;<a href="index.html">Flasker</a>
+        «&#160;&#160;<a href="index.html">Kit</a>
         &#160;&#160;::&#160;&#160;
         <a class="uplink" href="index.html">Contents</a>
         &#160;&#160;::&#160;&#160;
@@ -52,61 +50,45 @@
         
   <div class="section" id="overview">
 <h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="module-flasker.__main__">
-<span id="console-tool"></span><h2>Console tool<a class="headerlink" href="#module-flasker.__main__" title="Permalink to this headline">¶</a></h2>
-<p>Flasker command line tool.</p>
-<p>There are currently 4 commands available via the flasker command tool, all
-detailed below.</p>
-<p>All commands accept an optional argument <tt class="docutils literal"><span class="pre">-c,</span> <span class="pre">--conf</span></tt>
-to indicate the path of the configuration file to use. If none is specified
-flasker will search in the current directory for possible matches. If a single
-file <tt class="docutils literal"><span class="pre">.cfg</span></tt> file is found it will use it.</p>
+<div class="section" id="module-kit.__main__">
+<span id="console-tool"></span><h2>Console tool<a class="headerlink" href="#module-kit.__main__" title="Permalink to this headline">¶</a></h2>
+<p>Kit: your friendly Flask, Celery, SQLAlchemy toolkit.</p>
+<dl class="docutils">
+<dt>Usage:</dt>
+<dd>kit shell CONF
+kit server [-dlp PORT] CONF
+kit worker CONF [(&#8211; [RAW] ...)]
+kit flower CONF [(&#8211; [RAW] ...)]
+kit -h | &#8211;help | &#8211;version</dd>
+<dt>Arguments:</dt>
+<dd>CONF                  Path to YAML configuration file.
+RAW                   Options to pass to the underlying command.</dd>
+<dt>Options:</dt>
+<dd>-h &#8211;help             Show this screen.
+&#8211;version             Show version.
+-d &#8211;debug            Enable in browser debugging and autoreloading.
+-l &#8211;local            Only allow local connections to server.
+-p PORT &#8211;port=PORT   Port to run server on [default: 5000].</dd>
+</dl>
 <dl class="function">
-<dt id="flasker.__main__.server_handler">
-<tt class="descclassname">flasker.__main__.</tt><tt class="descname">server_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#server_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.server_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Start a Werkzeug server for the Flask application:</p>
-<div class="highlight-python"><pre>flasker server ...</pre>
-</div>
-<p>The following options are available:</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">-r,</span> <span class="pre">--restrict</span></tt> to disallow remove server connections.</li>
-<li><tt class="docutils literal"><span class="pre">-p,</span> <span class="pre">--port</span></tt> to set the port on which to run the server (default to 
-<tt class="docutils literal"><span class="pre">5000</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">-d,</span> <span class="pre">--debug</span></tt> to run in debug mode (enables autoreloading and in-browser
-debugging).</li>
-</ul>
+<dt id="kit.__main__.run_shell">
+<tt class="descclassname">kit.__main__.</tt><tt class="descname">run_shell</tt><big>(</big><em>kit</em><big>)</big><a class="reference internal" href="_modules/kit/__main__.html#run_shell"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.__main__.run_shell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start a shell in the context of the kit (using IPython if available).</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="flasker.__main__.shell_handler">
-<tt class="descclassname">flasker.__main__.</tt><tt class="descname">shell_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#shell_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.shell_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Start a shell in the context of the project:</p>
-<div class="highlight-python"><pre>flasker shell ...</pre>
-</div>
-<p>The following global variables will be available:</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">pj</span></tt>, an alias for the <tt class="docutils literal"><span class="pre">current_project</span></tt></li>
-</ul>
-<p>Flasker will use IPython if it is available.</p>
+<dt id="kit.__main__.run_server">
+<tt class="descclassname">kit.__main__.</tt><tt class="descname">run_server</tt><big>(</big><em>kit</em>, <em>local</em>, <em>port</em>, <em>debug</em><big>)</big><a class="reference internal" href="_modules/kit/__main__.html#run_server"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.__main__.run_server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start a Werkzeug server for the Flask application.</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="flasker.__main__.worker_handler">
-<tt class="descclassname">flasker.__main__.</tt><tt class="descname">worker_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#worker_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.worker_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Starts a celery worker:</p>
-<div class="highlight-python"><pre>flasker worker ...</pre>
-</div>
-<p>The following options are available:</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">-o,</span> <span class="pre">--only-direct</span></tt> to have the worker only listen to its direct queue
-(this option requires the CELERY_WORKER_DIRECT to be set to <tt class="docutils literal"><span class="pre">True</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">-v,</span> <span class="pre">--verbose-help</span></tt> to show the worker help.</li>
-<li><tt class="docutils literal"><span class="pre">-r,</span> <span class="pre">--raw</span></tt> to pass arguments to the worker (any arguments after this
-option will be passed through).</li>
-</ul>
+<dt id="kit.__main__.run_worker">
+<tt class="descclassname">kit.__main__.</tt><tt class="descname">run_worker</tt><big>(</big><em>kit</em>, <em>raw</em><big>)</big><a class="reference internal" href="_modules/kit/__main__.html#run_worker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.__main__.run_worker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starts a celery worker.</p>
 <p>If no hostname is provided, one will be generated automatically using the
-project domain and subdomain and current worker count. For example, the first
-two workers started for project <tt class="docutils literal"><span class="pre">my_project</span></tt> and configuration <tt class="docutils literal"><span class="pre">default</span></tt>
+configuration file path and kit project root. For example, the first two
+workers started for project root <tt class="docutils literal"><span class="pre">my_project</span></tt> and configuration <tt class="docutils literal"><span class="pre">default</span></tt>
 will have respective hostnames:</p>
 <ul class="simple">
 <li>w1.default.my_project</li>
@@ -115,173 +97,63 @@ will have respective hostnames:</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="flasker.__main__.flower_handler">
-<tt class="descclassname">flasker.__main__.</tt><tt class="descname">flower_handler</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/flasker/__main__.html#flower_handler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.__main__.flower_handler" title="Permalink to this definition">¶</a></dt>
-<dd><p>Start flower worker manager:</p>
-<div class="highlight-python"><pre>flasker flower ...</pre>
-</div>
-<p>The following arguments are available:</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">-p,</span> <span class="pre">--port</span></tt> to set the port to run flower on (defaults to <tt class="docutils literal"><span class="pre">5555</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">-v,</span> <span class="pre">--verbose-help</span></tt> to show the flower help.</li>
-<li><tt class="docutils literal"><span class="pre">-r,</span> <span class="pre">--raw</span></tt> to pass arguments to flower (any arguments after this option
-will be passed through).</li>
-</ul>
+<dt id="kit.__main__.run_flower">
+<tt class="descclassname">kit.__main__.</tt><tt class="descname">run_flower</tt><big>(</big><em>kit</em>, <em>raw</em><big>)</big><a class="reference internal" href="_modules/kit/__main__.html#run_flower"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.__main__.run_flower" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start flower worker manager.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="kit.__main__.main">
+<tt class="descclassname">kit.__main__.</tt><tt class="descname">main</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/kit/__main__.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.__main__.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Command line parser.</p>
 </dd></dl>
 
 </div>
-<div class="section" id="module-flasker.project">
-<span id="configuration"></span><h2>Configuration<a class="headerlink" href="#module-flasker.project" title="Permalink to this headline">¶</a></h2>
-<p>Project module.</p>
-<p>This module defines:</p>
-<ul class="simple">
-<li>the <a class="reference internal" href="#flasker.project.Project" title="flasker.project.Project"><tt class="xref py py-class docutils literal"><span class="pre">flasker.project.Project</span></tt></a> class which contains
-all the logic between the Flask and Celery applications and the SQLAlchemy
-sessions.</li>
-<li>the <tt class="docutils literal"><span class="pre">current_project</span></tt> proxy</li>
-</ul>
-<p>For convenience, both these variables are also available directly in the
-<tt class="docutils literal"><span class="pre">flasker</span></tt> namespace.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p>In most cases <a class="reference internal" href="#flasker.project.Project" title="flasker.project.Project"><tt class="xref py py-class docutils literal"><span class="pre">flasker.project.Project</span></tt></a> will not need to be
-instantiated explicitely (the console tool handles the setup) and will only
-be accessed via the <tt class="docutils literal"><span class="pre">current_project</span></tt> proxy. In some cases however the
-constructor can be called to create a project (for example from an IPython
-notebook or to use a separate WSGI server).</p>
-<div class="code python last highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">flasker</span> <span class="kn">import</span> <span class="n">Project</span>
+<div class="section" id="module-kit.base">
+<span id="configuration"></span><h2>Configuration<a class="headerlink" href="#module-kit.base" title="Permalink to this headline">¶</a></h2>
+<p>Kit class module.</p>
+<dl class="exception">
+<dt id="kit.base.KitError">
+<em class="property">exception </em><tt class="descclassname">kit.base.</tt><tt class="descname">KitError</tt><a class="reference internal" href="_modules/kit/base.html#KitError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.base.KitError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generic error class.</p>
+</dd></dl>
 
-<span class="c"># instantiating the project</span>
-<span class="n">pj</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s">&#39;path/to/config.cfg&#39;</span><span class="p">)</span>
-
-<span class="c"># the application that would be passed to a WSGI server</span>
-<span class="n">application</span> <span class="o">=</span> <span class="n">pj</span><span class="o">.</span><span class="n">flask</span>
-</pre></div>
-</div>
-</div>
 <dl class="class">
-<dt id="flasker.project.Project">
-<em class="property">class </em><tt class="descclassname">flasker.project.</tt><tt class="descname">Project</tt><big>(</big><em>conf_path=None</em><big>)</big><a class="reference internal" href="_modules/flasker/project.html#Project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flasker.project.Project" title="Permalink to this definition">¶</a></dt>
-<dd><p>Project class.</p>
+<dt id="kit.base.Kit">
+<em class="property">class </em><tt class="descclassname">kit.base.</tt><tt class="descname">Kit</tt><big>(</big><em>path=None</em><big>)</big><a class="reference internal" href="_modules/kit/base.html#Kit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.base.Kit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Kit class.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>conf_path</strong> (<em>str</em>) &#8211; path to the configuration file. The following sections
-are special: <tt class="docutils literal"><span class="pre">PROJECT</span></tt>, <tt class="docutils literal"><span class="pre">ENGINE</span></tt>, <tt class="docutils literal"><span class="pre">FLASK</span></tt>, <tt class="docutils literal"><span class="pre">CELERY</span></tt>. All but 
-<tt class="docutils literal"><span class="pre">PROJECT</span></tt> are optional. See below for a list of available options in each
-section.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<em>str</em>) &#8211; path to the configuration file.</td>
 </tr>
 </tbody>
 </table>
-<p>The following options are available each section of the configuration file
-(as a convenience, parameters stored as JSON strings are also accepted,
-which can be useful for example to configure Celery queues):</p>
-<ul class="simple">
-<li><tt class="docutils literal"><span class="pre">PROJECT</span></tt><ul>
-<li><tt class="docutils literal"><span class="pre">MODULES</span></tt>: comma separated list of the project&#8217;s modules. They must be
-importable from the configuration file&#8217;s folder.</li>
-<li><tt class="docutils literal"><span class="pre">DEBUG</span></tt></li>
-<li><tt class="docutils literal"><span class="pre">DISABLE_FLASK</span></tt></li>
-<li><tt class="docutils literal"><span class="pre">DISABLE_CELERY</span></tt></li>
-</ul>
-</li>
-<li><tt class="docutils literal"><span class="pre">ENGINE</span></tt><ul>
-<li><tt class="docutils literal"><span class="pre">URL</span></tt>: the url to the database</li>
-<li>any valid arguments to <tt class="docutils literal"><span class="pre">sqlalchemy.create_engine</span></tt></li>
-</ul>
-</li>
-<li><tt class="docutils literal"><span class="pre">SESSION</span></tt><ul>
-<li><tt class="docutils literal"><span class="pre">SMARTCOMMIT</span></tt>: if <tt class="docutils literal"><span class="pre">True</span></tt> (default), all database transactions
-will be committed after each Flask app request and Celery task
-completion. If <tt class="docutils literal"><span class="pre">False</span></tt> the session will simply be removed.</li>
-<li>any valid arguments to <tt class="docutils literal"><span class="pre">sqlalchemy.orm.session_maker</span></tt></li>
-</ul>
-</li>
-<li><tt class="docutils literal"><span class="pre">FLASK</span></tt><ul>
-<li><tt class="docutils literal"><span class="pre">ROOT_FOLDER</span></tt>: path to the Flask application&#8217;s root folder
-relative to the configuration file (defaults to <tt class="docutils literal"><span class="pre">app</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">STATIC_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">static_folder</span></tt> relative to
-the application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">static</span></tt>).</li>
-<li><tt class="docutils literal"><span class="pre">TEMPLATE_FOLDER</span></tt>: the application&#8217;s <tt class="docutils literal"><span class="pre">template_folder</span></tt> relative
-to the application&#8217;s root folder (defaults to <tt class="docutils literal"><span class="pre">templates</span></tt>).</li>
-<li>any valid Flask configuration option</li>
-</ul>
-</li>
-<li><tt class="docutils literal"><span class="pre">CELERY</span></tt><ul>
-<li><tt class="docutils literal"><span class="pre">MAIN</span></tt></li>
-<li>any valid Celery configuration option</li>
-</ul>
-</li>
-</ul>
 <dl class="attribute">
-<dt id="flasker.project.Project.default_conf">
-<tt class="descname">default_conf</tt><em class="property"> = {'PROJECT': {'DEBUG': False, 'DISABLE_FLASK': False, 'DISABLE_CELERY': False, 'MODULES': ''}, 'ENGINE': {'URL': 'sqlite://'}, 'FLASK': {'STATIC_FOLDER': 'static', 'ROOT_FOLDER': 'app', 'NAME': 'app', 'TEMPLATE_FOLDER': 'templates'}, 'SESSION': {'SMARTCOMMIT': True}, 'CELERY': {'MAIN': '__main__'}}</em><a class="headerlink" href="#flasker.project.Project.default_conf" title="Permalink to this definition">¶</a></dt>
-<dd><p>Default configuration</p>
+<dt id="kit.base.Kit.root">
+<tt class="descname">root</tt><a class="reference internal" href="_modules/kit/base.html#Kit.root"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.base.Kit.root" title="Permalink to this definition">¶</a></dt>
+<dd><p>Kit root path.</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="flasker.project.Project.conf">
-<tt class="descname">conf</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.conf" title="Permalink to this definition">¶</a></dt>
-<dd><p>Dictionary of configuration values</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.project.Project.conf_path">
-<tt class="descname">conf_path</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.conf_path" title="Permalink to this definition">¶</a></dt>
-<dd><p>Path to current configuration file</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.project.Project.logger">
-<tt class="descname">logger</tt><em class="property"> = None</em><a class="headerlink" href="#flasker.project.Project.logger" title="Permalink to this definition">¶</a></dt>
-<dd><p>Logger</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.project.Project.flask">
-<tt class="descname">flask</tt><a class="headerlink" href="#flasker.project.Project.flask" title="Permalink to this definition">¶</a></dt>
-<dd><p>Flask application.</p>
-<p>Lazily initialized.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.project.Project.celery">
-<tt class="descname">celery</tt><a class="headerlink" href="#flasker.project.Project.celery" title="Permalink to this definition">¶</a></dt>
-<dd><p>Celery application.</p>
-<p>Lazily initialized.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="flasker.project.Project.session">
-<tt class="descname">session</tt><a class="headerlink" href="#flasker.project.Project.session" title="Permalink to this definition">¶</a></dt>
-<dd><p>SQLAlchemy scoped sessionmaker.</p>
-<p>Lazily initialized.</p>
+<dt id="kit.base.Kit.sessions">
+<tt class="descname">sessions</tt><a class="reference internal" href="_modules/kit/base.html#Kit.sessions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.base.Kit.sessions" title="Permalink to this definition">¶</a></dt>
+<dd><p>SQLAlchemy scoped sessionmaker getter.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="flasker.project.Project.run_after_module_imports">
-<tt class="descname">run_after_module_imports</tt><big>(</big><em>func</em><big>)</big><a class="headerlink" href="#flasker.project.Project.run_after_module_imports" title="Permalink to this definition">¶</a></dt>
-<dd><p>Hook to run a function right after all project modules are imported.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> (<em>callable</em>) &#8211; the function to be called right before startup. It will be
-passed the project as single argument.</td>
-</tr>
-</tbody>
-</table>
-<p>This decorator can be used to run functions after all the components of
-the project have been created.</p>
+<dt id="kit.base.Kit.get_flask_app">
+<tt class="descname">get_flask_app</tt><big>(</big><em>module_name</em><big>)</big><a class="reference internal" href="_modules/kit/base.html#Kit.get_flask_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.base.Kit.get_flask_app" title="Permalink to this definition">¶</a></dt>
+<dd><p>Application getter.</p>
 </dd></dl>
 
+<dl class="method">
+<dt id="kit.base.Kit.get_celery_app">
+<tt class="descname">get_celery_app</tt><big>(</big><em>module_name</em><big>)</big><a class="reference internal" href="_modules/kit/base.html#Kit.get_celery_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.base.Kit.get_celery_app" title="Permalink to this definition">¶</a></dt>
+<dd><p>Celery application getter.</p>
 </dd></dl>
 
-<dl class="data">
-<dt id="flasker.project.current_project">
-<tt class="descclassname">flasker.project.</tt><tt class="descname">current_project</tt><a class="headerlink" href="#flasker.project.current_project" title="Permalink to this definition">¶</a></dt>
-<dd><p>Proxy to the current project</p>
 </dd></dl>
 
 </div>
@@ -292,7 +164,7 @@ the project have been created.</p>
       <div class="bottomnav">
       
         <p>
-        «&#160;&#160;<a href="index.html">Flasker</a>
+        «&#160;&#160;<a href="index.html">Kit</a>
         &#160;&#160;::&#160;&#160;
         <a class="uplink" href="index.html">Contents</a>
         &#160;&#160;::&#160;&#160;
@@ -303,7 +175,7 @@ the project have been created.</p>
 
     <div class="footer">
         &copy; Copyright 2013, Matthieu Monsch.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
     </div>
   </body>
 </html>

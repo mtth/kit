@@ -4,7 +4,7 @@ Extensions
 ORM
 ---
 
-.. automodule:: flasker.ext.orm
+.. automodule:: kit.ext.orm
        :members:
 
 
@@ -13,23 +13,7 @@ API
 
 *under development*
 
-.. automodule:: flasker.ext.api
+.. automodule:: kit.ext.api
    :members:
 
 
-Authentication
---------------
-
-*under development*
-
-.. automodule:: flasker.ext.auth
-   :members:
-
-
-SKL
----
-
-*under development*
-
-.. automodule:: flasker.ext.skl
-       :members:
