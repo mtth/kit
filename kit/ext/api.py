@@ -341,8 +341,8 @@ class _RelationshipView(_View):
       else:
         collection = collection[position:(position + 1)]
         model = collection[0] if collection else None
-        if not model:
-          raise APIError(404, 'Not found')
+      if not model:
+        raise APIError(404, 'Not found')
       return self.parser.jsonify(model)
 
     else:
