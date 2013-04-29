@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 
-"""Kit setup module."""
+"""PYPI setup module."""
 
 from setuptools import find_packages, setup
 
-
-def get_long_description():
-  from kit import __doc__
-  return __doc__
 
 def get_version():
   from kit import __version__
@@ -17,7 +13,7 @@ setup(
     name='kit',
     version=get_version(),
     description='Flask, Celery, SQLAlchemy toolkit',
-    long_description=get_long_description(),
+    long_description=open('README.rst').read(),
     author='Matthieu Monsch',
     author_email='monsch@mit.edu',
     url='http://github.com/mtth/kit/',
