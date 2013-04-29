@@ -24,10 +24,6 @@ Celery_.
         engine:
           pool_recycle: 3600
 
-* No more complicated and sometimes circular, import schemes: ``kit.Flask`` and
-  ``kit.Celery`` always return the correct (and configured) application
-  corresponding to the module.
-
 * Run your project from the command line:
 
   * Start the Werkzeug_ webserver
@@ -35,10 +31,13 @@ Celery_.
   * Start a shell in your project's context (using IPython_ if available)
   * Start the Flower_ monitor tool
 
+* No more complicated and sometimes circular, import schemes: ``kit.Flask`` and
+  ``kit.Celery`` always return the correct (and configured) application
+  corresponding to the module.
 
-Kit handles all the Flask, Celery, and SQLAlchemy setup. It only creates those
-you need for your application and makes sure database connections are correctly
-handled under the hood.
+* Kit makes sure database connections are correctly handled (e.g. removed after
+  each request and task) under the hood. You can configure this behavior via
+  the ``kit.teardown_handler`` decorator.
 
 Check out the ``examples/`` folder for a few sample applications or read the
 full documentation on `GitHub pages`_.
