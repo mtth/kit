@@ -26,7 +26,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/theme_extras.js"></script>
     <link rel="top" title="Kit 0.1 documentation" href="#" />
-    <link rel="next" title="Overview" href="project.html" /> 
+    <link rel="next" title="Quickstart" href="quickstart.html" /> 
   </head>
   <body>
       <div class="header"><h1 class="heading"><a href="#">
@@ -38,7 +38,7 @@
         <p>
         <a class="uplink" href="#">Contents</a>
         &#160;&#160;::&#160;&#160;
-        <a href="project.html">Overview</a>&#160;&#160;»
+        <a href="quickstart.html">Quickstart</a>&#160;&#160;»
         </p>
 
       </div>
@@ -55,10 +55,11 @@
 configuration file</a> for an example).</li>
 <li>Run your project from the command line: Start the <a class="reference external" href="http://werkzeug.pocoo.org/">Werkzeug</a> webserver,
 start Celery workers, start a shell in your project&#8217;s context (using
-<a class="reference external" href="http://ipython.org/">IPython</a> if available), and start the <a class="reference external" href="https://github.com/mher/flower">Flower</a> monitor tool.</li>
-<li>No more complicated and sometimes circular, import schemes: <tt class="docutils literal"><span class="pre">kit.Flask</span></tt>
-and <tt class="docutils literal"><span class="pre">kit.Celery</span></tt> always return the correct (and configured) application
-corresponding to the module.</li>
+<a class="reference external" href="http://ipython.org/">IPython</a> if available), and start the <a class="reference external" href="https://github.com/mher/flower">Flower</a> monitor using the <tt class="docutils literal"><span class="pre">kit</span></tt>
+command line tool.</li>
+<li>No more complicated import schemes: <tt class="docutils literal"><span class="pre">kit.Flask</span></tt> and <tt class="docutils literal"><span class="pre">kit.Celery</span></tt> always
+return the correct (and configured) application corresponding to the
+module.</li>
 <li>Kit makes sure database connections are correctly handled (e.g. removed
 after each request and task) under the hood. You can configure this
 behavior via the <tt class="docutils literal"><span class="pre">kit.teardown_handler</span></tt> decorator.</li>
@@ -96,9 +97,10 @@ sessions:
 <h1>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="project.html">Overview</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="project.html#module-kit.__main__">Console tool</a></li>
-<li class="toctree-l2"><a class="reference internal" href="project.html#module-kit.base">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#configuration-options">Configuration options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#command-line-tool">Command line tool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#next-steps">Next steps</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="extensions.html">Extensions</a><ul>
@@ -126,7 +128,7 @@ sessions:
         <p>
         <a class="uplink" href="#">Contents</a>
         &#160;&#160;::&#160;&#160;
-        <a href="project.html">Overview</a>&#160;&#160;»
+        <a href="quickstart.html">Quickstart</a>&#160;&#160;»
         </p>
 
       </div>
