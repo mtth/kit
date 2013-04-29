@@ -4,7 +4,7 @@ Kit
 A configurable, lightweight framework that integrates Flask_, SQLAlchemy_, and
 Celery_.
 
-  * Configure all your applications and sessions from one file (cf
+  * Configure all your applications and sessions from one file (cf.
     Quickstart_ for an example).
 
   * Run your project from the command line: Start the Werkzeug_ webserver,
