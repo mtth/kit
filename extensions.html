@@ -417,10 +417,11 @@ creating them.</td>
 <p>API Extension (requires the ORM extension).</p>
 <p>This extension provides a base class to create API views.</p>
 <p>Setup is as follows:</p>
-<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">kit</span> <span class="kn">import</span> <span class="n">current_project</span> <span class="k">as</span> <span class="n">pj</span>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">kit</span> <span class="kn">import</span> <span class="n">Flask</span>
 <span class="kn">from</span> <span class="nn">kit.ext</span> <span class="kn">import</span> <span class="n">API</span>
 
-<span class="n">api</span> <span class="o">=</span> <span class="n">API</span><span class="p">(</span><span class="n">pj</span><span class="p">)</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">API</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
 
 <span class="n">View</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">View</span>   <span class="c"># the base API view</span>
 </pre></div>
@@ -447,6 +448,9 @@ creating them.</td>
 
   <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="s">&#39;POST&#39;</span><span class="p">]</span>
   <span class="n">subviews</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;cats&#39;</span><span class="p">]</span>
+
+<span class="c"># we register the api views</span>
+<span class="n">api</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>This view will create the following hooks:</p>
