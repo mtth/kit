@@ -118,6 +118,20 @@ Note that there can only be one application of each type (Flask or Celery) in
 a given module. This shouldn't be too restrictive as it is arguably bad
 practice to mix applications in a same module.
 
+You can manage your project using the ``kit`` command line too. The following
+commands are available:
+
+* ``kit shell``: to start a shell in your project's environment (all
+  applications and sessions will have been created and set up beforehand).
+* ``kit server``: to run the Werkzeug server for one of your Flask applications
+  (if several applications are found, you will be prompted to choose one).
+* ``kit worker``: to start a Celery worker (if more than one Celery application
+  exists in your project, you will be prompted to choose one).
+* ``kit flower``: to start the Flower worker monitor.
+
+There are options available for each command. To display these or see general
+command usage, you can view the command tool help: ``kit -h``.
+
 
 Next steps
 ----------
