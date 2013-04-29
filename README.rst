@@ -4,8 +4,8 @@ Kit
 A configurable, lightweight framework that integrates Flask_, SQLAlchemy_, and
 Celery_.
 
-  * Configure all your applications and sessions from one file (cf `Sample
-    configuration file`_ for an example).
+  * Configure all your applications and sessions from one file (cf
+    Quickstart for an example).
 
   * Run your project from the command line: Start the Werkzeug_ webserver,
     start Celery workers, start a shell in your project's context (using
@@ -34,8 +34,10 @@ Installation
    $ pip install kit
 
 
-Sample configuration file
--------------------------
+Quickstart
+----------
+
+Sample configuration file:
 
 .. code:: yaml
 
@@ -56,8 +58,7 @@ Sample configuration file
         pool_recycle: 3600
 
 
-Quickstart
-----------
+The following configuration options are available:
 
 * ``root``: project root, will be added to your python path. Useful if your
   configuration files are in a subdirectory of your project.

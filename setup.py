@@ -4,15 +4,18 @@
 
 from setuptools import find_packages, setup
 
-
 def get_version():
   from kit import __version__
   return __version__
 
+def get_description()
+  from kit import __doc__
+  return __doc__.strip('Kit: ')
+
 setup(
     name='kit',
     version=get_version(),
-    description='Flask, Celery, SQLAlchemy toolkit',
+    description=get_description(),
     long_description=open('README.rst').read(),
     author='Matthieu Monsch',
     author_email='monsch@mit.edu',
