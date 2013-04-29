@@ -533,7 +533,7 @@ class ORM(object):
   def get_all_models(self):
     """All mapped models."""
     return {
-      k: v
+      k: v.__mapper__.class_
       for k, v in self._registry.items()
       if isinstance(v, DeclarativeMeta)
     }

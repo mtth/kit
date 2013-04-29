@@ -12,9 +12,9 @@ Celery_.
     IPython_ if available), and start the Flower_ monitor using the ``kit``
     command line tool.
 
-  * No more complicated and sometimes circular, import schemes: ``kit.Flask``
-    and ``kit.Celery`` always return the correct (and configured) application
-    corresponding to the module.
+  * No more complicated import schemes: ``kit.Flask`` and ``kit.Celery`` always
+    return the correct (and configured) application corresponding to the
+    module.
 
   * Kit makes sure database connections are correctly handled (e.g. removed
     after each request and task) under the hood. You can configure this
