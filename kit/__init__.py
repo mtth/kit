@@ -1,8 +1,30 @@
 #!/usr/bin/env python
 
-"""Kit: your friendly Flask, Celery, SQLAlchemy toolkit.""" 
+"""
 
-__version__ = '0.2.1'
+Quickstart
+==========
+
+Configuration options
+---------------------
+
+Todo.
+
+
+Command line tool
+-----------------
+
+Todo.
+
+
+Next steps
+----------
+
+Todo.
+
+"""
+
+__version__ = '0.2.4'
 
 
 def Flask(module_name, path=None):

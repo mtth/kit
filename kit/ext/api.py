@@ -203,14 +203,14 @@ class View(_View):
   subviews = []
 
   @classmethod
-  def register_view(cls, blueprint):
+  def register_view(cls):
     """Create the URL routes for the view.
     
     Standard :class:`kit.util.View` implementation plus subview support.
     
     """
 
-    super(View, cls).register_view(blueprint)
+    super(View, cls).register_view()
 
     if cls.subviews:
       model = cls.__model__
@@ -246,7 +246,7 @@ class View(_View):
           key
         )
         make_view(
-          blueprint,
+          cls.__app__,
           view_class=_RelationshipView,
           view_name='%s_%s' % (cls.endpoint, key),
           __model__=model,
