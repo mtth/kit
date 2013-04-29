@@ -8,7 +8,7 @@ def get_version():
   from kit import __version__
   return __version__
 
-def get_description()
+def get_description():
   from kit import __doc__
   return __doc__.strip('Kit: ')
 
