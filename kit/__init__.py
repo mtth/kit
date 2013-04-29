@@ -1,29 +1,6 @@
 #!/usr/bin/env python
 
-"""
-Kit
-===
-
-Your friendly Flask, Celery, SQLAlchemy toolkit.
-
-Why use Kit?
-------------
-
-* 1 YAML file for all your configuration options
-* No more complicated import schemes for your applications
-* Seamless integration between SQLAlchemy and the rest of your application
-* A command line tool to start a development server, Celery workers and more
-
-How to get Kit?
----------------
-
-.. code:: bash
-
-  pip install kit
-
-You can find the latest version on `Github <https://github.com/mtth/kit>`_.
-
-"""
+"""Kit: your friendly Flask, Celery, SQLAlchemy toolkit.""" 
 
 __version__ = '0.2.1'
 
