@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Flasker documentation build configuration file, created by
+# Kit documentation build configuration file, created by
 # sphinx-quickstart on Sat Feb 16 11:19:56 2013.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -40,7 +40,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Flasker'
+project = u'Kit'
 copyright = u'2013, Matthieu Monsch'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -166,7 +166,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Flaskerdoc'
+htmlhelp_basename = 'kitdoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -185,7 +185,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Flasker.tex', u'Flasker Documentation',
+  ('index', 'Kit.tex', u'Kit Documentation',
    u'Matthieu Monsch', 'manual'),
 ]
 
@@ -215,7 +215,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'flasker', u'Flasker Documentation',
+    ('index', 'Kit', u'Kit Documentation',
      [u'Matthieu Monsch'], 1)
 ]
 
@@ -229,8 +229,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Flasker', u'Flasker Documentation',
-   u'Matthieu Monsch', 'Flasker', 'One line description of project.',
+  ('index', 'Kit', u'Kit Documentation',
+   u'Matthieu Monsch', 'Kit', 'One line description of project.',
    'Miscellaneous'),
 ]
 

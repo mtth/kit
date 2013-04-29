@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Index &mdash; Flasker 0.1 documentation</title>
+    <title>Index &mdash; Kit 0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -26,11 +26,11 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/theme_extras.js"></script>
-    <link rel="top" title="Flasker 0.1 documentation" href="index.html" /> 
+    <link rel="top" title="Kit 0.1 documentation" href="index.html" /> 
   </head>
   <body>
       <div class="header"><h1 class="heading"><a href="index.html">
-          <span>Flasker 0.1 documentation</span></a></h1>
+          <span>Kit 0.1 documentation</span></a></h1>
         <h2 class="heading"><span>Index</span></h2>
       </div>
       <div class="topnav">
@@ -54,7 +54,6 @@
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
- | <a href="#I"><strong>I</strong></a>
  | <a href="#J"><strong>J</strong></a>
  | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
@@ -67,7 +66,6 @@
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
- | <a href="#W"><strong>W</strong></a>
  
 </div>
 <h2 id="A">A</h2>
@@ -90,6 +88,12 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
+  <dt><a href="extensions.html#kit.ext.orm.ORM.backref">backref (kit.ext.orm.ORM attribute)</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
   <dt><a href="extensions.html#kit.ext.api.View.base_url">base_url (kit.ext.api.View attribute)</a>
   </dt>
 
@@ -100,15 +104,19 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="util.html#kit.util.Cacheable">Cacheable (class in kit.util)</a>
+  <dt><a href="util.html#kit.util.CACHE_REFRESH">CACHE_REFRESH (class in kit.util)</a>
   </dt>
 
       
-  <dt><a href="util.html#kit.util.Cacheable.cached_property">cached_property() (kit.util.Cacheable class method)</a>
+  <dt><a href="util.html#kit.util.Cacheable">Cacheable (class in kit.util)</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="util.html#kit.util.Cacheable.cached_property">cached_property() (kit.util.Cacheable class method)</a>
+  </dt>
+
       
   <dt><a href="extensions.html#kit.ext.orm.ORM.create_all">create_all() (kit.ext.orm.ORM method)</a>
   </dt>
@@ -119,10 +127,6 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="util.html#kit.util.Loggable.debug">debug() (kit.util.Loggable method)</a>
-  </dt>
-
       
   <dt><a href="extensions.html#kit.ext.api.View.delete">delete() (kit.ext.api.View method)</a>
   </dt>
@@ -152,7 +156,7 @@
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="util.html#kit.util.Loggable.error">error() (kit.util.Loggable method)</a>
+  <dt><a href="util.html#kit.util.CACHE_REFRESH.expiration">expiration (kit.util.CACHE_REFRESH attribute)</a>
   </dt>
 
   </dl></td>
@@ -190,6 +194,10 @@
   </dt>
 
       
+  <dt><a href="util.html#kit.util.Cacheable.get_cache_ages">get_cache_ages() (kit.util.Cacheable method)</a>
+  </dt>
+
+      
   <dt><a href="project.html#kit.base.Kit.get_celery_app">get_celery_app() (kit.base.Kit method)</a>
   </dt>
 
@@ -207,14 +215,8 @@
   <dt><a href="extensions.html#kit.ext.orm.Model.get_primary_key">get_primary_key() (kit.ext.orm.Model method)</a>
   </dt>
 
-  </dl></td>
-</tr></table>
-
-<h2 id="I">I</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="util.html#kit.util.Loggable.info">info() (kit.util.Loggable method)</a>
+  <dt><a href="project.html#kit.base.Kit.get_session">get_session() (kit.base.Kit method)</a>
   </dt>
 
   </dl></td>
@@ -288,6 +290,12 @@
   </dt>
 
   </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="util.html#kit.util.Loggable.logger">logger (kit.util.Loggable attribute)</a>
+  </dt>
+
+  </dl></td>
 </tr></table>
 
 <h2 id="M">M</h2>
@@ -317,11 +325,23 @@
   <dt><a href="extensions.html#kit.ext.orm.Model">Model (class in kit.ext.orm)</a>
   </dt>
 
+      <dd><dl>
+        
+  <dt><a href="extensions.html#kit.ext.orm.ORM.Model">(kit.ext.orm.ORM attribute)</a>
+  </dt>
+
+      </dl></dd>
   </dl></td>
 </tr></table>
 
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="project.html#kit.base.Kit.on_teardown">on_teardown() (kit.base.Kit method)</a>
+  </dt>
+
+  </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="extensions.html#kit.ext.orm.ORM">ORM (class in kit.ext.orm)</a>
@@ -399,6 +419,10 @@
   </dt>
 
       </dl></dd>
+      
+  <dt><a href="extensions.html#kit.ext.orm.ORM.relationship">relationship (kit.ext.orm.ORM attribute)</a>
+  </dt>
+
       
   <dt><a href="extensions.html#kit.ext.orm.Model.retrieve">retrieve() (kit.ext.orm.Model class method)</a>
   </dt>
@@ -495,6 +519,8 @@
   <dt><a href="extensions.html#kit.ext.api.View.validate">validate() (kit.ext.api.View method)</a>
   </dt>
 
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="extensions.html#kit.ext.api.View">View (class in kit.ext.api)</a>
   </dt>
@@ -505,22 +531,6 @@
   </dt>
 
       </dl></dd>
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="util.html#kit.util.Cacheable.view_cache">view_cache() (kit.util.Cacheable method)</a>
-  </dt>
-
-  </dl></td>
-</tr></table>
-
-<h2 id="W">W</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="util.html#kit.util.Loggable.warn">warn() (kit.util.Loggable method)</a>
-  </dt>
-
   </dl></td>
 </tr></table>
 

@@ -11,8 +11,6 @@ ORM
 API
 ---
 
-*under development*
-
 .. automodule:: kit.ext.api
    :members:
 

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Kit &mdash; Flasker 0.1 documentation</title>
+    <title>Kit &mdash; Kit 0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,12 +25,12 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/theme_extras.js"></script>
-    <link rel="top" title="Flasker 0.1 documentation" href="#" />
+    <link rel="top" title="Kit 0.1 documentation" href="#" />
     <link rel="next" title="Overview" href="project.html" /> 
   </head>
   <body>
       <div class="header"><h1 class="heading"><a href="#">
-          <span>Flasker 0.1 documentation</span></a></h1>
+          <span>Kit 0.1 documentation</span></a></h1>
         <h2 class="heading"><span>Kit</span></h2>
       </div>
       <div class="topnav">
@@ -50,20 +50,32 @@
 <p>A configurable, lightweight framework that integrates <a class="reference external" href="http://flask.pocoo.org/docs/api/">Flask</a>, <a class="reference external" href="http://docs.sqlalchemy.org/en/rel_0_7/orm/tutorial.html">SQLAlchemy</a>, and
 <a class="reference external" href="http://docs.celeryproject.org/en/latest/index.html">Celery</a>.</p>
 <ul>
-<li><p class="first">Consolidate your configuration options into one YAML file:</p>
-<div class="code yaml highlight-python"><pre>flask:
-  name: 'app'
-  config:
-    debug: yes
-    testing: yes
-celery:
-  config:
-    broker_url: 'redis://'
-sqlalchemy:
-  url: 'mysql://...'
-  engine:
-    pool_recycle: 3600</pre>
+<li><p class="first">Configure all your applications from one file:</p>
+<div class="code yaml highlight-python"><pre>flasks:
+  - modules: ['app']
+  - modules: ['api.main', 'api.other']
+    config:
+      debug: yes
+      testing: yes
+celeries:
+  - modules: ['tasks']
+    config:
+      broker_url: 'redis://'
+sessions:
+  db:
+    url: 'mysql://...'
+    engine:
+      pool_recycle: 3600</pre>
 </div>
+</li>
+<li><p class="first">No more complicated import schemes:</p>
+<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">kit</span> <span class="kn">import</span> <span class="n">Flask</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><tt class="docutils literal"><span class="pre">kit.Flask</span></tt> (and <tt class="docutils literal"><span class="pre">kit.Celery</span></tt>) will always return the correct (and
+configured) application corresponding to the module.</p>
 </li>
 <li><p class="first">Run your project from the command line:</p>
 <ul>
@@ -101,36 +113,9 @@ applications.</p>
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
 <div class="code bash highlight-python"><pre>$ pip install kit</pre>
 </div>
-<p>If you don&#8217;t already have Flask, Celery, and SQLAlchemy installed you might
-want:</p>
-<div class="code bash highlight-python"><pre>$ pip install flask celery sqlalchemy kit</pre>
-</div>
 </div>
 <div class="section" id="quickstart">
 <h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
-<p>There are two ways you can use Kit.</p>
-<ul>
-<li><p class="first">By specifying a configuration path directly:</p>
-<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">kit</span> <span class="kn">import</span> <span class="n">Kit</span>
-
-<span class="n">kit</span> <span class="o">=</span> <span class="n">Kit</span><span class="p">(</span><span class="s">&#39;/path/to/conf.yaml&#39;</span><span class="p">)</span>
-
-<span class="n">flask_app</span> <span class="o">=</span> <span class="n">kit</span><span class="o">.</span><span class="n">flask</span>     <span class="c"># the configured Flask application</span>
-<span class="n">celery_app</span> <span class="o">=</span> <span class="n">kit</span><span class="o">.</span><span class="n">celery</span>   <span class="c"># the configured Celery application</span>
-<span class="n">session</span> <span class="o">=</span> <span class="n">kit</span><span class="o">.</span><span class="n">session</span>     <span class="c"># the configured SQLAlchemy scoped session maker</span>
-
-<span class="c"># Here we will only use flask_app</span>
-
-<span class="nd">@flask_app.route</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
-  <span class="k">return</span> <span class="s">&#39;Hello world!&#39;</span>
-
-<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
-  <span class="n">flask_app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-</pre></div>
-</div>
-</li>
-<li><p class="first">By using the <tt class="docutils literal"><span class="pre">modules</span></tt> configuration option:</p>
 <div class="code yaml highlight-python"><pre>modules: ['app.models', 'app.tasks']
 ...</pre>
 </div>
@@ -141,8 +126,6 @@ line tool to run different components of your project.</p>
 <tt class="docutils literal"><span class="pre">Kit</span></tt>: <tt class="docutils literal"><span class="pre">kit</span> <span class="pre">=</span> <span class="pre">Kit('/path/to/conf.yaml',</span> <span class="pre">load_modules=True)</span></tt>.  This can be
 useful to to run the application on a different server or load data in an
 IPython notebook.</p>
-</li>
-</ul>
 <p>You can also combine both these methods for more complex results.</p>
 </div>
 </div>
@@ -157,7 +140,7 @@ IPython notebook.</p>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="extensions.html">Extensions</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="extensions.html#module-kit.ext.orm">ORM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="extensions.html#api">API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extensions.html#module-kit.ext.api">API</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="util.html">Utilities</a></li>

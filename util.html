@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Utilities &mdash; Flasker 0.1 documentation</title>
+    <title>Utilities &mdash; Kit 0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,12 +25,12 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/theme_extras.js"></script>
-    <link rel="top" title="Flasker 0.1 documentation" href="index.html" />
+    <link rel="top" title="Kit 0.1 documentation" href="index.html" />
     <link rel="prev" title="Extensions" href="extensions.html" /> 
   </head>
   <body>
       <div class="header"><h1 class="heading"><a href="index.html">
-          <span>Flasker 0.1 documentation</span></a></h1>
+          <span>Kit 0.1 documentation</span></a></h1>
         <h2 class="heading"><span>Utilities</span></h2>
       </div>
       <div class="topnav">
@@ -113,37 +113,22 @@ call. This paramater sets the initial value.</li>
 <dt id="kit.util.Loggable">
 <em class="property">class </em><tt class="descclassname">kit.util.</tt><tt class="descname">Loggable</tt><a class="reference internal" href="_modules/kit/util.html#Loggable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.Loggable" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convenient logging mixin.</p>
-<p>This implements the main logging methods directly on the class instance. For
-example, this allows something like:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">instance</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Some message.&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>The instance&#8217;s <tt class="docutils literal"><span class="pre">__str__</span></tt> is prepended to the message for easier debugging.</p>
-<p>Note that this class doesn&#8217;t override `` __getattr__`` to preserve exception
-context. Otherwise the line where the inexistent attribute was accessed will
-be lost.</p>
-<dl class="method">
-<dt id="kit.util.Loggable.debug">
-<tt class="descname">debug</tt><big>(</big><em>message</em><big>)</big><a class="reference internal" href="_modules/kit/util.html#Loggable.debug"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.Loggable.debug" title="Permalink to this definition">¶</a></dt>
-<dd><p>Debug level message.</p>
+<dl class="attribute">
+<dt id="kit.util.Loggable.logger">
+<tt class="descname">logger</tt><a class="headerlink" href="#kit.util.Loggable.logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class logger.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kit.util.Loggable.info">
-<tt class="descname">info</tt><big>(</big><em>message</em><big>)</big><a class="reference internal" href="_modules/kit/util.html#Loggable.info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.Loggable.info" title="Permalink to this definition">¶</a></dt>
-<dd><p>Info level message.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="kit.util.Loggable.warn">
-<tt class="descname">warn</tt><big>(</big><em>message</em><big>)</big><a class="reference internal" href="_modules/kit/util.html#Loggable.warn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.Loggable.warn" title="Permalink to this definition">¶</a></dt>
-<dd><p>Warn level message.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="kit.util.Loggable.error">
-<tt class="descname">error</tt><big>(</big><em>message</em><big>)</big><a class="reference internal" href="_modules/kit/util.html#Loggable.error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.Loggable.error" title="Permalink to this definition">¶</a></dt>
-<dd><p>Error level message.</p>
+<dl class="class">
+<dt id="kit.util.CACHE_REFRESH">
+<em class="property">class </em><tt class="descclassname">kit.util.</tt><tt class="descname">CACHE_REFRESH</tt><a class="headerlink" href="#kit.util.CACHE_REFRESH" title="Permalink to this definition">¶</a></dt>
+<dd><p>CACHE_REFRESH(expiration,)</p>
+<dl class="attribute">
+<dt id="kit.util.CACHE_REFRESH.expiration">
+<tt class="descname">expiration</tt><a class="headerlink" href="#kit.util.CACHE_REFRESH.expiration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
 </dd></dl>
 
 </dd></dl>
@@ -152,11 +137,11 @@ be lost.</p>
 <dt id="kit.util.Cacheable">
 <em class="property">class </em><tt class="descclassname">kit.util.</tt><tt class="descname">Cacheable</tt><a class="reference internal" href="_modules/kit/util.html#Cacheable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.Cacheable" title="Permalink to this definition">¶</a></dt>
 <dd><p>Mixin to support cacheable properties.</p>
-<p>Implements a few cache maintenance utilities.</p>
+<p>Implements a few cache maintenance utilities as well.</p>
 <dl class="method">
 <dt id="kit.util.Cacheable.refresh_cache">
 <tt class="descname">refresh_cache</tt><big>(</big><em>names=None</em>, <em>expiration=0</em>, <em>remove_deleted=True</em><big>)</big><a class="reference internal" href="_modules/kit/util.html#Cacheable.refresh_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.Cacheable.refresh_cache" title="Permalink to this definition">¶</a></dt>
-<dd><p>Refresh cached properties.</p>
+<dd><p>Refresh this instance&#8217;s cached properties.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -165,7 +150,7 @@ be lost.</p>
 <li><strong>names</strong> (<em>iterable</em>) &#8211; list of cached property names to refresh. If specified, only
 these will be refreshed.</li>
 <li><strong>expiration</strong> (<em>int</em>) &#8211; if specified, only properties of age greater than this
-value will be refreshed.</li>
+value will be refreshed (seconds).</li>
 <li><strong>remove_deleted</strong> (<em>bool</em>) &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, cached properties that aren&#8217;t defined
 but are still present in the cache will be removed (useful especially for
 persistent caches)</li>
@@ -177,8 +162,8 @@ persistent caches)</li>
 </dd></dl>
 
 <dl class="method">
-<dt id="kit.util.Cacheable.view_cache">
-<tt class="descname">view_cache</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/kit/util.html#Cacheable.view_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.Cacheable.view_cache" title="Permalink to this definition">¶</a></dt>
+<dt id="kit.util.Cacheable.get_cache_ages">
+<tt class="descname">get_cache_ages</tt><big>(</big><big>)</big><a class="headerlink" href="#kit.util.Cacheable.get_cache_ages" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the age of cached values.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -203,10 +188,11 @@ persistent caches)</li>
 </tr>
 </tbody>
 </table>
-<p>A cached property acts similarly to a property but is only computed once and
-then stored in the instance&#8217;s <tt class="docutils literal"><span class="pre">_cache</span></tt> attribute along with the time it was
-last computed. Subsequent calls will read directly from the cached value.  To
-refresh several or all cached properties, use the <tt class="docutils literal"><span class="pre">refresh_cache</span></tt> method.</p>
+<p>A cached property acts similarly to a property but is only computed once
+and then stored in the instance&#8217;s <cite>__cache__</cite> attribute along with the time
+it was last computed. Subsequent calls will read directly from the cached
+value.  To refresh several or all cached properties, use the
+<a class="reference internal" href="#kit.util.Cacheable.refresh_cache" title="kit.util.Cacheable.refresh_cache"><tt class="xref py py-meth docutils literal"><span class="pre">refresh_cache()</span></tt></a> method.</p>
 <p>Should only be used with methods of classes that inherit from <tt class="docutils literal"><span class="pre">Cacheable</span></tt>.</p>
 </dd></dl>
 
@@ -230,7 +216,7 @@ refresh several or all cached properties, use the <tt class="docutils literal"><
 
 <dl class="function">
 <dt id="kit.util.query_to_dataframe">
-<tt class="descclassname">kit.util.</tt><tt class="descname">query_to_dataframe</tt><big>(</big><em>query</em>, <em>connection=None</em>, <em>exclude=None</em>, <em>index=None</em>, <em>columns=None</em>, <em>coerce_float=False</em><big>)</big><a class="reference internal" href="_modules/kit/util.html#query_to_dataframe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.query_to_dataframe" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">kit.util.</tt><tt class="descname">query_to_dataframe</tt><big>(</big><em>query</em>, <em>connection=None</em>, <em>columns=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/kit/util.html#query_to_dataframe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.query_to_dataframe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load a Pandas dataframe from an SQLAlchemy query.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -241,15 +227,11 @@ refresh several or all cached properties, use the <tt class="docutils literal"><
 <li><strong>connection</strong> (<em>sqlalchemy.engine.base.Connection</em>) &#8211; the connection to use to execute the query. By default
 the method will create a new connection using the session&#8217;s bound engine
 and properly close it afterwards.</li>
-<li><strong>exclude</strong> (<em>list</em>) &#8211; a list of column names to exclude from the dataframe</li>
-<li><strong>index</strong> (<em>str</em>) &#8211; the column to use as index</li>
-<li><strong>names</strong> (<em>list</em>) &#8211; a list of column names. If unspecified, the method will use
+<li><strong>columns</strong> (<em>list</em>) &#8211; a list of column names. If unspecified, the method will use
 the table&#8217;s keys from the query&#8217;s metadata. If the passed data do not have
 named associated with them, this argument provides names for the columns.
 Otherwise this argument indicates the order of the columns in the result
 (any names not found in the data will become all-NA columns)</li>
-<li><strong>coerce_float</strong> (<em>bool</em>) &#8211; Attempt to convert values to non-string, non-numeric
-objects (like decimal.Decimal) to floating point.</li>
 </ul>
 </td>
 </tr>
@@ -258,6 +240,16 @@ objects (like decimal.Decimal) to floating point.</li>
 </tr>
 </tbody>
 </table>
+<p>Any keyword arguments will be forwarded to <cite>pandas.DataFrame.from_records</cite>.
+The following are available:</p>
+<blockquote>
+<div><ul class="simple">
+<li>exclude: a list of column names to exclude from the dataframe</li>
+<li>index: the column to use as index</li>
+<li>coerce_float: Attempt to convert values to non-string, non-numeric
+objects (like decimal.Decimal) to floating point.</li>
+</ul>
+</div></blockquote>
 </dd></dl>
 
 <dl class="function">
@@ -364,8 +356,8 @@ default to the class&#8217; name uncamelcased.</p>
 <dl class="attribute">
 <dt id="kit.util.View.methods">
 <tt class="descname">methods</tt><em class="property"> = None</em><a class="headerlink" href="#kit.util.View.methods" title="Permalink to this definition">¶</a></dt>
-<dd><p>If specified, only these methods will have their routes registered. This
-can be useful if subclassing views.</p>
+<dd><p>If specified, only these methods will be allowed. This can be useful if
+subclassing views to override the rule methods.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -373,12 +365,12 @@ can be useful if subclassing views.</p>
 <tt class="descname">rules</tt><em class="property"> = None</em><a class="headerlink" href="#kit.util.View.rules" title="Permalink to this definition">¶</a></dt>
 <dd><p>A dictionary with the rules to create. Each key is the url rule and the
 corresponding value a list of methods to accept. E.g.
-<tt class="docutils literal"><span class="pre">{'/index':</span> <span class="pre">['GET'],</span> <span class="pre">'/index/&lt;page&gt;':</span> <span class="pre">['GET',</span> <span class="pre">'PUT']}</span></tt>.</p>
+<tt class="docutils literal"><span class="pre">{'/index/':</span> <span class="pre">['GET'],</span> <span class="pre">'/index/&lt;page&gt;':</span> <span class="pre">['GET',</span> <span class="pre">'PUT']}</span></tt>.</p>
 </dd></dl>
 
 <dl class="classmethod">
 <dt id="kit.util.View.register_view">
-<em class="property">classmethod </em><tt class="descname">register_view</tt><big>(</big><em>app</em><big>)</big><a class="reference internal" href="_modules/kit/util.html#View.register_view"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.View.register_view" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><tt class="descname">register_view</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/kit/util.html#View.register_view"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.util.View.register_view" title="Permalink to this definition">¶</a></dt>
 <dd><p>Attach view to app or blueprint.</p>
 <p>Called by the metaclass when the class is created.</p>
 </dd></dl>

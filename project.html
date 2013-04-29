@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Overview &mdash; Flasker 0.1 documentation</title>
+    <title>Overview &mdash; Kit 0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,13 +25,13 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/theme_extras.js"></script>
-    <link rel="top" title="Flasker 0.1 documentation" href="index.html" />
+    <link rel="top" title="Kit 0.1 documentation" href="index.html" />
     <link rel="next" title="Extensions" href="extensions.html" />
     <link rel="prev" title="Kit" href="index.html" /> 
   </head>
   <body>
       <div class="header"><h1 class="heading"><a href="index.html">
-          <span>Flasker 0.1 documentation</span></a></h1>
+          <span>Kit 0.1 documentation</span></a></h1>
         <h2 class="heading"><span>Overview</span></h2>
       </div>
       <div class="topnav">
@@ -152,6 +152,20 @@ will have respective hostnames:</p>
 <dt id="kit.base.Kit.get_celery_app">
 <tt class="descname">get_celery_app</tt><big>(</big><em>module_name</em><big>)</big><a class="reference internal" href="_modules/kit/base.html#Kit.get_celery_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.base.Kit.get_celery_app" title="Permalink to this definition">¶</a></dt>
 <dd><p>Celery application getter.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="kit.base.Kit.get_session">
+<tt class="descname">get_session</tt><big>(</big><em>session_name</em><big>)</big><a class="reference internal" href="_modules/kit/base.html#Kit.get_session"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.base.Kit.get_session" title="Permalink to this definition">¶</a></dt>
+<dd><p>SQLAlchemy session getter.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="kit.base.Kit.on_teardown">
+<tt class="descname">on_teardown</tt><big>(</big><em>app</em>, <em>task=None</em><big>)</big><a class="headerlink" href="#kit.base.Kit.on_teardown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback on request / task teardown.</p>
+<p>Default implementation calls the teardown handler on all the defined
+sessions.</p>
 </dd></dl>
 
 </dd></dl>

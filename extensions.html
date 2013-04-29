@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Extensions &mdash; Flasker 0.1 documentation</title>
+    <title>Extensions &mdash; Kit 0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,13 +25,13 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/theme_extras.js"></script>
-    <link rel="top" title="Flasker 0.1 documentation" href="index.html" />
+    <link rel="top" title="Kit 0.1 documentation" href="index.html" />
     <link rel="next" title="Utilities" href="util.html" />
     <link rel="prev" title="Overview" href="project.html" /> 
   </head>
   <body>
       <div class="header"><h1 class="heading"><a href="index.html">
-          <span>Flasker 0.1 documentation</span></a></h1>
+          <span>Kit 0.1 documentation</span></a></h1>
         <h2 class="heading"><span>Extensions</span></h2>
       </div>
       <div class="topnav">
@@ -159,14 +159,14 @@ Out[2]: 281992L</pre>
 
 <dl class="method">
 <dt id="kit.ext.orm.Query.random">
-<tt class="descname">random</tt><big>(</big><em>n=1</em>, <em>dialect=None</em><big>)</big><a class="reference internal" href="_modules/kit/ext/orm.html#Query.random"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.ext.orm.Query.random" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns n random model instances.</p>
+<tt class="descname">random</tt><big>(</big><em>n_instances=1</em>, <em>dialect=None</em><big>)</big><a class="reference internal" href="_modules/kit/ext/orm.html#Query.random"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.ext.orm.Query.random" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns random model instances.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>n</strong> (<em>int</em>) &#8211; the number of instances to return</li>
+<li><strong>n_instances</strong> (<em>int</em>) &#8211; the number of instances to return</li>
 <li><strong>dialect</strong> (<em>str</em>) &#8211; the engine dialect (the implementation of random differs
 between MySQL and SQLite among others). By default will look up on the
 query for the dialect used. If no random function is available for the 
@@ -190,8 +190,8 @@ generate random offsets.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lazy</strong> (<em>bool</em>) &#8211; whether or not to load the underlying objects. If set to
-<tt class="docutils literal"><span class="pre">False</span></tt>, the dataframe will be populated with the contents of
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>load_objects</strong> (<em>bool</em>) &#8211; whether or not to load the underlying objects. If set
+to <tt class="docutils literal"><span class="pre">False</span></tt>, the dataframe will be populated with the contents of
 <tt class="docutils literal"><span class="pre">to_json</span></tt> of the models, otherwise it will only contain the columns
 existing in the database (default behavior). If lazy is <tt class="docutils literal"><span class="pre">True</span></tt>, this
 method also accepts the same keyword arguments as
@@ -226,7 +226,7 @@ method also accepts the same keyword arguments as
 <dl class="class">
 <dt id="kit.ext.orm.Model">
 <em class="property">class </em><tt class="descclassname">kit.ext.orm.</tt><tt class="descname">Model</tt><a class="reference internal" href="_modules/kit/ext/orm.html#Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.ext.orm.Model" title="Permalink to this definition">¶</a></dt>
-<dd><p>The custom SQLAlchemy base.</p>
+<dd><p>The custom model class.</p>
 <p>Along with the methods described below, the following conveniences are
 provided:</p>
 <ul class="simple">
@@ -235,9 +235,8 @@ extra s appended for good measure). To disable this behavior, simply
 override the <tt class="docutils literal"><span class="pre">__tablename__</span></tt> argument (setting it to <tt class="docutils literal"><span class="pre">None</span></tt> for
 single table inheritance).</li>
 <li>Default implementation of <tt class="docutils literal"><span class="pre">__repr__</span></tt> with model class and primary keys</li>
-<li>Caching (inherited from <a class="reference internal" href="util.html#kit.util.Cacheable" title="kit.util.Cacheable"><tt class="xref py py-class docutils literal"><span class="pre">kit.util.Cacheable</span></tt></a>). The cache is
-persistent by default (<tt class="docutils literal"><span class="pre">_cache</span></tt> is actually a
-<a class="reference internal" href="util.html#kit.util.JSONEncodedDict" title="kit.util.JSONEncodedDict"><tt class="xref py py-class docutils literal"><span class="pre">kit.util.JSONEncodedDict</span></tt></a> column).</li>
+<li>Caching (inherited from <a class="reference internal" href="util.html#kit.util.Cacheable" title="kit.util.Cacheable"><tt class="xref py py-class docutils literal"><span class="pre">kit.util.Cacheable</span></tt></a>). The cache is not
+persistent by default.</li>
 <li>Logging (inherited from <a class="reference internal" href="util.html#kit.util.Loggable" title="kit.util.Loggable"><tt class="xref py py-class docutils literal"><span class="pre">kit.util.Loggable</span></tt></a>)</li>
 </ul>
 <dl class="method">
@@ -343,9 +342,51 @@ if found and <tt class="docutils literal"><span class="pre">None</span></tt> oth
 
 <dl class="class">
 <dt id="kit.ext.orm.ORM">
-<em class="property">class </em><tt class="descclassname">kit.ext.orm.</tt><tt class="descname">ORM</tt><big>(</big><em>session</em>, <em>query_class=&lt;class 'kit.ext.orm.Query'&gt;</em>, <em>persistent_cache=False</em><big>)</big><a class="reference internal" href="_modules/kit/ext/orm.html#ORM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.ext.orm.ORM" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">kit.ext.orm.</tt><tt class="descname">ORM</tt><big>(</big><em>session</em>, <em>model_class=None</em>, <em>query_class=&lt;class 'kit.ext.orm.Query'&gt;</em>, <em>persistent_cache=False</em><big>)</big><a class="reference internal" href="_modules/kit/ext/orm.html#ORM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.ext.orm.ORM" title="Permalink to this definition">¶</a></dt>
 <dd><p>The main ORM object.</p>
-<p>The session will be reconfigured to use <tt class="docutils literal"><span class="pre">query_class</span></tt>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>session</strong> (<cite>sqlalchemy.orm.scoped.scoped_session</cite>) &#8211; the session to attach the ORM instance to.</li>
+<li><strong>model_class</strong> &#8211; the base model class used by all models in this
+extension.</li>
+<li><strong>model_class</strong> &#8211; <cite>kit.ext.orm.Model</cite></li>
+<li><strong>query_class</strong> &#8211; the base query class used by all queries made on the
+session. The session will be reconfigured in place.</li>
+<li><strong>query_class</strong> &#8211; <cite>sqlalchemy.orm.Query</cite></li>
+<li><strong>persistent_cache</strong> (<em>bool</em>) &#8211; whether or not to store each model&#8217;s cache in the
+database. If so, a text column storing the JSON encoded dictionary will
+be created.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="kit.ext.orm.ORM.Model">
+<tt class="descname">Model</tt><em class="property"> = None</em><a class="headerlink" href="#kit.ext.orm.ORM.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>The declarative base generated from the <cite>model_class</cite>. All models in this
+ORM extension should inherit from this class.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="kit.ext.orm.ORM.backref">
+<tt class="descname">backref</tt><em class="property"> = None</em><a class="headerlink" href="#kit.ext.orm.ORM.backref" title="Permalink to this definition">¶</a></dt>
+<dd><p>The backref factory function using <cite>query_class</cite>. If you use
+<cite>sqlalchemy.backref</cite> instead, your dynamic queries will not subclass
+<cite>query_class</cite>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="kit.ext.orm.ORM.relationship">
+<tt class="descname">relationship</tt><em class="property"> = None</em><a class="headerlink" href="#kit.ext.orm.ORM.relationship" title="Permalink to this definition">¶</a></dt>
+<dd><p>The relationship factory function using <cite>query_class</cite>. If you use
+<cite>sqlalchemy.relationship</cite> instead, your dynamic queries will not subclass
+<cite>query_class</cite>.</p>
+</dd></dl>
+
 <dl class="method">
 <dt id="kit.ext.orm.ORM.get_all_models">
 <tt class="descname">get_all_models</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/kit/ext/orm.html#ORM.get_all_models"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.ext.orm.ORM.get_all_models" title="Permalink to this definition">¶</a></dt>
@@ -356,15 +397,23 @@ if found and <tt class="docutils literal"><span class="pre">None</span></tt> oth
 <dt id="kit.ext.orm.ORM.create_all">
 <tt class="descname">create_all</tt><big>(</big><em>checkfirst=True</em><big>)</big><a class="reference internal" href="_modules/kit/ext/orm.html#ORM.create_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kit.ext.orm.ORM.create_all" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create tables for all mapped models.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>checkfirst</strong> (<em>bool</em>) &#8211; whether or not to check if tables already exist before
+creating them.</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
 
 </div>
-<div class="section" id="api">
-<h2>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h2>
-<p><em>under development</em></p>
-<span class="target" id="module-kit.ext.api"></span><p>API Extension (requires the ORM extension).</p>
+<div class="section" id="module-kit.ext.api">
+<span id="api"></span><h2>API<a class="headerlink" href="#module-kit.ext.api" title="Permalink to this headline">¶</a></h2>
+<p>API Extension (requires the ORM extension).</p>
 <p>This extension provides a base class to create API views.</p>
 <p>Setup is as follows:</p>
 <div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">kit</span> <span class="kn">import</span> <span class="n">current_project</span> <span class="k">as</span> <span class="n">pj</span>
