@@ -4,22 +4,36 @@ Kit
 A configurable, lightweight framework that integrates Flask_, SQLAlchemy_, and
 Celery_.
 
-* Consolidate your configuration options into one YAML file:
+* Configure all your applications from one file:
 
   .. code:: yaml
 
-    flask:
-      name: 'app'
-      config:
-        debug: yes
-        testing: yes
-    celery:
-      config:
-        broker_url: 'redis://'
-    sqlalchemy:
-      url: 'mysql://...'
-      engine:
-        pool_recycle: 3600
+    flasks:
+      - modules: ['app']
+      - modules: ['api.main', 'api.other']
+        config:
+          debug: yes
+          testing: yes
+    celeries:
+      - modules: ['tasks']
+        config:
+          broker_url: 'redis://'
+    sessions:
+      db:
+        url: 'mysql://...'
+        engine:
+          pool_recycle: 3600
+
+* No more complicated import schemes:
+
+  .. code:: python
+
+    from kit import Flask
+
+    app = Flask(__name__)
+
+  ``kit.Flask`` (and ``kit.Celery``) will always return the correct (and
+  configured) application corresponding to the module.
 
 * Run your project from the command line:
 
@@ -69,55 +83,23 @@ Installation
 
    $ pip install kit
 
-If you don't already have Flask, Celery, and SQLAlchemy installed you might
-want:
-
-.. code:: bash
-
-   $ pip install flask celery sqlalchemy kit
-
 
 Quickstart
 ----------
 
-There are two ways you can use Kit.
+.. code:: yaml
 
-* By specifying a configuration path directly:
+  modules: ['app.models', 'app.tasks']
+  ...
 
-  .. code:: python
+Inside each of these modules, any ``Kit`` instantiation without a path
+argument will return a copy of the same kit. You can then use the command
+line tool to run different components of your project.
 
-    from kit import Kit
-
-    kit = Kit('/path/to/conf.yaml')
-
-    flask_app = kit.flask     # the configured Flask application
-    celery_app = kit.celery   # the configured Celery application
-    session = kit.session     # the configured SQLAlchemy scoped session maker
-
-    # Here we will only use flask_app
-
-    @flask_app.route('/')
-    def index():
-      return 'Hello world!'
-
-    if __name__ == '__main__':
-      flask_app.run()
-
-* By using the ``modules`` configuration option:
-
-  .. code:: yaml
-
-    modules: ['app.models', 'app.tasks']
-    ...
-
-  Inside each of these modules, any ``Kit`` instantiation without a path
-  argument will return a copy of the same kit. You can then use the command
-  line tool to run different components of your project.
-
-  Alternatively, you can pass ``load_modules=True`` when instantiating the
-  ``Kit``: ``kit = Kit('/path/to/conf.yaml', load_modules=True)``.  This can be
-  useful to to run the application on a different server or load data in an
-  IPython notebook.
+Alternatively, you can pass ``load_modules=True`` when instantiating the
+``Kit``: ``kit = Kit('/path/to/conf.yaml', load_modules=True)``.  This can be
+useful to to run the application on a different server or load data in an
+IPython notebook.
 
 You can also combine both these methods for more complex results.
 

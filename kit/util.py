@@ -119,27 +119,13 @@ class Loggable(object):
 
   __logger__ = None
 
-  def _logger(self, message, loglevel):
+  @property
+  def logger(self):
     if not self.__logger__:
       self.__logger__ = getLogger(self.__module__)
+    return self.__logger__
     action = getattr(self.__logger__, loglevel)
     return action('%s :: %s' % (self, message))
-
-  def debug(self, message):
-    """Debug level message."""
-    return self._logger(message, 'debug')
-
-  def info(self, message):
-    """Info level message."""
-    return self._logger(message, 'info')
-
-  def warn(self, message):
-    """Warn level message."""
-    return self._logger(message, 'warn')
-
-  def error(self, message):
-    """Error level message."""
-    return self._logger(message, 'error')
 
 
 class Cacheable(object):
