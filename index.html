@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Kit &mdash; Kit 0.1 documentation</title>
+    <title>Kit &mdash; Kit 0.2 documentation</title>
     
     <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -15,7 +15,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1',
+        VERSION:     '0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,12 +25,12 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/theme_extras.js"></script>
-    <link rel="top" title="Kit 0.1 documentation" href="#" />
+    <link rel="top" title="Kit 0.2 documentation" href="#" />
     <link rel="next" title="API" href="api.html" /> 
   </head>
   <body>
       <div class="header"><h1 class="heading"><a href="#">
-          <span>Kit 0.1 documentation</span></a></h1>
+          <span>Kit 0.2 documentation</span></a></h1>
         <h2 class="heading"><span>Kit</span></h2>
       </div>
       <div class="topnav">
@@ -51,7 +51,7 @@
 <a class="reference external" href="http://docs.celeryproject.org/en/latest/index.html">Celery</a>.</p>
 <blockquote>
 <div><ul class="simple">
-<li>Configure all your applications and sessions from one file (cf
+<li>Configure all your applications and sessions from one file (cf.
 <a class="reference internal" href="#quickstart">Quickstart</a> for an example).</li>
 <li>Run your project from the command line: Start the <a class="reference external" href="http://werkzeug.pocoo.org/">Werkzeug</a> webserver,
 start Celery workers, start a shell in your project&#8217;s context (using
@@ -151,6 +151,19 @@ or task (defaults to <tt class="docutils literal"><span class="pre">False</span>
 <p>Note that there can only be one application of each type (Flask or Celery) in
 a given module. This shouldn&#8217;t be too restrictive as it is arguably bad
 practice to mix applications in a same module.</p>
+<p>You can manage your project using the <tt class="docutils literal"><span class="pre">kit</span></tt> command line too. The following
+commands are available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">kit</span> <span class="pre">shell</span></tt>: to start a shell in your project&#8217;s environment (all
+applications and sessions will have been created and set up beforehand).</li>
+<li><tt class="docutils literal"><span class="pre">kit</span> <span class="pre">server</span></tt>: to run the Werkzeug server for one of your Flask applications
+(if several applications are found, you will be prompted to choose one).</li>
+<li><tt class="docutils literal"><span class="pre">kit</span> <span class="pre">worker</span></tt>: to start a Celery worker (if more than one Celery application
+exists in your project, you will be prompted to choose one).</li>
+<li><tt class="docutils literal"><span class="pre">kit</span> <span class="pre">flower</span></tt>: to start the Flower worker monitor.</li>
+</ul>
+<p>There are options available for each command. To display these or see general
+command usage, you can view the command tool help: <tt class="docutils literal"><span class="pre">kit</span> <span class="pre">-h</span></tt>.</p>
 </div>
 <div class="section" id="next-steps">
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
