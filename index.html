@@ -26,7 +26,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/theme_extras.js"></script>
     <link rel="top" title="Kit 0.1 documentation" href="#" />
-    <link rel="next" title="Quickstart" href="quickstart.html" /> 
+    <link rel="next" title="&lt;no title&gt;" href="api.html" /> 
   </head>
   <body>
       <div class="header"><h1 class="heading"><a href="#">
@@ -38,7 +38,7 @@
         <p>
         <a class="uplink" href="#">Contents</a>
         &#160;&#160;::&#160;&#160;
-        <a href="quickstart.html">Quickstart</a>&#160;&#160;»
+        <a href="api.html">&lt;no title&gt;</a>&#160;&#160;»
         </p>
 
       </div>
@@ -51,8 +51,8 @@
 <a class="reference external" href="http://docs.celeryproject.org/en/latest/index.html">Celery</a>.</p>
 <blockquote>
 <div><ul class="simple">
-<li>Configure all your applications and sessions from one file (cf <a class="reference internal" href="#sample-configuration-file">Sample
-configuration file</a> for an example).</li>
+<li>Configure all your applications and sessions from one file (cf
+<a class="reference internal" href="#quickstart">Quickstart</a> for an example).</li>
 <li>Run your project from the command line: Start the <a class="reference external" href="http://werkzeug.pocoo.org/">Werkzeug</a> webserver,
 start Celery workers, start a shell in your project&#8217;s context (using
 <a class="reference external" href="http://ipython.org/">IPython</a> if available), and start the <a class="reference external" href="https://github.com/mher/flower">Flower</a> monitor using the <tt class="docutils literal"><span class="pre">kit</span></tt>
@@ -73,36 +73,98 @@ full documentation on <a class="reference external" href="http://mtth.github.com
 <div class="code bash highlight-python"><pre>$ pip install kit</pre>
 </div>
 </div>
-<div class="section" id="sample-configuration-file">
-<h2>Sample configuration file<a class="headerlink" href="#sample-configuration-file" title="Permalink to this headline">¶</a></h2>
-<div class="code yaml highlight-python"><pre>flasks:
-  - modules: ['app', 'app.views']
+<div class="section" id="quickstart">
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
+<p>Sample configuration file:</p>
+<div class="code yaml highlight-python"><pre>root: '..'
+modules: ['my_project.startup']
+flasks:
+  - modules: ['my_project.app', 'my_project.app.views']
+    kwargs:
+      static_folder: 'st'
     config:
       debug: yes
       testing: yes
-  - modules: ['api']
+  - modules: ['my_project.api']
 celeries:
-  - modules: ['tasks']
+  - modules: ['my_project.tasks']
     config:
       broker_url: 'redis://'
 sessions:
   db:
     url: 'mysql://...'
     engine:
-      pool_recycle: 3600</pre>
+      pool_recycle: 3600
+    options:
+      commit: yes
+      raise: no</pre>
 </div>
+<p>The following configuration options are available:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">root</span></tt>: project root, will be added to your python path. Useful if your
+configuration files are in a subdirectory of your project (defaults to
+<tt class="docutils literal"><span class="pre">'.'</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">modules</span></tt>: list of modules to import (and that don&#8217;t belong to an
+application).</li>
+<li><tt class="docutils literal"><span class="pre">flasks</span></tt>: list of Flask application settings. Each item has the following
+keys available:<ul>
+<li><tt class="docutils literal"><span class="pre">modules</span></tt>: list of modules where this application is used. Inside each
+of these modules, you can use <tt class="docutils literal"><span class="pre">kit.Flask</span></tt> to recover this
+configured application. The application&#8217;s name will be automatically
+generated from this list of modules.</li>
+<li><tt class="docutils literal"><span class="pre">kwargs</span></tt>: dictionary of keyword arguments passed to the <tt class="docutils literal"><span class="pre">flask.Flask</span></tt>
+constructor.</li>
+<li><tt class="docutils literal"><span class="pre">config</span></tt>: dictionary of configuration options used to configure the
+application. Names are case insensitive so no need to uppercase them.</li>
+</ul>
+</li>
+<li><tt class="docutils literal"><span class="pre">celeries</span></tt>: list of Celery application settings. Each item has the
+following keys available:<ul>
+<li><tt class="docutils literal"><span class="pre">modules</span></tt>: list of modules where this application is used. Inside each
+of these modules, you can use <tt class="docutils literal"><span class="pre">kit.Celery</span></tt> to recover this
+configured application. The application&#8217;s name will be automatically
+generated from this list of modules.</li>
+<li><tt class="docutils literal"><span class="pre">kwargs</span></tt>: dictionary of keyword arguments passed to the
+<tt class="docutils literal"><span class="pre">celery.Celery</span></tt> constructor.</li>
+<li><tt class="docutils literal"><span class="pre">config</span></tt>: dictionary of configuration options used to configure the
+application. Names are case insensitive so no need to uppercase them.</li>
+</ul>
+</li>
+<li><tt class="docutils literal"><span class="pre">sessions</span></tt>: dictionary of sessions. The key is the session name (used
+as argument to <tt class="docutils literal"><span class="pre">kit.get_session</span></tt>). Each item has the following
+settings available:<ul>
+<li><tt class="docutils literal"><span class="pre">url</span></tt>: the database url (defaults to <tt class="docutils literal"><span class="pre">sqlite://</span></tt>)</li>
+<li><tt class="docutils literal"><span class="pre">kwargs</span></tt>: dictionary of keyword arguments to pass to
+<tt class="docutils literal"><span class="pre">sqlalchemy.orm.sessionmaker</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">engine</span></tt>: dictionary of keyword arguments to pass to the bound engine&#8217;s
+constructor.</li>
+<li><tt class="docutils literal"><span class="pre">options</span></tt>: there are currently two options available:<ul>
+<li><tt class="docutils literal"><span class="pre">commit</span></tt>: whether or not to commit the session after each request
+or task (defaults to <tt class="docutils literal"><span class="pre">False</span></tt>).</li>
+<li><tt class="docutils literal"><span class="pre">raise</span></tt>: whether or not to reraise any errors found during commit
+(defaults to <tt class="docutils literal"><span class="pre">True</span></tt>).</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>Note that there can only be one application of each type (Flask or Celery) in
+a given module. This shouldn&#8217;t be too restrictive as it is arguably bad
+practice to mix applications in a same module.</p>
+</div>
+<div class="section" id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Permalink to this headline">¶</a></h2>
+<p>To instantiate an application outside of the command line tool (for example
+to run it on a different WSGI server), you can specify a <tt class="docutils literal"><span class="pre">path</span></tt> argument
+to the <tt class="docutils literal"><span class="pre">kit.Flask</span></tt> function. This will load the kit before returning
+the application. The <tt class="docutils literal"><span class="pre">path</span></tt> argument is available on all other functions as
+well (for example to allow model access from an IPython notebook).</p>
 </div>
 </div>
 <div class="section" id="contents">
 <h1>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#configuration-options">Configuration options</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#command-line-tool">Command line tool</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#next-steps">Next steps</a></li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="extensions.html">Extensions</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="extensions.html#module-kit.ext.orm">ORM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="extensions.html#module-kit.ext.api">API</a></li>
@@ -128,7 +190,7 @@ sessions:
         <p>
         <a class="uplink" href="#">Contents</a>
         &#160;&#160;::&#160;&#160;
-        <a href="quickstart.html">Quickstart</a>&#160;&#160;»
+        <a href="api.html">&lt;no title&gt;</a>&#160;&#160;»
         </p>
 
       </div>
