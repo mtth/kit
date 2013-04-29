@@ -49,14 +49,37 @@
 <h1>Kit<a class="headerlink" href="#kit" title="Permalink to this headline">¶</a></h1>
 <p>A configurable, lightweight framework that integrates <a class="reference external" href="http://flask.pocoo.org/docs/api/">Flask</a>, <a class="reference external" href="http://docs.sqlalchemy.org/en/rel_0_7/orm/tutorial.html">SQLAlchemy</a>, and
 <a class="reference external" href="http://docs.celeryproject.org/en/latest/index.html">Celery</a>.</p>
-<ul>
-<li><p class="first">Configure all your applications from one file:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Configure all your applications and sessions from one file (cf <a class="reference internal" href="#sample-configuration-file">Sample
+configuration file</a> for an example).</li>
+<li>Run your project from the command line: Start the <a class="reference external" href="http://werkzeug.pocoo.org/">Werkzeug</a> webserver,
+start Celery workers, start a shell in your project&#8217;s context (using
+<a class="reference external" href="http://ipython.org/">IPython</a> if available), and start the <a class="reference external" href="https://github.com/mher/flower">Flower</a> monitor tool.</li>
+<li>No more complicated and sometimes circular, import schemes: <tt class="docutils literal"><span class="pre">kit.Flask</span></tt>
+and <tt class="docutils literal"><span class="pre">kit.Celery</span></tt> always return the correct (and configured) application
+corresponding to the module.</li>
+<li>Kit makes sure database connections are correctly handled (e.g. removed
+after each request and task) under the hood. You can configure this
+behavior via the <tt class="docutils literal"><span class="pre">kit.teardown_handler</span></tt> decorator.</li>
+</ul>
+</div></blockquote>
+<p>Check out the <tt class="docutils literal"><span class="pre">examples/</span></tt> folder for a few sample applications or read the
+full documentation on <a class="reference external" href="http://mtth.github.com/kit">GitHub pages</a>.</p>
+<p><em>Kit is under development.</em></p>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<div class="code bash highlight-python"><pre>$ pip install kit</pre>
+</div>
+</div>
+<div class="section" id="sample-configuration-file">
+<h2>Sample configuration file<a class="headerlink" href="#sample-configuration-file" title="Permalink to this headline">¶</a></h2>
 <div class="code yaml highlight-python"><pre>flasks:
-  - modules: ['app']
-  - modules: ['api.main', 'api.other']
+  - modules: ['app', 'app.views']
     config:
       debug: yes
       testing: yes
+  - modules: ['api']
 celeries:
   - modules: ['tasks']
     config:
@@ -67,66 +90,6 @@ sessions:
     engine:
       pool_recycle: 3600</pre>
 </div>
-</li>
-<li><p class="first">No more complicated import schemes:</p>
-<div class="code python highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">kit</span> <span class="kn">import</span> <span class="n">Flask</span>
-
-<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
-</pre></div>
-</div>
-<p><tt class="docutils literal"><span class="pre">kit.Flask</span></tt> (and <tt class="docutils literal"><span class="pre">kit.Celery</span></tt>) will always return the correct (and
-configured) application corresponding to the module.</p>
-</li>
-<li><p class="first">Run your project from the command line:</p>
-<ul>
-<li><p class="first">Start the <a class="reference external" href="http://werkzeug.pocoo.org/">Werkzeug</a> webserver:</p>
-<div class="code bash highlight-python"><pre>$ kit server -d -p 5050 conf.yaml
- * Running on http://0.0.0.0:5050/
- * Restarting with reloader</pre>
-</div>
-</li>
-<li><p class="first">Start a shell in your project&#8217;s context (using <a class="reference external" href="http://ipython.org/">IPython</a> if available):</p>
-<div class="code bash highlight-python"><pre>$ kit shell conf.yaml
-...
-In [1]: kit.session
-Out[1]: &lt;sqlalchemy.orm.scoping.scoped_session at 0x10b2dccd0&gt;
-In [2]:</pre>
-</div>
-</li>
-<li><p class="first">Start Celery workers:</p>
-<div class="code bash highlight-python"><pre>$ kit worker conf.yaml</pre>
-</div>
-</li>
-<li><p class="first">Start the <a class="reference external" href="https://github.com/mher/flower">Flower</a> monitor tool:</p>
-<div class="code bash highlight-python"><pre>$ kit flower conf.yaml</pre>
-</div>
-</li>
-</ul>
-</li>
-</ul>
-<p>Kit handles all the Flask, Celery, and SQLAlchemy setup. It only creates those
-you need for your application and makes sure database connections are correctly
-handled under the hood. Check out the <tt class="docutils literal"><span class="pre">examples/</span></tt> folder for a few sample
-applications.</p>
-<p><em>Kit is under development.</em></p>
-<div class="section" id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<div class="code bash highlight-python"><pre>$ pip install kit</pre>
-</div>
-</div>
-<div class="section" id="quickstart">
-<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
-<div class="code yaml highlight-python"><pre>modules: ['app.models', 'app.tasks']
-...</pre>
-</div>
-<p>Inside each of these modules, any <tt class="docutils literal"><span class="pre">Kit</span></tt> instantiation without a path
-argument will return a copy of the same kit. You can then use the command
-line tool to run different components of your project.</p>
-<p>Alternatively, you can pass <tt class="docutils literal"><span class="pre">load_modules=True</span></tt> when instantiating the
-<tt class="docutils literal"><span class="pre">Kit</span></tt>: <tt class="docutils literal"><span class="pre">kit</span> <span class="pre">=</span> <span class="pre">Kit('/path/to/conf.yaml',</span> <span class="pre">load_modules=True)</span></tt>.  This can be
-useful to to run the application on a different server or load data in an
-IPython notebook.</p>
-<p>You can also combine both these methods for more complex results.</p>
 </div>
 </div>
 <div class="section" id="contents">
