@@ -4,37 +4,37 @@ Kit
 A configurable, lightweight framework that integrates Flask_, SQLAlchemy_, and
 Celery_.
 
-* Configure all your applications from one file:
+  * Configure all your applications and sessions from one file:
 
-  .. code:: yaml
+    .. code:: yaml
 
-    flasks:
-      - modules: ['app', 'app.views']
-        config:
-          debug: yes
-          testing: yes
-      - modules: ['api']
-    celeries:
-      - modules: ['tasks']
-        config:
-          broker_url: 'redis://'
-    sessions:
-      db:
-        url: 'mysql://...'
-        engine:
-          pool_recycle: 3600
+      flasks:
+        - modules: ['app', 'app.views']
+          config:
+            debug: yes
+            testing: yes
+        - modules: ['api']
+      celeries:
+        - modules: ['tasks']
+          config:
+            broker_url: 'redis://'
+      sessions:
+        db:
+          url: 'mysql://...'
+          engine:
+            pool_recycle: 3600
 
-* Run your project from the command line: Start the Werkzeug_ webserver, start
-  Celery workers, start a shell in your project's context (using IPython_ if
-  available), and start the Flower_ monitor tool
+  * Run your project from the command line: Start the Werkzeug_ webserver,
+    start Celery workers, start a shell in your project's context (using
+    IPython_ if available), and start the Flower_ monitor tool.
 
-* No more complicated and sometimes circular, import schemes: ``kit.Flask`` and
-  ``kit.Celery`` always return the correct (and configured) application
-  corresponding to the module.
+  * No more complicated and sometimes circular, import schemes: ``kit.Flask``
+    and ``kit.Celery`` always return the correct (and configured) application
+    corresponding to the module.
 
-* Kit makes sure database connections are correctly handled (e.g. removed after
-  each request and task) under the hood. You can configure this behavior via
-  the ``kit.teardown_handler`` decorator.
+  * Kit makes sure database connections are correctly handled (e.g. removed
+    after each request and task) under the hood. You can configure this
+    behavior via the ``kit.teardown_handler`` decorator.
 
 Check out the ``examples/`` folder for a few sample applications or read the
 full documentation on `GitHub pages`_.
