@@ -8,10 +8,11 @@ Setup is straightforward:
 
 .. code:: python
 
-  from kit import current_project as pj
+  from kit import get_session
   from kit.ext import ORM
 
-  orm = ORM(pj)
+  session = get_session('your_session_name')
+  orm = ORM(session)
 
   Model = orm.Model                 # the customized base
   relationship = orm.relationship   # the customized relationship
@@ -45,7 +46,7 @@ Models can be queried in several ways:
 .. code:: python
 
   # the two following queries are equivalent
-  query = pj.session.query(Cat)
+  query = session.query(Cat)
   query = Cat.q
 
 Both queries above are instances of :class:`kit.ext.orm.Query`, which are
