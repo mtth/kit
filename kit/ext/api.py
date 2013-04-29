@@ -8,10 +8,11 @@ Setup is as follows:
 
 .. code:: python
 
-  from kit import current_project as pj
+  from kit import Flask
   from kit.ext import API
 
-  api = API(pj)
+  app = Flask(__name__)
+  api = API(app)
 
   View = api.View   # the base API view
 
@@ -42,6 +43,9 @@ Another slighly more complex example:
 
     methods = ['GET', 'POST']
     subviews = ['cats']
+
+  # we register the api views
+  api.register(app)
 
 This view will create the following hooks:
 
