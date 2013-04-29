@@ -4,25 +4,8 @@ Kit
 A configurable, lightweight framework that integrates Flask_, SQLAlchemy_, and
 Celery_.
 
-  * Configure all your applications and sessions from one file:
-
-    .. code:: yaml
-
-      flasks:
-        - modules: ['app', 'app.views']
-          config:
-            debug: yes
-            testing: yes
-        - modules: ['api']
-      celeries:
-        - modules: ['tasks']
-          config:
-            broker_url: 'redis://'
-      sessions:
-        db:
-          url: 'mysql://...'
-          engine:
-            pool_recycle: 3600
+  * Configure all your applications and sessions from one file (cf `Sample
+    configuration file`_ for an example).
 
   * Run your project from the command line: Start the Werkzeug_ webserver,
     start Celery workers, start a shell in your project's context (using
@@ -48,6 +31,28 @@ Installation
 .. code:: bash
 
    $ pip install kit
+
+
+Sample configuration file
+-------------------------
+
+.. code:: yaml
+
+  flasks:
+    - modules: ['app', 'app.views']
+      config:
+        debug: yes
+        testing: yes
+    - modules: ['api']
+  celeries:
+    - modules: ['tasks']
+      config:
+        broker_url: 'redis://'
+  sessions:
+    db:
+      url: 'mysql://...'
+      engine:
+        pool_recycle: 3600
 
 
 .. _Flask: http://flask.pocoo.org/docs/api/
