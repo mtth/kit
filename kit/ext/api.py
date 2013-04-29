@@ -246,7 +246,7 @@ class View(_View):
           key
         )
         make_view(
-          self.__app__,
+          cls.__app__,
           view_class=_RelationshipView,
           view_name='%s_%s' % (cls.endpoint, key),
           __model__=model,
