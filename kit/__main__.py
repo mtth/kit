@@ -93,7 +93,7 @@ def run_worker(kit, raw):
     name,
     basename(abspath(join(
       dirname(kit.path),
-      kit.config['root'].rstrip(sep)
+      kit.root.rstrip(sep)
     ))),
   )
   worker_pattern = r'w(\d+)\.%s' % (base_hostname, )

@@ -381,12 +381,12 @@ class Model(Cacheable, Loggable):
     return instance_json
 
   @classmethod
-  def retrieve(cls, from_key=False, flush_if_missing=False, **kwargs):
+  def retrieve(cls, from_key=False, flush_if_new=False, **kwargs):
     """Given constructor arguments will return a match or create one.
 
-    :param flush_if_missing: whether or not to create and flush the model if 
+    :param flush_if_new: whether or not to create and flush the model if 
       created (this can be used to generate its ``id``).
-    :type flush_if_missing: bool
+    :type flush_if_new: bool
     :param from_key: instead of issuing a filter on kwargs, this will issue
       a get query by id using this parameter. Note that in this case, any other
       keyword arguments will only be used if a new instance is created.
@@ -394,10 +394,10 @@ class Model(Cacheable, Loggable):
     :param kwargs: constructor arguments
     :rtype: varies
 
-    If ``flush_if_missing`` is ``True``, this method returns a tuple ``(model,
+    If ``flush_if_new`` is ``True``, this method returns a tuple ``(model,
     flag)`` where ``model`` is of the corresponding class and ``flag`` is
     ``True`` if the model was just created and ``False`` otherwise. If
-    ``flush_if_missing`` is ``False``, this methods simply returns an instance
+    ``flush_if_new`` is ``False``, this methods simply returns an instance
     if found and ``None`` otherwise.
 
     """
@@ -409,7 +409,7 @@ class Model(Cacheable, Loggable):
       instance = cls.q.get(model_primary_key)
     else:
       instance = cls.q.filter_by(**kwargs).first()
-    if not flush_if_missing:
+    if not flush_if_new:
       return instance
     else:
       if instance:

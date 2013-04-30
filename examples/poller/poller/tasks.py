@@ -6,7 +6,7 @@ from dateutil.parser import parse
 from kit import Celery, get_config
 from twitter import Api
 
-from .models import session, RetweetCount, Tweet
+from .models import RetweetCount, Tweet
 
 celery = Celery(__name__)
 
@@ -26,16 +26,15 @@ def get_user_timeline():
     trim_user=True                        # not interested in who retweeted
   )
   for tweet_info in tweet_infos:
-    # we try to find if this tweet already exists in the database
-    tweet = session.query(Tweet).get(tweet_info.id)
-    if not tweet:
-      # if it doesn't, we add it
-      tweet = Tweet(
-        id=tweet_info.id,
-        text=tweet_info.text,
-        created_at=parse(tweet_info.created_at),
-      )
-      session.add(tweet)
+    tweet, flag = Tweet.retrieve(
+      from_key=True,
+      flush_if_new=True,
+      **{
+        'id': tweet_info.id,
+        'text': tweet_info.text,
+        'created_at': parse(tweet_info.created_at),
+      }
+    )
     # we add a new retweet count for this tweet
     tweet.retweet_counts.append(
       RetweetCount(retweet_count=tweet_info.retweet_count)

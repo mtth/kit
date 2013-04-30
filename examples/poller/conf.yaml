@@ -14,5 +14,7 @@ sessions:
     url: 'sqlite:///db/db.sqlite'
     engine:
       echo: no
+    options:
+      commit: yes
 twitter:
   user_handle: 'justinbieber'
