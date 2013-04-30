@@ -78,7 +78,7 @@ The following configuration options are available:
   keys available:
 
   * ``modules``: list of modules where this application is used. Inside each
-    of these modules, you can use ``kit.Flask`` to recover this
+    of these modules, you can use ``kit.Flask(__name__)`` to recover this
     configured application. The application's name will be automatically
     generated from this list of modules.
   * ``kwargs``: dictionary of keyword arguments passed to the ``flask.Flask``
@@ -90,7 +90,7 @@ The following configuration options are available:
   following keys available:
 
   * ``modules``: list of modules where this application is used. Inside each
-    of these modules, you can use ``kit.Celery`` to recover this
+    of these modules, you can use ``kit.Celery(__name__)`` to recover this
     configured application. The application's name will be automatically
     generated from this list of modules.
   * ``kwargs``: dictionary of keyword arguments passed to the
@@ -114,23 +114,19 @@ The following configuration options are available:
     * ``raise``: whether or not to reraise any errors found during commit
       (defaults to ``True``).
 
-Note that there can only be one application of each type (Flask or Celery) in
-a given module. This shouldn't be too restrictive as it is arguably bad
-practice to mix applications in a same module.
+You can then manage your project using the ``kit`` command line tool:
 
-You can manage your project using the ``kit`` command line too. The following
-commands are available:
-
-* ``kit shell``: to start a shell in your project's environment (all
+* ``kit shell`` will start a shell in your project's environment (all
   applications and sessions will have been created and set up beforehand).
-* ``kit server``: to run the Werkzeug server for one of your Flask applications
-  (if several applications are found, you will be prompted to choose one).
-* ``kit worker``: to start a Celery worker (if more than one Celery application
-  exists in your project, you will be prompted to choose one).
-* ``kit flower``: to start the Flower worker monitor.
+* ``kit server`` will run the Werkzeug server for one of your Flask
+  applications (if several applications are found, you will be prompted to
+  choose one).
+* ``kit worker`` will start a Celery worker (if more than one Celery
+  application exists in your project, you will be prompted to choose one).
+* ``kit flower`` starts the Flower worker monitor.
 
-There are options available for each command. To display these or see general
-command usage, you can view the command tool help: ``kit -h``.
+``kit -h`` displays usage and the list of options available for each of these
+commands.
 
 
 Next steps
