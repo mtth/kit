@@ -11,7 +11,7 @@ celeries:
       celery_send_events: yes
 sessions:
   db:
-    url: 'sqlite:///db/db.sqlite'
+    url: 'sqlite:///db.sqlite'
     engine:
       echo: no
     options:

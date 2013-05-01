@@ -2,7 +2,7 @@
 
 """Kit: Flask, Celery, SQLAlchemy integration framework."""
 
-__version__ = '0.2.10'
+__version__ = '0.2.11'
 
 
 def Flask(module_name, path=None):
