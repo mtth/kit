@@ -192,8 +192,7 @@ class Query(_Query):
       ``to_json`` of the models, otherwise it will only contain the columns
       existing in the database (default behavior). If lazy is ``True``, this
       method also accepts the same keyword arguments as
-      :func:`kit.util.query_to_dataframe`. For convenience, if no
-      ``exclude`` kwarg is specified, it will default to ``['_cache']``.
+      :func:`kit.util.query_to_dataframe`.
     :type load_objects: bool
     :rtype: pandas.DataFrame
 
@@ -201,7 +200,6 @@ class Query(_Query):
 
     """
     if not load_objects:
-      kwargs.setdefault('exclude', ['__cache__'])
       return query_to_dataframe(
         self,
         connection=self.session.connection(),
@@ -532,7 +530,8 @@ class ORM(object):
     self.backref = partial(_backref, query_class=query_class)
     self.relationship = partial(_relationship, query_class=query_class)
 
-  def get_all_models(self):
+  @property
+  def models(self):
     """All mapped models."""
     return {
       k: v.__mapper__.class_
