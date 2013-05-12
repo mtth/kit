@@ -5,7 +5,7 @@
 from datetime import datetime
 from kit import get_session
 from kit.ext.orm import ORM
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Unicode
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Unicode, desc
 
 session = get_session('db')
 orm = ORM(session)
@@ -14,6 +14,14 @@ orm = ORM(session)
 class User(orm.Model):
 
   handle = Column(Unicode(36), primary_key=True)
+
+  @property
+  def latest_tweet(self):
+    return self.tweets.first().to_json()
+
+  @property
+  def saved_tweets(self):
+    return self.tweets.fast_count()
 
 
 class Tweet(orm.Model):
@@ -25,8 +33,16 @@ class Tweet(orm.Model):
 
   user = orm.relationship(
     'User',
-    backref=orm.backref('tweets', lazy='dynamic')
+    backref=orm.backref(
+      'tweets',
+      lazy='dynamic',
+      order_by=desc(created_at),
+    )
   )
+
+  @property
+  def age(self):
+    return datetime.now() - self.created_at
 
 
 class RetweetCount(orm.Model):
@@ -38,8 +54,16 @@ class RetweetCount(orm.Model):
 
   tweet = orm.relationship(
     'Tweet',
-    backref=orm.backref('retweet_counts', lazy='dynamic')
+    backref=orm.backref(
+      'retweet_counts',
+      lazy='dynamic',
+      order_by=desc(date),
+    )
   )
+
+  @property
+  def age(self):
+    return self.date - self.tweet.created_at
 
 
 orm.create_all()

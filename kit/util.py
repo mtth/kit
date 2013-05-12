@@ -3,7 +3,7 @@
 """Utility module."""
 
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from flask import request
 from flask.views import View as _View
@@ -54,7 +54,7 @@ def to_json(value, depth=1):
     return value
   if value is None:
     return None
-  if isinstance(value, datetime):
+  if isinstance(value, (datetime, timedelta)):
     return str(value)
   if isinstance(value, Decimal):
     return float(value)
