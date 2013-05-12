@@ -17,7 +17,9 @@ class User(orm.Model):
 
   @property
   def latest_tweet(self):
-    return self.tweets.first().to_json()
+    latest_tweet = self.tweets.first()
+    if latest_tweet:
+      return latest_tweet.to_json()
 
   @property
   def saved_tweets(self):
