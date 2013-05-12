@@ -7,5 +7,5 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-  handle = get_config()['twitter']['user_handle']
-  return render_template('index.html', handle=handle)
+  handles = ', '.join(map(str, get_config()['twitter']['handles']))
+  return render_template('index.html', handle=handles)

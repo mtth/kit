@@ -17,4 +17,17 @@ sessions:
     options:
       commit: yes
 twitter:
-  user_handle: 'justinbieber'
+  handles:
+    - 'justinbieber'
+    - 'ladygaga'
+    - 'katyperry'
+    - 'BarackObama'
+    - 'rihanna'
+    - 'taylorswift13'
+    - 'britneyspears'
+    - 'shakira'
+    - 'jtimberlake'
+    - 'TheEllenShow'
+    - 'Oprah'
+    - 'Cristiano'
+    - 'JLo'

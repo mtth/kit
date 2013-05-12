@@ -10,11 +10,23 @@ from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Unicode
 session = get_session('db')
 orm = ORM(session)
 
+
+class User(orm.Model):
+
+  handle = Column(Unicode(36), primary_key=True)
+
+
 class Tweet(orm.Model):
 
   id = Column(Integer, primary_key=True)
+  user_handle = Column(ForeignKey('users.handle'))
   text = Column(Unicode(140))
   created_at = Column(DateTime(timezone=False))
+
+  user = orm.relationship(
+    'User',
+    backref=orm.backref('tweets', lazy='dynamic')
+  )
 
 
 class RetweetCount(orm.Model):
@@ -28,5 +40,6 @@ class RetweetCount(orm.Model):
     'Tweet',
     backref=orm.backref('retweet_counts', lazy='dynamic')
   )
+
 
 orm.create_all()
