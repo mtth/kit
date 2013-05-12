@@ -22,13 +22,21 @@ class User(orm.Model):
       return latest_tweet.to_json()
 
   @property
-  def saved_tweets(self):
+  def total_saved_tweets(self):
     return self.tweets.fast_count()
+
+  @property
+  def average_retweet_count(self):
+    n_tweets = self.total_saved_tweets
+    if n_tweets:
+      total = sum(tweet.current_retweet_count for tweet in self.tweets)
+      return float(total) / n_tweets
 
 
 class Tweet(orm.Model):
 
   id = Column(Integer, primary_key=True)
+  date = Column(DateTime, default=datetime.now)
   user_handle = Column(ForeignKey('users.handle'))
   text = Column(Unicode(140))
   created_at = Column(DateTime(timezone=False))
@@ -44,7 +52,13 @@ class Tweet(orm.Model):
 
   @property
   def age(self):
-    return datetime.now() - self.created_at
+    return datetime.now() - self.date
+
+  @property
+  def current_retweet_count(self):
+    latest_count = self.retweet_counts.first()
+    if latest_count:
+      return latest_count.retweet_count
 
 
 class RetweetCount(orm.Model):
@@ -65,7 +79,7 @@ class RetweetCount(orm.Model):
 
   @property
   def age(self):
-    return self.date - self.tweet.created_at
+    return self.date - self.tweet.date
 
 
 orm.create_all()
