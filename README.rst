@@ -42,7 +42,6 @@ Sample configuration file:
 .. code:: yaml
 
   root: '..'
-  modules: ['my_project.startup']
   flasks:
     - modules: ['my_project.app', 'my_project.app.views']
       kwargs:
@@ -63,16 +62,13 @@ Sample configuration file:
       options:
         commit: yes
         raise: no
+  modules: ['my_project.startup']
 
 
 The following configuration options are available:
 
-* ``root``: project root, will be added to your python path. Useful if your
-  configuration files are in a subdirectory of your project (defaults to
+* ``root``: project root, will be added to your python path (defaults to
   ``'.'``)
-
-* ``modules``: list of modules to import (and that don't belong to an
-  application).
 
 * ``flasks``: list of Flask application settings. Each item has the following
   keys available:
@@ -113,6 +109,9 @@ The following configuration options are available:
       or task (defaults to ``False``).
     * ``raise``: whether or not to reraise any errors found during commit
       (defaults to ``True``).
+
+* ``modules``: list of modules to import (and that don't belong to an
+  application).
 
 You can then manage your project using the ``kit`` command line tool:
 
