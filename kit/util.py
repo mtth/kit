@@ -313,7 +313,7 @@ def query_to_dataframe(query, connection=None, columns=None, **kwargs):
   result.close()
   return dataframe
 
-def query_to_records(query, connection=None):
+def query_to_records(query, connection=None, use_labels=False):
   """Raw execute of the query into a generator.
 
   :param query: the query to be executed
@@ -322,6 +322,10 @@ def query_to_records(query, connection=None):
     the method will create a new connection using the session's bound engine
     and properly close it afterwards.
   :type connection: sqlalchemy.engine.base.Connection
+  :param use_labels: whether or not to use labels instead of raw column names
+    in the output dictionary. Useful when retrieving results from multiple
+    tables with duplicate column names.
+  :type use_labels: bool
   :rtype: generator
 
   About 5 times faster than loading the objects. Useful if only interested in
@@ -337,7 +341,10 @@ def query_to_records(query, connection=None):
   
   """
   connection = connection or query.session.get_bind()
-  result = connection.execute(query.statement)
+  selectable = query.statement
+  if use_labels:
+    selectable = selectable.apply_labels() 
+  result = connection.execute(selectable)
   keys = result.keys()
   for record in result:
     yield {k:v for k, v in zip(keys, record)}
