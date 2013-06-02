@@ -471,7 +471,7 @@ class _TableProperty(object):
         # We bind the metadata to a connection to allow use of `execute`
         # directly on the statement objects. This connection will be closed
         # when the session is removed.
-        table.metadata.bind = self.session.connection()
+        table.metadata.bind = self.session().connection()
         return table
     except UnmappedClassError:
       return None
