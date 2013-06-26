@@ -9,7 +9,7 @@ from celery.task import periodic_task
 from flask import Flask
 from flask.signals import request_tearing_down
 from os.path import abspath, dirname, join
-from sqlalchemy import create_engine  
+from sqlalchemy import create_engine
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sys import path as sys_path
@@ -29,7 +29,7 @@ class Kit(object):
 
   :param path: path to the configuration file.
   :type path: str
-  
+
   """
 
   path = None
@@ -163,13 +163,13 @@ class Kit(object):
       raise KitError('Duplicate %s for module %r found.' % (kind, module_name))
     else:
       raise KitError('Undefined %s for module  %r.' % (kind, module_name))
-    
+
   def on_teardown(self, app, task=None):
     """Callback on request / task teardown.
 
     Default implementation calls the teardown handler on all the defined
     sessions.
-    
+
     """
     for session, options in self._sessions.values():
       self._teardown_handler(session, app, options)

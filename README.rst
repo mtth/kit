@@ -138,6 +138,13 @@ the application. The ``path`` argument is available on all other functions as
 well (for example to allow model access from an IPython notebook).
 
 
+Next features
+-------------
+
+* ``kit.setup(path, name=None)`` to load the kit. ``name=__name__`` can be
+  passed as keyword argument to disable effect if not run as main module
+  (for testing). This method would replace ``kit.get_kit``.
+
 .. _Flask: http://flask.pocoo.org/docs/api/
 .. _Flask-Script: http://flask-script.readthedocs.org/en/latest/
 .. _Flask-Login: http://packages.python.org/Flask-Login/
