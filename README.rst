@@ -144,6 +144,19 @@ Next features
 * ``kit.setup(path, name=None)`` to load the kit. ``name=__name__`` can be
   passed as keyword argument to disable effect if not run as main module
   (for testing). This method would replace ``kit.get_kit``.
+  Suggested example usage:
+
+  .. code:: python
+
+    import kit
+
+    kit.setup('conf/path.yaml', name=__name__)
+    app = kit.Flask(__name__)
+
+    from project.models import orm
+
+    # ...
+    
 
 .. _Flask: http://flask.pocoo.org/docs/api/
 .. _Flask-Script: http://flask-script.readthedocs.org/en/latest/
